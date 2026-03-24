@@ -3,11 +3,10 @@
 
 if [[ $((MIN_LOG_LEVEL)) -ge 4 ]]; then
     # shellcheck disable=SC2016
-    echo "Starting web service (Node.js)" | stdbuf -oL awk '{print "[webapp      ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+    s6wrap --quiet --prepend=webapp --timestamps --args echo "Starting web service (Node.js)"
 fi
 
 cd /backend || exit 1
 
 # shellcheck disable=SC2016
-stdbuf -oL node server.bundle.mjs 2>&1 |
-    stdbuf -oL awk '{print "[webapp      ] " strftime("%Y/%m/%d %H:%M:%S", systime()) " " $0}'
+exec s6wrap --quiet --prepend=webapp --timestamps --args node server.bundle.mjs

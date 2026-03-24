@@ -234,7 +234,7 @@ function createTables(): void {
   db.run(`
     CREATE TABLE IF NOT EXISTS alert_matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-      message_uid TEXT NOT NULL,
+      message_id INTEGER NOT NULL,
       term TEXT NOT NULL,
       match_type TEXT NOT NULL,
       matched_at INTEGER NOT NULL
@@ -610,16 +610,16 @@ describe("collectMetrics", () => {
       const db = getDatabase();
       const now = Math.floor(Date.now() / 1000);
       db.run(
-        `INSERT INTO alert_matches (message_uid, term, match_type, matched_at)
-         VALUES ('uid-1', 'EMERGENCY', 'text', ${now})`,
+        `INSERT INTO alert_matches (message_id, term, match_type, matched_at)
+         VALUES (1, 'EMERGENCY', 'text', ${now})`,
       );
       db.run(
-        `INSERT INTO alert_matches (message_uid, term, match_type, matched_at)
-         VALUES ('uid-2', 'TURBULENCE', 'text', ${now})`,
+        `INSERT INTO alert_matches (message_id, term, match_type, matched_at)
+         VALUES (2, 'TURBULENCE', 'text', ${now})`,
       );
       db.run(
-        `INSERT INTO alert_matches (message_uid, term, match_type, matched_at)
-         VALUES ('uid-1', 'MAYDAY', 'text', ${now})`,
+        `INSERT INTO alert_matches (message_id, term, match_type, matched_at)
+         VALUES (1, 'MAYDAY', 'text', ${now})`,
       );
 
       const output = await collectMetrics();

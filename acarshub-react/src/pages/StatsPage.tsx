@@ -584,9 +584,6 @@ export const StatsPage = () => {
               <h2 className="chart-section__title">
                 Message Reception Over Time
               </h2>
-              <p className="chart-section__description">
-                Historical message counts from RRD database
-              </p>
             </div>
 
             {/* Time Period Selector */}

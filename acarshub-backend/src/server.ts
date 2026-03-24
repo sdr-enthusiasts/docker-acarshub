@@ -43,6 +43,10 @@ import {
   readSavedGeoJSON,
 } from "./services/heywhatsthat.js";
 import { createBackgroundServices } from "./services/index.js";
+import {
+  initMessageBuffers,
+  warmMessageBuffers,
+} from "./services/message-ring-buffer.js";
 import { collectMetrics, METRICS_CONTENT_TYPE } from "./services/metrics.js";
 import { migrateRrdToSqlite } from "./services/rrd-migration.js";
 import { initializeStationIds } from "./services/station-ids.js";
@@ -235,7 +239,7 @@ function createServer() {
  * Main server initialization
  */
 async function main(): Promise<void> {
-  logger.info("Starting ACARS Hub backend", {
+  logger.warn("Starting ACARS Hub backend", {
     port: config.port,
     host: config.host,
     database: config.dbPath,
@@ -283,7 +287,7 @@ async function main(): Promise<void> {
     // Any Socket.IO client that connects from this point on will see
     // isMigrationRunning() = true and receive migration_status { running: true }.
     setMigrationRunning(true);
-    logger.info(
+    logger.debug(
       "Migration window open — connections will receive migration banner",
     );
 
@@ -307,7 +311,7 @@ async function main(): Promise<void> {
     ]);
 
     let appConfig = getConfig();
-    logger.info("Enrichment data loaded", {
+    logger.debug("Enrichment data loaded", {
       airlines: Object.keys(appConfig.airlines).length,
       groundStations: Object.keys(appConfig.groundStations).length,
       messageLabels: Object.keys(appConfig.messageLabels).length,
@@ -373,6 +377,19 @@ async function main(): Promise<void> {
     initializeAlertCache();
     initializeStationIds();
 
+    // Initialise and warm the message ring buffers immediately after the DB is
+    // open.  This seeds the in-memory buffers with the most-recent enriched
+    // messages and alerts so that the first connecting client receives a full
+    // history without any per-connect DB queries or re-enrichment.
+    //
+    // WHY BEFORE initTimeSeriesCache
+    // --------------------------------
+    // Both operations are synchronous DB reads.  Order does not matter for
+    // correctness; we place the ring-buffer warm-up first so that the startup
+    // log order reflects the data-availability sequence: messages → time-series.
+    initMessageBuffers();
+    await warmMessageBuffers();
+
     // Warm the time-series cache immediately after the DB is open.
     //
     // WHY HERE (not after backgroundServices.start())
@@ -398,7 +415,7 @@ async function main(): Promise<void> {
     const { count: messageCount, size: dbSize } = getRowCount();
     const countStats = getMessageCountStats();
     const alertStats = getAlertCounts();
-    logger.info("Database statistics", {
+    logger.debug("Database statistics", {
       messages: messageCount,
       sizeMB:
         dbSize !== null ? Number((dbSize / 1024 / 1024).toFixed(2)) : null,
@@ -443,7 +460,7 @@ async function main(): Promise<void> {
     }
 
     appConfig = getConfig();
-    logger.info("ACARS Hub backend ready", {
+    logger.warn("ACARS Hub backend ready", {
       version: appConfig.version,
       decoders: {
         acars: appConfig.enableAcars,
@@ -457,7 +474,7 @@ async function main(): Promise<void> {
 
     // Handle shutdown signals
     const shutdown = async (signal: string) => {
-      logger.info("Shutting down", { signal });
+      logger.warn("Shutting down", { signal });
 
       stopTimeSeriesCache();
       stopStatsWriter();
@@ -475,7 +492,7 @@ async function main(): Promise<void> {
       }
 
       closeDatabase();
-      logger.info("Shutdown complete");
+      logger.warn("Shutdown complete");
       process.exit(0);
     };
 

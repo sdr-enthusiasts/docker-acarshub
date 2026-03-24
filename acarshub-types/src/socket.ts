@@ -102,6 +102,11 @@ export interface SocketEvents {
   // On-demand recent alerts response (Python: request_recent_alerts → recent_alerts)
   recent_alerts: (data: { alerts: AcarsMsg[] }) => void;
 
+  // Wholesale alert buffer refresh — broadcast to all clients after alert term
+  // changes or alert match regeneration so connected clients replace their
+  // stale alertMessageGroups without requiring a reconnect.
+  alerts_refreshed: (data: { messages: AcarsMsg[] }) => void;
+
   // Search results
   database_search_results: (data: SearchHtmlMsg) => void;
 

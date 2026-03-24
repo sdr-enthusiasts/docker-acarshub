@@ -52,6 +52,11 @@ import {
   getMessageQueue,
   type QueuedMessage,
 } from "./message-queue.js";
+import {
+  pushAlert,
+  pushMessage,
+  reheatMessageBuffers,
+} from "./message-ring-buffer.js";
 import { destroyScheduler, getScheduler } from "./scheduler.js";
 import { checkAndAddStationId, getStationIds } from "./station-ids.js";
 import { startStatsPruning } from "./stats-pruning.js";
@@ -171,7 +176,7 @@ export class BackgroundServices extends EventEmitter {
       this.setupAdsbPolling();
     }
 
-    logger.info("Background services initialized", {
+    logger.debug("Background services initialized", {
       listeners: Array.from(this.decoderListeners.keys()),
       adsbEnabled: appConfig.enableAdsb,
     });
@@ -378,7 +383,7 @@ export class BackgroundServices extends EventEmitter {
         // the explicit first argument to addMessageFromJson instead.
         const dbMessageType = normalizeMessageType(queuedMessage.type);
 
-        logger.debug("Message formatted", {
+        logger.trace("Message formatted", {
           type: queuedMessage.type,
           timestamp: formattedMessage.timestamp,
           hasText: !!formattedMessage.text,
@@ -430,6 +435,14 @@ export class BackgroundServices extends EventEmitter {
           hasToaddrHex: !!enrichedMessage.toaddr_hex,
           hasFromaddrHex: !!enrichedMessage.fromaddr_hex,
         });
+
+        // Update ring buffers BEFORE emitting so a client connecting at this
+        // exact moment gets a consistent snapshot.
+        if (alertMetadata.matched) {
+          pushAlert(enrichedMessage);
+        } else {
+          pushMessage(enrichedMessage);
+        }
 
         // Emit enriched message to Socket.IO clients
         this.config.socketio.emit("acars_msg", {
@@ -484,11 +497,21 @@ export class BackgroundServices extends EventEmitter {
       .do(async () => {
         try {
           const pruneConfig = getConfig();
-          await pruneDatabase(
+          const { prunedAlerts } = await pruneDatabase(
             pruneConfig.dbSaveDays,
             pruneConfig.dbAlertSaveDays,
           );
           logger.debug("Database pruned");
+
+          // If alert_matches rows were pruned, the ring buffer may reference
+          // messages that no longer exist in the DB.  Reheat so the buffer
+          // stays consistent with the DB state.
+          if (prunedAlerts > 0) {
+            await reheatMessageBuffers();
+            logger.debug("Ring buffers reheated after alert prune", {
+              prunedAlerts,
+            });
+          }
         } catch (err) {
           logger.error("Failed to prune database", {
             error: err instanceof Error ? err.message : String(err),
@@ -606,7 +629,7 @@ export class BackgroundServices extends EventEmitter {
         this.checkThreadHealth();
       }, "check_thread_health");
 
-    logger.info("Scheduled tasks configured", {
+    logger.debug("Scheduled tasks configured", {
       taskCount: scheduler.getTasks().length,
     });
   }
@@ -626,7 +649,7 @@ export class BackgroundServices extends EventEmitter {
       // Broadcast to all connected clients
       this.config.socketio.emit("adsb_aircraft", data);
 
-      logger.debug("ADS-B data broadcast", {
+      logger.trace("ADS-B data broadcast", {
         aircraftCount: data.aircraft.length,
       });
     });
@@ -637,7 +660,7 @@ export class BackgroundServices extends EventEmitter {
       });
     });
 
-    logger.info("ADS-B polling configured", {
+    logger.debug("ADS-B polling configured", {
       url: appConfig.adsbUrl,
     });
   }

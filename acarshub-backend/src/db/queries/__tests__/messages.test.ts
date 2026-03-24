@@ -24,6 +24,7 @@ import {
   getRowCount,
   grabMostRecent,
   pruneDatabase,
+  resetUnsavedMessageCounter,
 } from "../messages.js";
 import { initializeMessageCounters } from "../statistics.js";
 
@@ -49,7 +50,6 @@ describe("Message Query Functions", () => {
     db.exec(`
       CREATE TABLE IF NOT EXISTS messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        uid TEXT UNIQUE NOT NULL,
         message_type TEXT,
         msg_time INTEGER NOT NULL,
         station_id TEXT,
@@ -120,7 +120,7 @@ describe("Message Query Functions", () => {
 
       CREATE TABLE IF NOT EXISTS alert_matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        message_uid TEXT NOT NULL,
+        message_id INTEGER NOT NULL,
         term TEXT NOT NULL,
         match_type TEXT NOT NULL,
         matched_at INTEGER NOT NULL
@@ -349,6 +349,7 @@ describe("Message Query Functions", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    resetUnsavedMessageCounter();
     db.close();
   });
 
@@ -397,9 +398,6 @@ describe("Message Query Functions", () => {
 
       // Verify AlertMetadata structure
       expect(alertMetadata.uid).toBeDefined();
-      expect(alertMetadata.uid).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-      );
       expect(alertMetadata.matched).toBe(false);
       expect(alertMetadata.matched_text).toEqual([]);
       expect(alertMetadata.matched_icao).toEqual([]);
@@ -411,7 +409,7 @@ describe("Message Query Functions", () => {
       const inserted = drizzleDb
         .select()
         .from(messages)
-        .where(eq(messages.uid, alertMetadata.uid))
+        .where(eq(messages.id, Number(alertMetadata.uid)))
         .get();
 
       expect(inserted).toBeDefined();
@@ -488,12 +486,12 @@ describe("Message Query Functions", () => {
 
       const found = getMessageByUid(inserted.uid);
       expect(found).toBeDefined();
-      expect(found?.uid).toBe(inserted.uid);
+      expect(found?.id).toBe(Number(inserted.uid));
       expect(found?.tail).toBe("FIND123");
     });
 
     it("should return undefined for nonexistent UID", () => {
-      const found = getMessageByUid("00000000-0000-0000-0000-000000000000");
+      const found = getMessageByUid("-1");
       expect(found).toBeUndefined();
     });
   });
@@ -804,10 +802,10 @@ describe("Message Query Functions", () => {
 
   describe("pruneDatabase()", () => {
     // Shared helper: insert a minimal message directly and return its uid
-    const insertMessage = (uid: string, msgTime: number): void => {
+    const insertMessage = (id: number, msgTime: number): void => {
       db.prepare(`
         INSERT INTO messages (
-          uid, message_type, msg_time, station_id, toaddr, fromaddr,
+          id, message_type, msg_time, station_id, toaddr, fromaddr,
           depa, dsta, eta, gtout, gtin, wloff, wlin, lat, lon, alt,
           msg_text, tail, flight, icao, freq, ack, mode, label,
           block_id, msgno, is_response, is_onground, error, libacars, level
@@ -815,17 +813,17 @@ describe("Message Query Functions", () => {
           ?, 'ACARS', ?, 'TEST', '', '', '', '', '', '', '', '', '', '', '', '',
           'test', '', '', '', '131.550', '', '', 'H1', '', '', '', '', '', '', ''
         )
-      `).run(uid, msgTime);
+      `).run(id, msgTime);
     };
 
     const insertAlertMatch = (
-      messageUid: string,
+      messageId: number,
       matchedAt: number,
     ): void => {
       db.prepare(`
-        INSERT INTO alert_matches (message_uid, term, match_type, matched_at)
+        INSERT INTO alert_matches (message_id, term, match_type, matched_at)
         VALUES (?, 'TEST', 'text', ?)
-      `).run(messageUid, matchedAt);
+      `).run(messageId, matchedAt);
     };
 
     it("prunes messages older than messageSaveDays", () => {
@@ -833,8 +831,9 @@ describe("Message Query Functions", () => {
       const old = now - 10 * 86400; // 10 days ago
       const recent = now - 1 * 86400; // 1 day ago
 
-      insertMessage("old-msg-1", old);
-      insertMessage("recent-msg-1", recent);
+      // use unix timestamp as rowId as well
+      insertMessage(old, old);
+      insertMessage(recent, recent);
 
       // The 4 beforeEach test messages have 2024 timestamps and will also be
       // pruned. Assert on specific UIDs rather than the total count so the test
@@ -842,13 +841,13 @@ describe("Message Query Functions", () => {
       pruneDatabase(7, 30);
 
       const row = db
-        .prepare("SELECT uid FROM messages WHERE uid = ?")
-        .get("recent-msg-1") as { uid: string } | undefined;
-      expect(row?.uid).toBe("recent-msg-1");
+        .prepare("SELECT id FROM messages WHERE id = ?")
+        .get(recent) as { id: number } | undefined;
+      expect(row?.id).toBe(recent);
 
       const gone = db
-        .prepare("SELECT uid FROM messages WHERE uid = ?")
-        .get("old-msg-1");
+        .prepare("SELECT id FROM messages WHERE id = ?")
+        .get(old);
       expect(gone).toBeUndefined();
     });
 
@@ -856,50 +855,53 @@ describe("Message Query Functions", () => {
       const now = Math.floor(Date.now() / 1000);
       const old = now - 10 * 86400; // 10 days ago — outside 7-day message window
 
-      insertMessage("protected-msg", old);
+      const prot = old - 1;
+      insertMessage(prot, old);
       // Alert match is recent (within 30-day alert window) → message must be kept
-      insertAlertMatch("protected-msg", now - 1 * 86400);
+      insertAlertMatch(prot, now - 1 * 86400);
 
       // Assert on the specific UID rather than total count; the 4 beforeEach
       // messages (2024 timestamps) are also pruned in the same run.
       pruneDatabase(7, 30);
 
       const row = db
-        .prepare("SELECT uid FROM messages WHERE uid = ?")
-        .get("protected-msg") as { uid: string } | undefined;
-      expect(row?.uid).toBe("protected-msg");
+        .prepare("SELECT id FROM messages WHERE id = ?")
+        .get(prot) as { id: number } | undefined;
+      expect(row?.id).toBe(prot);
     });
 
     it("does NOT protect old messages whose alert match is itself outside the alert retention window", () => {
       const now = Math.floor(Date.now() / 1000);
       const old = now - 10 * 86400; // 10 days ago
 
-      insertMessage("stale-alert-msg", old);
+      const stale = old - 8343;
+      insertMessage(stale, old);
       // Alert match is 40 days old — outside the 30-day alert window
-      insertAlertMatch("stale-alert-msg", now - 40 * 86400);
+      insertAlertMatch(stale, now - 40 * 86400);
 
       // Assert on the specific UID rather than total count; the 4 beforeEach
       // messages (2024 timestamps) are also pruned in the same run.
       pruneDatabase(7, 30);
 
       const gone = db
-        .prepare("SELECT uid FROM messages WHERE uid = ?")
-        .get("stale-alert-msg");
+        .prepare("SELECT id FROM messages WHERE id = ?")
+        .get(stale);
       expect(gone).toBeUndefined();
     });
 
     it("prunes alert_matches older than alertSaveDays", () => {
       const now = Math.floor(Date.now() / 1000);
 
-      insertMessage("am-msg", now - 1 * 86400);
+      const alertId = 234235221;
+      insertMessage(alertId, now - 1 * 86400);
       const staleMatchedAt = now - 40 * 86400;
-      insertAlertMatch("am-msg", staleMatchedAt);
+      insertAlertMatch(alertId, staleMatchedAt);
 
       const { prunedAlerts } = pruneDatabase(7, 30);
 
       const gone = db
-        .prepare("SELECT id FROM alert_matches WHERE message_uid = ?")
-        .get("am-msg");
+        .prepare("SELECT id FROM alert_matches WHERE message_id = ?")
+        .get(alertId);
       expect(gone).toBeUndefined();
       expect(prunedAlerts).toBe(1);
     });
@@ -914,14 +916,18 @@ describe("Message Query Functions", () => {
       const old = now - 10 * 86400;
       const PROTECTED_COUNT = 1500; // deliberately above the 999 default limit
 
-      for (let i = 0; i < PROTECTED_COUNT; i++) {
-        const uid = `protected-bulk-${i}`;
+      const prot_start = 23423;
+      const prot_end = prot_start + PROTECTED_COUNT;
+
+      for (let uid = prot_start; uid < prot_end; uid++) {
         insertMessage(uid, old);
         insertAlertMatch(uid, now - 1 * 86400); // recent match → protected
       }
 
+      const unprotected = 3454389723;
+
       // One unprotected old message that SHOULD be pruned
-      insertMessage("unprotected-old", old);
+      insertMessage(unprotected, old);
 
       // Must not throw despite 1500 protected UIDs.
       // The 4 beforeEach messages (2024 timestamps) are also pruned, so we
@@ -931,17 +937,127 @@ describe("Message Query Functions", () => {
       }).not.toThrow();
 
       const gone = db
-        .prepare("SELECT uid FROM messages WHERE uid = ?")
-        .get("unprotected-old");
+        .prepare("SELECT id FROM messages WHERE id = ?")
+        .get(unprotected);
       expect(gone).toBeUndefined();
 
       // All 1500 protected messages must still be present
       const remaining = db
         .prepare(
-          "SELECT COUNT(*) as c FROM messages WHERE uid LIKE 'protected-bulk-%'",
+          `SELECT COUNT(*) as c FROM messages WHERE id >= ${prot_start} and id < ${prot_end}`,
         )
         .get() as { c: number };
       expect(remaining.c).toBe(PROTECTED_COUNT);
+    });
+  });
+
+  describe("unsaved message UID uniqueness", () => {
+    it("regression: multiple unsaved messages each receive a unique uid (no duplicate React keys)", () => {
+      // When DB_SAVEALL is false (default) and the message is empty,
+      // addMessage() skips the DB insert.  Previously every skipped message
+      // received uid "-1", which caused duplicate React keys on the frontend.
+      // After the fix each skipped message gets a unique negative-number uid.
+      const emptyJson: Record<string, unknown> = {}; // isMessageNotEmpty({}) === false
+
+      const baseMsg: Omit<schema.NewMessage, "id"> = {
+        messageType: "ACARS",
+        time: Math.floor(Date.now() / 1000),
+        stationId: "TEST",
+        toaddr: "",
+        fromaddr: "",
+        depa: "",
+        dsta: "",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
+        tail: "",
+        flight: "",
+        icao: "",
+        freq: "131.550",
+        label: "",
+        text: "",
+        lat: "",
+        lon: "",
+        alt: "",
+        ack: "",
+        mode: "",
+        msgno: "",
+        blockId: "",
+        isResponse: "",
+        isOnground: "",
+        error: "",
+        libacars: "",
+        level: "",
+      };
+
+      const result1 = addMessage(baseMsg, emptyJson);
+      const result2 = addMessage(baseMsg, emptyJson);
+      const result3 = addMessage(baseMsg, emptyJson);
+
+      // Every uid must be unique
+      const uids = [result1.uid, result2.uid, result3.uid];
+      expect(new Set(uids).size).toBe(3);
+
+      // None should be the old hardcoded "-1"
+      for (const uid of uids) {
+        expect(uid).not.toBe("-1");
+      }
+
+      // UIDs should be negative numbers (distinguishable from real DB row IDs)
+      for (const uid of uids) {
+        expect(Number(uid)).toBeLessThan(0);
+      }
+
+      // Messages were NOT inserted into the DB
+      const count = db
+        .prepare("SELECT COUNT(*) as c FROM messages WHERE message_type = 'ACARS' AND station_id = 'TEST'")
+        .get() as { c: number };
+      expect(count.c).toBe(0);
+    });
+
+    it("saved messages still receive positive DB row IDs as uid", () => {
+      // Verify saved messages still get real DB IDs (positive numbers)
+      const nonEmptyJson: Record<string, unknown> = { text: "Hello world" };
+
+      const msg: Omit<schema.NewMessage, "id"> = {
+        messageType: "ACARS",
+        time: Math.floor(Date.now() / 1000),
+        stationId: "TEST2",
+        toaddr: "",
+        fromaddr: "",
+        depa: "",
+        dsta: "",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
+        tail: "",
+        flight: "",
+        icao: "",
+        freq: "131.550",
+        label: "",
+        text: "Hello world",
+        lat: "",
+        lon: "",
+        alt: "",
+        ack: "",
+        mode: "",
+        msgno: "",
+        blockId: "",
+        isResponse: "",
+        isOnground: "",
+        error: "",
+        libacars: "",
+        level: "",
+      };
+
+      const result = addMessage(msg, nonEmptyJson);
+
+      // UID should be a positive number (real DB row ID)
+      expect(Number(result.uid)).toBeGreaterThan(0);
     });
   });
 });

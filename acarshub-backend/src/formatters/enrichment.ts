@@ -37,7 +37,7 @@ const logger = createLogger("enrichment");
  * Initialized once and reused for all message enrichment
  */
 const acarsDecoder = new MessageDecoder();
-logger.info("ACARS message decoder initialized in enrichment pipeline");
+logger.debug("ACARS message decoder initialized in enrichment pipeline");
 
 /**
  * Protected keys that should never be deleted, even if null/empty
@@ -69,6 +69,10 @@ const PROTECTED_KEYS = new Set([
 export function enrichMessage(message: Record<string, unknown>): AcarsMsg {
   // Create a shallow copy to avoid mutating original
   const enriched = { ...message };
+
+  if (!("uid" in enriched) && "id" in enriched) {
+    enriched.uid = String(enriched.id);
+  }
 
   // FIRST: Convert field names before cleanup
   // Database column: msg_text -> Frontend: text
@@ -172,7 +176,7 @@ function enrichDecodedText(message: Record<string, unknown>): void {
     const result = acarsDecoder.decode({ text, label });
 
     if (result.decoded === true) {
-      logger.debug("Successfully decoded message text", {
+      logger.trace("Successfully decoded message text", {
         uid: message.uid,
         decoderName: result.decoder.name,
         decodeLevel: result.decoder.decodeLevel,
@@ -233,16 +237,7 @@ function enrichIcaoFields(message: Record<string, unknown>): void {
   const icaoValue = message.icao;
 
   if (typeof icaoValue === "string") {
-    // Already a string - check if it's hex or decimal
-    // ICAO hex addresses contain A-F characters (e.g., "ABCD", "ABF308")
-    // Pure decimal strings (e.g., "11269896") should be converted to hex
-    const hasHexChars = /[A-Fa-f]/.test(icaoValue);
-    const isAllHex = /^[0-9A-Fa-f]+$/.test(icaoValue);
-
-    if (hasHexChars && isAllHex) {
-      // Contains A-F, so it's definitely hex - uppercase and pad to 6 characters
-      message.icao_hex = icaoValue.toUpperCase().padStart(6, "0");
-    } else {
+    if (icaoValue.length > 6) {
       // It's a decimal string - convert to hex
       try {
         const icaoInt = Number.parseInt(icaoValue, 10);
@@ -251,13 +246,30 @@ function enrichIcaoFields(message: Record<string, unknown>): void {
         // Not a valid number - use as-is (probably already hex)
         message.icao_hex = icaoValue.toUpperCase().padStart(6, "0");
       }
+      logger.warn(
+        `icao string but longer than 6 chars, converting to hex ${icaoValue} -> ${message.icao_hex}`,
+      );
+    } else if (icaoValue.length < 6) {
+      message.icao_hex = icaoValue.toUpperCase().padStart(6, "0");
+      logger.warn(
+        `icao string shorter than 6 chars, zero padding ${icaoValue} -> ${message.icao_hex}`,
+      );
+    } else {
+      message.icao_hex = icaoValue.toUpperCase();
+      //logger.warn(`icao already hex converting string to hex ${icaoValue} -> ${message.icao_hex}`);
     }
   } else if (typeof icaoValue === "number") {
     // Numeric ICAO - convert to 6-character hex string
     message.icao_hex = icaoValue.toString(16).toUpperCase().padStart(6, "0");
+    logger.warn(
+      `number type for message.icao, conversion: ${icaoValue} -> ${message.icao_hex}`,
+    );
   } else {
     // Unknown type - convert to string and uppercase
     message.icao_hex = String(icaoValue).toUpperCase();
+    logger.warn(
+      `unknown type for message.icao, conversion: ${icaoValue} -> ${message.icao_hex}`,
+    );
   }
 }
 
@@ -359,7 +371,7 @@ function enrichAddressFields(message: Record<string, unknown>): void {
     message.toaddr !== null &&
     message.toaddr !== undefined
   ) {
-    logger.debug("Enriching toaddr", {
+    logger.trace("Enriching toaddr", {
       uid: message.uid,
       toaddr: message.toaddr,
       type: typeof message.toaddr,
@@ -370,7 +382,7 @@ function enrichAddressFields(message: Record<string, unknown>): void {
       message.toaddr_hex = toaddrHex;
 
       const groundStation = lookupGroundstation(toaddrHex);
-      logger.debug("Ground station lookup", {
+      logger.trace("Ground station lookup", {
         uid: message.uid,
         hex: toaddrHex,
         found: groundStation !== null,
@@ -388,7 +400,7 @@ function enrichAddressFields(message: Record<string, unknown>): void {
     message.fromaddr !== null &&
     message.fromaddr !== undefined
   ) {
-    logger.debug("Enriching fromaddr", {
+    logger.trace("Enriching fromaddr", {
       uid: message.uid,
       fromaddr: message.fromaddr,
       type: typeof message.fromaddr,
@@ -399,7 +411,7 @@ function enrichAddressFields(message: Record<string, unknown>): void {
       message.fromaddr_hex = fromaddrHex;
 
       const groundStation = lookupGroundstation(fromaddrHex);
-      logger.debug("Ground station lookup", {
+      logger.trace("Ground station lookup", {
         uid: message.uid,
         hex: fromaddrHex,
         found: groundStation !== null,

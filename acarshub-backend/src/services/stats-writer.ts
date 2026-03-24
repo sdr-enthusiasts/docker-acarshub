@@ -119,7 +119,7 @@ export function startStatsWriter(): void {
   const nextMinute = Math.ceil(now / 60000) * 60000;
   const delayToNextMinute = nextMinute - now;
 
-  logger.info("Starting stats writer", {
+  logger.debug("Starting stats writer", {
     nextWriteIn: `${Math.round(delayToNextMinute / 1000)}s`,
   });
 
@@ -132,7 +132,7 @@ export function startStatsWriter(): void {
       writeStats();
     }, 60000);
 
-    logger.info("Stats writer started (interval: 60s)");
+    logger.debug("Stats writer started (interval: 60s)");
   }, delayToNextMinute);
 }
 

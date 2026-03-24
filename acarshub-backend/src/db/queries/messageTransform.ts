@@ -83,8 +83,8 @@ export interface RawMessage {
  */
 export function createDbSafeParams(
   messageFromJson: RawMessage,
-): Omit<NewMessage, "id" | "uid"> {
-  const params: Omit<NewMessage, "id" | "uid"> = {
+): Omit<NewMessage, "id"> {
+  const params: Omit<NewMessage, "id"> = {
     messageType: "", // Set by caller
     time: 0,
     stationId: "",
@@ -312,7 +312,11 @@ export function addMessageFromJson(
 
     // Write to backup database if configured
     // Uses same UID as primary database (already in alertMetadata)
-    if (hasBackupDatabase()) {
+    // Skip backup write for unsaved messages (negative uid) — these were not
+    // persisted to the primary DB so inserting them into the backup would
+    // cause the two databases to diverge.
+    const numericUid = Number(alertMetadata.uid);
+    if (hasBackupDatabase() && numericUid > 0) {
       try {
         const backupDb = getBackupDatabase();
         if (backupDb) {
@@ -325,7 +329,7 @@ export function addMessageFromJson(
             .insert(messages)
             .values({
               ...params,
-              uid: alertMetadata.uid,
+              id: numericUid,
             })
             .run();
         }

@@ -153,13 +153,13 @@ function insertTestMessages(
 ): void {
   const stmt = db.prepare(`
     INSERT INTO messages (
-      uid, message_type, msg_time, station_id,
+      message_type, msg_time, station_id,
       toaddr, fromaddr, depa, dsta, eta, gtout, gtin,
       wloff, wlin, lat, lon, alt, msg_text, tail, flight,
       icao, freq, ack, mode, label, block_id, msgno,
       is_response, is_onground, error, libacars, level
     ) VALUES (
-      ?, 'ACARS', ?, 'TEST-STATION',
+      'ACARS', ?, 'TEST-STATION',
       '', '', 'KJFK', 'KLAX', '', '', '',
       '', '', '40.64', '-73.78', '35000',
       'Test ACARS message', 'N12345', ?,
@@ -171,7 +171,6 @@ function insertTestMessages(
   const insert = db.transaction(() => {
     for (let i = 0; i < count; i++) {
       stmt.run(
-        `test-uid-${Date.now()}-${i}`,
         Math.floor(Date.now() / 1000) - i,
         `${flightPrefix}${String(i + 1).padStart(3, "0")}`,
       );
@@ -679,7 +678,7 @@ describe("migration04 FTS creation and repair", () => {
       .get() as { version_num: string } | undefined;
     db2.close();
 
-    expect(version?.version_num).toBe("b6c7d8e9f0a1");
+    expect(version?.version_num).toBe("8c9d47f5ed13");
   });
 });
 
@@ -735,12 +734,12 @@ describe("migration10 rebuild_fts", () => {
         message_type, msg_time, station_id, toaddr, fromaddr,
         depa, dsta, eta, gtout, gtin, wloff, wlin, lat, lon, alt,
         msg_text, tail, flight, icao, freq, ack, mode, label,
-        block_id, msgno, is_response, is_onground, error, libacars, level, uid
+        block_id, msgno, is_response, is_onground, error, libacars, level
       ) VALUES (
         'ACARS', ${Math.floor(Date.now() / 1000)}, 'TEST', '', '',
         '', '', '', '', '', '', '', '40.64', '-73.78', '35000',
         'migration10 test message', 'N99999', 'MIG010', 'AABBCC', '129.125',
-        0, 'A', '5Z', '', '', 0, 0, 0, '{}', '-15.0', 'uid-mig10-test'
+        0, 'A', '5Z', '', '', 0, 0, 0, '{}', '-15.0'
       )
     `);
 
@@ -756,13 +755,13 @@ describe("migration10 rebuild_fts", () => {
 
   // -------------------------------------------------------------------------
 
-  test("regression: alembic_version is b6c7d8e9f0a1 after all migrations", () => {
+  test("regression: alembic_version is 803398f85958 after all migrations", () => {
     const db = new Database(DB_PATH);
     const version = db
       .prepare("SELECT version_num FROM alembic_version")
       .get() as { version_num: string } | undefined;
     db.close();
 
-    expect(version?.version_num).toBe("b6c7d8e9f0a1");
+    expect(version?.version_num).toBe("8c9d47f5ed13");
   });
 });

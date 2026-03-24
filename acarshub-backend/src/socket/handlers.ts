@@ -52,9 +52,7 @@ import {
   getErrors,
   getPerDecoderMessageCounts,
   getRowCount,
-  grabMostRecent,
   regenerateAllAlertMatches,
-  searchAlerts,
   searchAlertsByTerm,
   setAlertIgnore,
   setAlertTerms,
@@ -64,9 +62,14 @@ import { enrichMessage, enrichMessages } from "../formatters/enrichment.js";
 import { getAdsbPoller } from "../services/adsb-poller.js";
 import { getHeyWhatsThatUrl } from "../services/heywhatsthat.js";
 import { getMessageQueue } from "../services/message-queue.js";
+import {
+  getRecentAlerts,
+  getRecentMessages,
+  reheatMessageBuffers,
+} from "../services/message-ring-buffer.js";
 import { queryTimeseriesData } from "../services/rrd-migration.js";
 import { getStationIds } from "../services/station-ids.js";
-import { getCachedTimeSeries } from "../services/timeseries-cache.js";
+import { getOrQueryTimeSeries } from "../services/timeseries-cache.js";
 import { isMigrationRunning, registerPendingSocket } from "../startup-state.js";
 import { createLogger } from "../utils/logger.js";
 import { isValidTimePeriod, zeroFillBuckets } from "../utils/timeseries.js";
@@ -81,7 +84,7 @@ export function registerHandlers(io: TypedSocketServer): void {
   const namespace = io.of("/main");
 
   namespace.on("connection", (socket: TypedSocket) => {
-    logger.info("Client connected", {
+    logger.debug("Client connected", {
       socketId: socket.id,
       transport: socket.conn.transport.name,
     });
@@ -136,7 +139,7 @@ export function registerHandlers(io: TypedSocketServer): void {
     });
   });
 
-  logger.info("Socket.IO handlers registered on /main namespace");
+  logger.debug("Socket.IO handlers registered on /main namespace");
 }
 
 /**
@@ -231,10 +234,8 @@ export function handleConnect(
       }
     }
 
-    // 6. Send recent messages in chunks (filter out alerts)
-    const recentMessagesRaw = grabMostRecent(250);
-    const recentMessages = enrichMessages(recentMessagesRaw);
-    const nonAlertMessages = recentMessages.filter((msg) => !msg.matched);
+    // 6. Send recent messages in chunks (from ring buffer — no DB query or re-enrichment)
+    const nonAlertMessages = getRecentMessages();
 
     const chunkSize = 25;
     const totalMessages = nonAlertMessages.length;
@@ -245,16 +246,27 @@ export function handleConnect(
       chunks: Math.ceil(totalMessages / chunkSize),
     });
 
-    for (let i = 0; i < totalMessages; i += chunkSize) {
-      const chunk = nonAlertMessages.slice(i, i + chunkSize);
-      const isLastChunk = i + chunkSize >= totalMessages;
-
-      // Send as batch with loading indicators
+    if (totalMessages === 0) {
+      // Emit a terminal empty batch so clients receive done_loading=true and
+      // can transition out of their loading state even when the ring buffer
+      // is empty (e.g. a fresh install with no messages yet).
       socket.emit("acars_msg_batch", {
-        messages: chunk,
-        loading: true,
-        done_loading: isLastChunk,
+        messages: [],
+        loading: false,
+        done_loading: true,
       });
+    } else {
+      for (let i = 0; i < totalMessages; i += chunkSize) {
+        const chunk = nonAlertMessages.slice(i, i + chunkSize);
+        const isLastChunk = i + chunkSize >= totalMessages;
+
+        // Send as batch with loading indicators
+        socket.emit("acars_msg_batch", {
+          messages: chunk,
+          loading: true,
+          done_loading: isLastChunk,
+        });
+      }
     }
 
     // 7. Send database size
@@ -287,22 +299,8 @@ export function handleConnect(
     // Python sends "alert_terms" with {data: ...}, NOT "alert_terms_stats"
     socket.emit("alert_terms", { data: alertTermData });
 
-    // 10. Send recent alerts in chunks
-    const recentAlertsRaw = searchAlerts(100, 0);
-    const recentAlerts = recentAlertsRaw.map((alert) => {
-      const enriched = enrichMessage(alert.message);
-      // Add alert metadata back
-      enriched.matched = true;
-      enriched.matched_text =
-        alert.matchType === "text" ? [alert.term] : undefined;
-      enriched.matched_icao =
-        alert.matchType === "icao" ? [alert.term] : undefined;
-      enriched.matched_flight =
-        alert.matchType === "flight" ? [alert.term] : undefined;
-      enriched.matched_tail =
-        alert.matchType === "tail" ? [alert.term] : undefined;
-      return enriched;
-    });
+    // 10. Send recent alerts in chunks (from ring buffer — no DB query or re-enrichment)
+    const recentAlerts = getRecentAlerts();
 
     const totalAlerts = recentAlerts.length;
     logger.debug("Sending alert cache", {
@@ -310,15 +308,25 @@ export function handleConnect(
       total: totalAlerts,
     });
 
-    for (let i = 0; i < totalAlerts; i += chunkSize) {
-      const chunk = recentAlerts.slice(i, i + chunkSize);
-      const isLastChunk = i + chunkSize >= totalAlerts;
-
+    if (totalAlerts === 0) {
+      // Emit a terminal empty batch so clients receive done_loading=true even
+      // when the alert ring buffer is empty.
       socket.emit("alert_matches_batch", {
-        messages: chunk,
-        loading: true,
-        done_loading: isLastChunk,
+        messages: [],
+        loading: false,
+        done_loading: true,
       });
+    } else {
+      for (let i = 0; i < totalAlerts; i += chunkSize) {
+        const chunk = recentAlerts.slice(i, i + chunkSize);
+        const isLastChunk = i + chunkSize >= totalAlerts;
+
+        socket.emit("alert_matches_batch", {
+          messages: chunk,
+          loading: true,
+          done_loading: isLastChunk,
+        });
+      }
     }
 
     // 11. Send version information
@@ -334,7 +342,7 @@ export function handleConnect(
     socket.emit("acarshub_version", versionInfo);
 
     const elapsed = performance.now() - startTime;
-    logger.info("Client initialization complete", {
+    logger.debug("Client initialization complete", {
       socketId: socket.id,
       elapsed: `${elapsed.toFixed(2)}ms`,
       messages: totalMessages,
@@ -437,11 +445,11 @@ function handleQuerySearch(
  *
  * Mirrors Python: @socketio.on("update_alerts", namespace="/main")
  */
-function handleUpdateAlerts(
+async function handleUpdateAlerts(
   socket: TypedSocket,
   io: TypedSocketServer,
   terms: Terms,
-): void {
+): Promise<void> {
   const config = getConfig();
 
   if (!config.allowRemoteUpdates) {
@@ -472,8 +480,19 @@ function handleUpdateAlerts(
     };
     io.of("/main").emit("terms", updatedTerms);
 
+    // Reheat ring buffers so alert cache reflects the new terms.
+    // Old alert matches (for terms that were removed) are purged and new
+    // matches (for terms that were added) are picked up from the DB.
+    await reheatMessageBuffers();
+
+    // Broadcast refreshed alert content to all connected clients so their
+    // alert pages update without requiring a reconnect.
+    const refreshedAlerts = getRecentAlerts();
+    io.of("/main").emit("alerts_refreshed", { messages: refreshedAlerts });
+
     logger.info("Alert terms updated successfully", {
       socketId: socket.id,
+      alertBufferSize: refreshedAlerts.length,
     });
   } catch (error) {
     logger.error("Error updating alert terms", {
@@ -545,12 +564,19 @@ function handleRegenerateAlertMatches(
 
   // Defer the heavy synchronous work so Socket.IO can flush the started event
   // before the DB work blocks the event loop (mirrors Python's background task)
-  setImmediate(() => {
+  setImmediate(async () => {
     try {
       const startTime = performance.now();
       const alertTerms = getCachedAlertTerms();
       const alertIgnoreTerms = getCachedAlertIgnoreTerms();
       const stats = regenerateAllAlertMatches(alertTerms, alertIgnoreTerms);
+
+      // Reheat ring buffers so alert cache reflects the regenerated matches.
+      // regenerateAllAlertMatches() no longer calls reheatMessageBuffers()
+      // internally — the socket handler owns the full sequence so it can
+      // broadcast the result to clients after the await completes.
+      await reheatMessageBuffers();
+
       const elapsed = performance.now() - startTime;
 
       logger.info("Alert match regeneration complete", {
@@ -578,6 +604,11 @@ function handleRegenerateAlertMatches(
         };
       }
       io.of("/main").emit("alert_terms", { data: alertTermData });
+
+      // Broadcast refreshed alert content to all connected clients so their
+      // alert pages update without requiring a reconnect.
+      const refreshedAlerts = getRecentAlerts();
+      io.of("/main").emit("alerts_refreshed", { messages: refreshedAlerts });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error("Error during alert match regeneration", {
@@ -850,20 +881,9 @@ function handleSignalGraphs(socket: TypedSocket): void {
  */
 function handleRequestRecentAlerts(socket: TypedSocket): void {
   try {
-    const recentAlertsRaw = searchAlerts(100, 0);
-    const alerts = recentAlertsRaw.map((alert) => {
-      const enriched = enrichMessage(alert.message);
-      enriched.matched = true;
-      enriched.matched_text =
-        alert.matchType === "text" ? [alert.term] : undefined;
-      enriched.matched_icao =
-        alert.matchType === "icao" ? [alert.term] : undefined;
-      enriched.matched_flight =
-        alert.matchType === "flight" ? [alert.term] : undefined;
-      enriched.matched_tail =
-        alert.matchType === "tail" ? [alert.term] : undefined;
-      return enriched;
-    });
+    // Use the ring buffer — same authoritative source as handleConnect —
+    // instead of querying the DB directly and re-enriching.
+    const alerts = getRecentAlerts();
 
     socket.emit("recent_alerts", { alerts });
 
@@ -921,26 +941,25 @@ async function handleRRDTimeseries(
         return;
       }
 
-      const cached = getCachedTimeSeries(period);
+      const result = getOrQueryTimeSeries(period);
 
-      if (cached !== null) {
-        socket.emit("rrd_timeseries_data", cached);
-        logger.debug("Served time-series from cache", {
+      if (result !== null) {
+        socket.emit("rrd_timeseries_data", result);
+        logger.debug("Served time-series response", {
           socketId: socket.id,
           period,
-          points: cached.points,
+          points: result.points,
         });
       } else {
-        // Narrow startup race: initTimeSeriesCache() hasn't finished yet.
-        // This should be sub-millisecond in practice because the cache is
-        // warmed before any sockets are accepted, but we handle it cleanly.
+        // Narrow startup race: warm-tier cache hasn't finished populating yet.
+        // Lazy and query-only periods return null only when the DB query fails.
         socket.emit("rrd_timeseries_data", {
-          error: "Cache warming up — retry in a moment",
+          error: "Time-series data unavailable — retry in a moment",
           data: [],
           time_period: period,
           points: 0,
         });
-        logger.warn("Time-series cache miss during warmup", {
+        logger.warn("Time-series response unavailable", {
           socketId: socket.id,
           period,
         });

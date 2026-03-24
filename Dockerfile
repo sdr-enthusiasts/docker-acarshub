@@ -11,17 +11,25 @@ WORKDIR /workspace
 # vite.config.ts (frontend) and config.ts (backend) — no ARG injection needed.
 ARG BUILD_NUMBER=0
 
-# Copy workspace manifests first for better layer caching
+# ── Dependency layer ─────────────────────────────────────────
+# Copy manifests and lockfile before source so Docker can cache
+# the npm ci layer independently of source changes.
 COPY package.json package-lock.json tsconfig.json tsconfig.base.json ./
-COPY acarshub-react/ ./acarshub-react/
-COPY acarshub-backend/ ./acarshub-backend/
-COPY acarshub-types/ ./acarshub-types/
+COPY acarshub-react/package.json  ./acarshub-react/package.json
+COPY acarshub-backend/package.json ./acarshub-backend/package.json
+COPY acarshub-types/package.json  ./acarshub-types/package.json
 
 # Install all workspace dependencies (devDeps required for tsc/vite build tools)
 # --loglevel=error suppresses deprecation warnings from transitive deps in @lhci/cli
 # and drizzle-kit (both at latest versions; upstream fixes required to remove them)
 RUN set -xe && \
     npm ci --include=dev --loglevel=error
+
+# ── Source layer ─────────────────────────────────────────────
+# Copied after npm ci so the dependency layer survives source edits.
+COPY acarshub-react/ ./acarshub-react/
+COPY acarshub-backend/ ./acarshub-backend/
+COPY acarshub-types/ ./acarshub-types/
 
 # Re-declare ARG after FROM so it is in scope for the RUN
 ARG BUILD_NUMBER=0
@@ -252,7 +260,7 @@ EXPOSE 5558/udp
 ENV ENABLE_ACARS="false" \
     ENABLE_VDLM="false" \
     ENABLE_ADSB="false" \
-    MIN_LOG_LEVEL=3 \
+    MIN_LOG_LEVEL=4 \
     DB_SAVEALL="true" \
     ENABLE_RANGE_RINGS="true" \
     ADSB_URL="http://tar1090/data/aircraft.json" \

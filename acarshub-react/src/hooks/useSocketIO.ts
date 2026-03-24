@@ -19,9 +19,9 @@ import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import type { AcarsMsg, HtmlMsg, Labels } from "../types";
 import {
-  ALL_TIME_PERIODS,
   isValidTimePeriod,
   type TimeSeriesCacheEntry,
+  WARM_PERIODS,
 } from "../types/timeseries";
 import { socketLogger } from "../utils/logger";
 
@@ -40,6 +40,7 @@ export const useSocketIO = () => {
     (state) => state.setMigrationInProgress,
   );
   const addMessage = useAppStore((state) => state.addMessage);
+  const clearAlertMessages = useAppStore((state) => state.clearAlertMessages);
   const setLabels = useAppStore((state) => state.setLabels);
   const setAlertTerms = useAppStore((state) => state.setAlertTerms);
   const setDecoders = useAppStore((state) => state.setDecoders);
@@ -81,14 +82,21 @@ export const useSocketIO = () => {
       });
       setConnected(true);
 
-      // Request all eight time-series periods immediately on every connect
-      // (including reconnects) so the cache is warm before the user visits
-      // the Stats page.  The backend answers from its own in-memory cache, so
-      // these eight requests are very cheap and arrive nearly instantly.
-      // Subsequent updates arrive as unsolicited pushes on the backend's
-      // wall-clock-aligned refresh schedule — no further requests needed.
-      socketLogger.debug("Requesting time-series warm-up for all periods");
-      for (const period of ALL_TIME_PERIODS) {
+      // Request only the warm-tier time-series periods (1hr, 6hr, 12hr) on
+      // connect.  These are pre-computed by the backend at startup and served
+      // from memory, so the Stats page loads instantly for the common
+      // short-window views.  Subsequent pushes arrive automatically on the
+      // backend's wall-clock-aligned refresh schedule — no further requests
+      // needed for warm periods.
+      //
+      // Non-warm periods (24hr, 1wk, 30day, 6mon, 1yr) are requested
+      // on-demand by useRRDTimeSeriesData when the user navigates to them.
+      // This avoids triggering expensive GROUP BY queries (the 1yr query
+      // scans up to 525,600 rows) on every client connect.
+      socketLogger.debug(
+        "Requesting time-series warm-up for warm-tier periods",
+      );
+      for (const period of WARM_PERIODS) {
         // @ts-expect-error — Flask-SocketIO requires namespace as third arg
         socket.emit("rrd_timeseries", { time_period: period }, "/main");
       }
@@ -160,6 +168,20 @@ export const useSocketIO = () => {
         }
       },
     );
+
+    // Wholesale alert buffer refresh — broadcast by the backend after alert
+    // term changes or alert match regeneration.  Replaces the entire
+    // alertMessageGroups in the store so connected clients see up-to-date
+    // alert content without requiring a reconnect.
+    socket.on("alerts_refreshed", (data: { messages: AcarsMsg[] }) => {
+      socketLogger.info("Received alerts_refreshed event", {
+        count: data.messages?.length || 0,
+      });
+      clearAlertMessages();
+      for (const message of data.messages) {
+        addMessage(message);
+      }
+    });
 
     // Core message event - most frequent event
     socket.on("acars_msg", (data: HtmlMsg) => {
@@ -365,6 +387,7 @@ export const useSocketIO = () => {
       socket.off("acars_msg_batch");
       socket.off("alert_matches");
       socket.off("alert_matches_batch");
+      socket.off("alerts_refreshed");
       socket.off("labels");
       socket.off("terms");
 
@@ -399,6 +422,7 @@ export const useSocketIO = () => {
   }, [
     setConnected,
     addMessage,
+    clearAlertMessages,
     setLabels,
     setAlertTerms,
     setDecoders,

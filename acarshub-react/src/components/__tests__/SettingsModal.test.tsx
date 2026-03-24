@@ -123,19 +123,20 @@ describe("SettingsModal", () => {
     it("should render all tabs", () => {
       render(<SettingsModal />);
 
-      // Only 5 tabs exist: Appearance, Regional & Time, Notifications, Data & Privacy, Advanced
       expect(
         screen.getByRole("tab", { name: "Appearance" }),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("tab", { name: "Regional & Time" }),
       ).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Alerts" })).toBeInTheDocument();
       expect(
         screen.getByRole("tab", { name: "Notifications" }),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("tab", { name: "Data & Privacy" }),
       ).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Map" })).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Advanced" })).toBeInTheDocument();
     });
 
@@ -173,6 +174,12 @@ describe("SettingsModal", () => {
       // Switch to Regional & Time
       await user.click(screen.getByRole("tab", { name: "Regional & Time" }));
       expect(screen.getByLabelText("Time Format")).toBeInTheDocument();
+
+      // Switch to Alerts
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
+      expect(
+        screen.getByText("Alert Terms", { selector: "h3" }),
+      ).toBeInTheDocument();
 
       // Switch to Notifications
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
@@ -545,11 +552,11 @@ describe("SettingsModal", () => {
       useAppStore.setState({ settingsOpen: true });
     });
 
-    it("should display alert terms section in Notifications tab", async () => {
+    it("should display alert terms section in Alerts tab", async () => {
       const user = userEvent.setup();
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       expect(
         screen.getByText("Alert Terms", { selector: "h3" }),
@@ -560,7 +567,7 @@ describe("SettingsModal", () => {
       const user = userEvent.setup();
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
       const inputs = screen.getAllByPlaceholderText(
@@ -607,7 +614,7 @@ describe("SettingsModal", () => {
       useAppStore.setState({ settingsOpen: true });
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
       const inputs = screen.getAllByPlaceholderText(
@@ -639,7 +646,7 @@ describe("SettingsModal", () => {
       useAppStore.setState({ settingsOpen: true });
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
       const inputs = screen.getAllByPlaceholderText(
@@ -672,7 +679,7 @@ describe("SettingsModal", () => {
 
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
       const inputs = screen.getAllByPlaceholderText(
@@ -707,7 +714,7 @@ describe("SettingsModal", () => {
 
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
       const inputs = screen.getAllByPlaceholderText(
@@ -745,7 +752,7 @@ describe("SettingsModal", () => {
 
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
       const inputs = screen.getAllByPlaceholderText(
@@ -784,7 +791,7 @@ describe("SettingsModal", () => {
 
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
       const inputs = screen.getAllByPlaceholderText(
@@ -812,7 +819,7 @@ describe("SettingsModal", () => {
 
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       const maydayChip = screen.getByText("MAYDAY").closest(".alert-term-chip");
       const removeButton = within(maydayChip as HTMLElement).getByRole(
@@ -848,7 +855,7 @@ describe("SettingsModal", () => {
 
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, second is ignore terms
       const inputs = screen.getAllByPlaceholderText(
@@ -882,7 +889,7 @@ describe("SettingsModal", () => {
       useAppStore.setState({ settingsOpen: true });
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, second is ignore terms
       const inputs = screen.getAllByPlaceholderText(
@@ -918,7 +925,7 @@ describe("SettingsModal", () => {
 
       render(<SettingsModal />);
 
-      await user.click(screen.getByRole("tab", { name: "Notifications" }));
+      await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       const testChip = screen.getByText("TEST").closest(".alert-term-chip");
       const removeButton = within(testChip as HTMLElement).getByRole("button", {

@@ -475,9 +475,9 @@ test.describe("Alert Message Card Interactions", () => {
     // The Alerts nav link may carry an "(N)" badge that changes its accessible
     // name — use a starts-with regex to match regardless of badge presence.
     await navigateTo(page, /^alerts/i);
-    await expect(
-      page.locator("h1.page__title", { hasText: /alerts/i }),
-    ).toBeVisible();
+    // .page__header is hidden at viewport heights below 800px, so assert a
+    // content-area element that is always visible regardless of viewport size.
+    await expect(page.locator(".alerts-page__mode-toggle")).toBeVisible();
   });
 
   // -------------------------------------------------------------------------
@@ -535,6 +535,11 @@ test.describe("Alert Message Card Interactions", () => {
   // -------------------------------------------------------------------------
 
   test("Mark All Read button clears the unread count", async ({ page }) => {
+    // .page__header (which contains .page__stats and Mark All Read) is hidden
+    // at viewport heights below 800px.  Increase height so the header is visible.
+    const vp = page.viewportSize() ?? { width: 1280, height: 720 };
+    await page.setViewportSize({ ...vp, height: 900 });
+
     const i1 = await injectAlert(page, MSG_ALERT_TEXT);
     expect(i1).toBe(true);
     const i2 = await injectAlert(page, MSG_ALERT_FLIGHT);

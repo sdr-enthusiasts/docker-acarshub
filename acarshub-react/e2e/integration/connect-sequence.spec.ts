@@ -85,6 +85,9 @@ test.describe("Connect sequence — full stack", () => {
   test("alerts page shows non-zero total-alerts stat after connect", async ({
     page,
   }) => {
+    // .page__stats lives inside .page__header which is hidden below 800px.
+    // Desktop Chrome default viewport is 1280×720, so increase height.
+    await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/alerts");
     await waitForPageReady(page);
 

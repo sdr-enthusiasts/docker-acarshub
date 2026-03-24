@@ -44,10 +44,11 @@ async function goToAlerts(page: Page): Promise<void> {
   await expect(page.locator("header.navigation")).toBeVisible({
     timeout: 20_000,
   });
-  // The Alerts page title heading should appear quickly
-  await expect(
-    page.getByRole("heading", { name: /alerts/i }).first(),
-  ).toBeVisible({ timeout: 15_000 });
+  // .page__header is hidden at viewport heights below 800px, so assert a
+  // content-area element that is always visible regardless of viewport size.
+  await expect(page.locator(".alerts-page__mode-toggle")).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +62,9 @@ test.describe("Alerts page — full stack", () => {
   test("alerts page shows non-zero total alerts after connect", async ({
     page,
   }) => {
+    // .page__stats lives inside .page__header which is hidden below 800px.
+    // Desktop Chrome default viewport is 1280×720, so increase height.
+    await page.setViewportSize({ width: 1280, height: 900 });
     await goToAlerts(page);
 
     // The page stats bar renders:
@@ -86,6 +90,7 @@ test.describe("Alerts page — full stack", () => {
   test("historical mode dropdown contains seed alert terms", async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     await goToAlerts(page);
 
     // Wait for alert data to load (total alerts stat > 0)
@@ -115,6 +120,7 @@ test.describe("Alerts page — full stack", () => {
 
   // ── Test 3: Historical mode loads results for a known term ─────────────
   test("historical mode shows messages for term 'WN4899'", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     await goToAlerts(page);
 
     // Wait for total alerts stat to confirm data has loaded

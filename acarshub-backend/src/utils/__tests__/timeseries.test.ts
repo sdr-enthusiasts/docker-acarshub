@@ -33,6 +33,7 @@ import {
   isValidTimePeriod,
   PERIOD_CONFIG,
   type TimeSeriesRawPoint,
+  WARM_PERIODS,
   zeroFillBuckets,
 } from "../timeseries.js";
 
@@ -115,9 +116,15 @@ describe("PERIOD_CONFIG", () => {
     }
   });
 
-  it("has positive refreshIntervalMs for every period", () => {
+  it("has positive refreshIntervalMs for warm and lazy tier periods", () => {
     for (const period of ALL_TIME_PERIODS) {
-      expect(PERIOD_CONFIG[period].refreshIntervalMs).toBeGreaterThan(0);
+      const cfg = PERIOD_CONFIG[period];
+      if (cfg.tier === "query-only") {
+        // query-only periods deliberately have refreshIntervalMs = 0 (no timer)
+        expect(cfg.refreshIntervalMs).toBe(0);
+      } else {
+        expect(cfg.refreshIntervalMs).toBeGreaterThan(0);
+      }
     }
   });
 
@@ -145,12 +152,14 @@ describe("PERIOD_CONFIG", () => {
     expect(PERIOD_CONFIG["30day"].refreshIntervalMs).toBe(3_600_000);
   });
 
-  it("6mon refreshes every 6 hours", () => {
-    expect(PERIOD_CONFIG["6mon"].refreshIntervalMs).toBe(21_600_000);
+  it("6mon is query-only with refreshIntervalMs = 0", () => {
+    expect(PERIOD_CONFIG["6mon"].tier).toBe("query-only");
+    expect(PERIOD_CONFIG["6mon"].refreshIntervalMs).toBe(0);
   });
 
-  it("1yr refreshes every 12 hours", () => {
-    expect(PERIOD_CONFIG["1yr"].refreshIntervalMs).toBe(43_200_000);
+  it("1yr is query-only with refreshIntervalMs = 0", () => {
+    expect(PERIOD_CONFIG["1yr"].tier).toBe("query-only");
+    expect(PERIOD_CONFIG["1yr"].refreshIntervalMs).toBe(0);
   });
 
   it("startOffset for 1hr is 3600 seconds", () => {
@@ -161,10 +170,69 @@ describe("PERIOD_CONFIG", () => {
     expect(PERIOD_CONFIG["1yr"].startOffset).toBe(31_536_000);
   });
 
+  it("each period has a tier field", () => {
+    for (const period of ALL_TIME_PERIODS) {
+      const tier = PERIOD_CONFIG[period].tier;
+      expect(["warm", "lazy", "query-only"]).toContain(tier);
+    }
+  });
+
+  it("1hr, 6hr, 12hr are warm tier", () => {
+    expect(PERIOD_CONFIG["1hr"].tier).toBe("warm");
+    expect(PERIOD_CONFIG["6hr"].tier).toBe("warm");
+    expect(PERIOD_CONFIG["12hr"].tier).toBe("warm");
+  });
+
+  it("24hr, 1wk, 30day are lazy tier", () => {
+    expect(PERIOD_CONFIG["24hr"].tier).toBe("lazy");
+    expect(PERIOD_CONFIG["1wk"].tier).toBe("lazy");
+    expect(PERIOD_CONFIG["30day"].tier).toBe("lazy");
+  });
+
   it("longer periods have longer startOffsets (monotonically increasing)", () => {
     const offsets = ALL_TIME_PERIODS.map((p) => PERIOD_CONFIG[p].startOffset);
     for (let i = 1; i < offsets.length; i++) {
       expect(offsets[i]).toBeGreaterThan(offsets[i - 1]);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WARM_PERIODS
+// ---------------------------------------------------------------------------
+
+describe("WARM_PERIODS", () => {
+  it("contains exactly 1hr, 6hr, 12hr", () => {
+    expect([...WARM_PERIODS].sort()).toEqual(["12hr", "1hr", "6hr"]);
+  });
+
+  it("has length 3", () => {
+    expect(WARM_PERIODS.length).toBe(3);
+  });
+
+  it("every entry is a valid TimePeriod", () => {
+    for (const period of WARM_PERIODS) {
+      expect(isValidTimePeriod(period)).toBe(true);
+    }
+  });
+
+  it("every entry in WARM_PERIODS has tier === 'warm' in PERIOD_CONFIG", () => {
+    for (const period of WARM_PERIODS) {
+      expect(PERIOD_CONFIG[period].tier).toBe("warm");
+    }
+  });
+
+  it("no query-only or lazy period appears in WARM_PERIODS", () => {
+    for (const period of ALL_TIME_PERIODS) {
+      if (PERIOD_CONFIG[period].tier !== "warm") {
+        expect(WARM_PERIODS).not.toContain(period);
+      }
+    }
+  });
+
+  it("is a subset of ALL_TIME_PERIODS", () => {
+    for (const period of WARM_PERIODS) {
+      expect(ALL_TIME_PERIODS).toContain(period);
     }
   });
 });

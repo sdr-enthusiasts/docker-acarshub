@@ -62,12 +62,22 @@ import {
 import { initializeConfig } from "../../config.js";
 import {
   closeDatabase,
+  getCachedAlertIgnoreTerms,
+  getCachedAlertTerms,
   initDatabase,
   initializeAlertCache,
   initializeMessageCounters,
   initializeMessageCounts,
+  regenerateAllAlertMatches,
+  setAlertTerms,
 } from "../../db/index.js";
 import { runMigrations } from "../../db/migrate.js";
+import {
+  initMessageBuffers,
+  reheatMessageBuffers,
+  resetMessageBuffersForTesting,
+  warmMessageBuffers,
+} from "../../services/message-ring-buffer.js";
 import {
   initTimeSeriesCache,
   stopTimeSeriesCache,
@@ -140,6 +150,11 @@ async function createTestServer(dbPath: string): Promise<TestServer> {
     cors: { origin: "*", credentials: true },
   });
 
+  // Initialise and seed the message ring buffers so handleConnect() can
+  // serve recent messages from memory rather than querying the DB per-connect.
+  initMessageBuffers();
+  await warmMessageBuffers();
+
   // Warm the time-series cache so rrd_timeseries requests are served from
   // memory rather than returning a "warming up" error.  The broadcaster
   // pushes refreshed data to all connected clients on the /main namespace.
@@ -157,6 +172,8 @@ async function createTestServer(dbPath: string): Promise<TestServer> {
       // Stop the cache timers before closing so no callbacks fire after the
       // database connection is closed.
       stopTimeSeriesCache();
+      // Reset message ring buffers so the next test suite gets a clean state.
+      resetMessageBuffersForTesting();
       // Disconnect all active sockets before closing the HTTP server so that
       // fastify.close() does not hang waiting for open connections.
       io.of("/main").disconnectSockets(true);
@@ -801,6 +818,23 @@ describe("Socket.IO integration", () => {
   // -------------------------------------------------------------------------
 
   describe("5.1.3 — update_alerts", () => {
+    // update_alerts mutates alert_stats AND alert_matches (setAlertTerms
+    // purges matches for removed terms).  We restore the seed DB state in
+    // afterAll so downstream tests that rely on the original 92 alert_matches
+    // (e.g. query_alerts_by_term, request_recent_alerts) are not affected.
+
+    afterAll(async () => {
+      // Restore the three original seed alert terms
+      setAlertTerms(["WN4899", "N8560Z", "XA0001"]);
+      // Rebuild alert_matches from the full messages table
+      regenerateAllAlertMatches(
+        getCachedAlertTerms(),
+        getCachedAlertIgnoreTerms(),
+      );
+      // Refresh ring buffers so subsequent tests see the restored data
+      await reheatMessageBuffers();
+    });
+
     it("broadcasts updated terms to ALL connected clients", async () => {
       const clientA = connectClient(server.port);
       const clientB = connectClient(server.port);

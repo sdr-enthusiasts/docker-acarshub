@@ -81,7 +81,7 @@
 
     // Tab styling
     position: relative;
-    padding: $spacing-sm $spacing-md;
+    padding: $spacing-sm $spacing-sm;
     min-width: max-content;
     white-space: nowrap;
     font-size: $font-size-sm;
@@ -99,8 +99,8 @@
     align-items: center;
     justify-content: center;
 
-    @include media-md {
-      padding: $spacing-md $spacing-lg;
+    @include media-lg {
+      padding: $spacing-sm $spacing-lg;
       font-size: $font-size-base;
       min-height: auto;
     }

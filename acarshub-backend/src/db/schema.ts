@@ -10,7 +10,7 @@
  * - SQLite-specific types and constraints
  *
  * Schema includes:
- * - messages: Main ACARS message storage (with UID)
+ * - messages: Main ACARS message storage
  * - alert_matches: Normalized alert junction table (replaces messages_saved)
  * - Frequency statistics tables (per decoder type)
  * - Signal level statistics tables (per decoder type)
@@ -35,7 +35,6 @@ import {
  * Primary table for storing ACARS messages
  *
  * Indexes:
- * - uid: UNIQUE index for fast UID lookups
  * - depa, dsta, flight, freq, icao, label, msg_text, msgno, tail: Non-unique for searches
  * - aircraft_id: For future aircraft tracking feature (v5+)
  * - Composite indexes for common query patterns (added in migration 8)
@@ -44,7 +43,6 @@ export const messages = sqliteTable(
   "messages",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    uid: text("uid", { length: 36 }).notNull().unique(),
     messageType: text("message_type", { length: 32 }).notNull(),
     time: integer("msg_time").notNull(), // Unix timestamp
     stationId: text("station_id", { length: 32 }).notNull(),
@@ -79,24 +77,15 @@ export const messages = sqliteTable(
   },
   (table) => ({
     // Single-column indexes
-    uidIdx: uniqueIndex("ix_messages_uid").on(table.uid),
     depaIdx: index("ix_messages_depa").on(table.depa),
     dstaIdx: index("ix_messages_dsta").on(table.dsta),
     flightIdx: index("ix_messages_flight").on(table.flight),
     freqIdx: index("ix_messages_freq").on(table.freq),
     icaoIdx: index("ix_messages_icao").on(table.icao),
     labelIdx: index("ix_messages_label").on(table.label),
-    msgTextIdx: index("ix_messages_msg_text").on(table.text),
     msgnoIdx: index("ix_messages_msgno").on(table.msgno),
     tailIdx: index("ix_messages_tail").on(table.tail),
-    aircraftIdIdx: index("ix_messages_aircraft_id").on(table.aircraftId),
     // Composite indexes (added in migration 8 for query optimization)
-    timeIcaoIdx: index("ix_messages_time_icao").on(table.time, table.icao),
-    tailFlightIdx: index("ix_messages_tail_flight").on(
-      table.tail,
-      table.flight,
-    ),
-    depaDstaIdx: index("ix_messages_depa_dsta").on(table.depa, table.dsta),
     typeTimeIdx: index("ix_messages_type_time").on(
       table.messageType,
       table.time,
@@ -121,20 +110,20 @@ export const alertMatches = sqliteTable(
   "alert_matches",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    messageUid: text("message_uid", { length: 36 }).notNull(),
+    messageId: integer("message_id").notNull(),
     term: text("term", { length: 32 }).notNull(),
     matchType: text("match_type", { length: 32 }).notNull(),
     matchedAt: integer("matched_at").notNull(), // Unix timestamp when match was created
   },
   (table) => ({
-    messageUidIdx: index("ix_alert_matches_message_uid").on(table.messageUid),
+    messageIdIdx: index("ix_alert_matches_message_id").on(table.messageId),
     // Composite indexes (added in migration 8)
     termTimeIdx: index("ix_alert_matches_term_time").on(
       table.term,
       table.matchedAt,
     ),
-    uidTermIdx: index("ix_alert_matches_uid_term").on(
-      table.messageUid,
+    idTermIdx: index("ix_alert_matches_id_term").on(
+      table.messageId,
       table.term,
     ),
   }),

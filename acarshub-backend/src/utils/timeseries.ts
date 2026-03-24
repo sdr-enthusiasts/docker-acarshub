@@ -128,6 +128,32 @@ export interface TimeSeriesResponse {
 // Period configuration
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Cache tier classification
+// ---------------------------------------------------------------------------
+
+/**
+ * How aggressively the backend caches a given time period.
+ *
+ * - "warm"       — Kept in memory at all times; refresh timers are armed at
+ *                  startup; fresh results are broadcast to all clients on
+ *                  every refresh tick.  Appropriate for short windows where
+ *                  a new data point materially changes the chart shape.
+ *
+ * - "lazy"       — Not kept warm at startup.  Queried from the DB on first
+ *                  request and cached briefly (TTL = refreshIntervalMs).
+ *                  Subsequent requests within the TTL window are served from
+ *                  the lazy cache; after expiry the DB is queried again.
+ *                  Never broadcast unsolicited.
+ *
+ * - "query-only" — Never cached.  Every request hits the DB directly.
+ *                  refreshIntervalMs = 0.  Appropriate for very long windows
+ *                  (6mon, 1yr) where the data barely changes and the query
+ *                  cost is high enough that we should NOT keep the result in
+ *                  memory when no client is looking at it.
+ */
+export type CacheTier = "warm" | "lazy" | "query-only";
+
 /**
  * Configuration for one time-period entry in the cache.
  */
@@ -149,8 +175,15 @@ export interface PeriodConfig {
    * The shortest-lived windows are refreshed most frequently because new data
    * (written every minute by the stats-writer) makes the most visible
    * difference there.
+   *
+   * Set to 0 for "query-only" periods that are never cached.
    */
   refreshIntervalMs: number;
+  /**
+   * Caching tier for this period.
+   * Controls how aggressively the backend holds this period in memory.
+   */
+  tier: CacheTier;
 }
 
 /**
@@ -158,63 +191,95 @@ export interface PeriodConfig {
  *
  * Refresh cadence is intentionally coarser for longer windows:
  *
- *   1hr / 6hr / 12hr → every 1 minute   (on the UTC :00 second)
- *   24hr             → every 5 minutes   (00:00, 00:05, 00:10 …)
- *   1wk              → every 30 minutes  (00:00, 00:30, 01:00 …)
- *   30day            → every 1 hour      (00:00, 01:00, 02:00 …)
- *   6mon             → every 6 hours     (00:00, 06:00, 12:00, 18:00 UTC)
- *   1yr              → every 12 hours    (00:00, 12:00 UTC)
+ *   1hr / 6hr / 12hr → warm tier, every 1 minute   (on the UTC :00 second)
+ *   24hr             → lazy tier, TTL 5 minutes
+ *   1wk              → lazy tier, TTL 30 minutes
+ *   30day            → lazy tier, TTL 1 hour
+ *   6mon             → query-only (refreshIntervalMs = 0, never cached)
+ *   1yr              → query-only (refreshIntervalMs = 0, never cached)
  *
  * WHY THESE NUMBERS
  * -----------------
  * The stats-writer inserts one row per minute.  A new minute of data
  * produces a noticeable change on the 1hr chart (1/60 of the window) but
- * is imperceptible on the 1yr chart (1/525600 of the window).  Refreshing
- * the 1yr cache every 12 hours matches the downsample bucket width (43200 s)
- * so the chart never shows a partial bucket at the trailing edge.
+ * is imperceptible on the 1yr chart (1/525600 of the window).
+ *
+ * WHY query-only FOR 6mon/1yr
+ * ---------------------------
+ * Building a 1yr response requires a GROUP BY AVG over up to 525,600 rows.
+ * Keeping that result in memory on a 12-hour timer causes a large, predictable
+ * heap spike — measured at ~420 MB — even when no client ever looks at the
+ * 1yr chart.  Making these periods query-only means the expensive query only
+ * runs when a client explicitly requests those views, and the result is
+ * immediately discarded rather than held in RAM indefinitely.
  */
 export const PERIOD_CONFIG: Readonly<Record<TimePeriod, PeriodConfig>> = {
   "1hr": {
     startOffset: 3_600,
     downsample: 60,
     refreshIntervalMs: 60_000,
+    tier: "warm",
   },
   "6hr": {
     startOffset: 21_600,
     downsample: 60,
     refreshIntervalMs: 60_000,
+    tier: "warm",
   },
   "12hr": {
     startOffset: 43_200,
     downsample: 60,
     refreshIntervalMs: 60_000,
+    tier: "warm",
   },
   "24hr": {
     startOffset: 86_400,
     downsample: 300,
     refreshIntervalMs: 300_000,
+    tier: "lazy",
   },
   "1wk": {
     startOffset: 604_800,
     downsample: 1_800,
     refreshIntervalMs: 1_800_000,
+    tier: "lazy",
   },
   "30day": {
     startOffset: 2_592_000,
     downsample: 3_600,
     refreshIntervalMs: 3_600_000,
+    tier: "lazy",
   },
   "6mon": {
     startOffset: 15_768_000,
     downsample: 21_600,
-    refreshIntervalMs: 21_600_000,
+    refreshIntervalMs: 0,
+    tier: "query-only",
   },
   "1yr": {
     startOffset: 31_536_000,
     downsample: 43_200,
-    refreshIntervalMs: 43_200_000,
+    refreshIntervalMs: 0,
+    tier: "query-only",
   },
 } as const;
+
+/**
+ * The subset of TimePeriod values that use the "warm" cache tier.
+ *
+ * These are the periods kept in memory at all times and broadcast to clients
+ * on every scheduled refresh.  The frontend requests exactly these periods
+ * on connect so the Stats page loads instantly for common short-window views.
+ *
+ * Exported here (the single source of truth) so that both timeseries-cache.ts
+ * and the frontend types/timeseries.ts can derive their own constants from
+ * PERIOD_CONFIG rather than duplicating the literal list.
+ */
+export const WARM_PERIODS: readonly TimePeriod[] = (
+  Object.entries(PERIOD_CONFIG) as [TimePeriod, PeriodConfig][]
+)
+  .filter(([, cfg]) => cfg.tier === "warm")
+  .map(([period]) => period);
 
 // ---------------------------------------------------------------------------
 // Zero-fill

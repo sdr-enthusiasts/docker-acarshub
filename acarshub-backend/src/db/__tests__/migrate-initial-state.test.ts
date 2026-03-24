@@ -339,7 +339,7 @@ describe("Migration from initial Alembic state", () => {
       .get() as { version_num: string } | undefined;
 
     expect(version).toBeDefined();
-    expect(version?.version_num).toBe("b6c7d8e9f0a1");
+    expect(version?.version_num).toBe("8c9d47f5ed13");
 
     testDb.close();
   });
@@ -448,32 +448,6 @@ describe("Migration from initial Alembic state", () => {
     testDb.close();
   });
 
-  test("should add uid column and generate UIDs for existing messages", () => {
-    runMigrations(TEST_DB_PATH);
-
-    const testDb = new Database(TEST_DB_PATH);
-
-    // Check that uid column exists
-    const columns = testDb
-      .prepare("PRAGMA table_info(messages)")
-      .all() as Array<{ name: string }>;
-    const hasUid = columns.some((col) => col.name === "uid");
-    expect(hasUid).toBe(true);
-
-    // Check that all messages have UIDs
-    const totalMessages = testDb
-      .prepare("SELECT COUNT(*) as count FROM messages")
-      .get() as { count: number };
-    const messagesWithUid = testDb
-      .prepare("SELECT COUNT(*) as count FROM messages WHERE uid IS NOT NULL")
-      .get() as { count: number };
-
-    expect(messagesWithUid.count).toBe(totalMessages.count);
-    expect(totalMessages.count).toBe(33); // 10 + 15 + 8
-
-    testDb.close();
-  });
-
   test("should add aircraft_id column", () => {
     runMigrations(TEST_DB_PATH);
 
@@ -525,12 +499,9 @@ describe("Migration from initial Alembic state", () => {
 
     const indexNames = indexes.map((idx) => idx.name);
 
-    expect(indexNames).toContain("ix_messages_time_icao");
-    expect(indexNames).toContain("ix_messages_tail_flight");
-    expect(indexNames).toContain("ix_messages_depa_dsta");
     expect(indexNames).toContain("ix_messages_type_time");
     expect(indexNames).toContain("ix_alert_matches_term_time");
-    expect(indexNames).toContain("ix_alert_matches_uid_term");
+    expect(indexNames).toContain("ix_alert_matches_id_term");
 
     testDb.close();
   });
@@ -698,6 +669,68 @@ describe("Migration from initial Alembic state", () => {
         ON timeseries_stats (resolution);
     `);
 
+    // Add messages table (as it would exist at migration-6+ state with uid column)
+    // and alert_matches table (as created by migration-7 with message_uid column)
+    // so that migrations 13 and 14 can operate on them.
+    // First drop the tables/triggers/FTS created by beforeEach so we can
+    // recreate them with the schema expected at this migration state.
+    setupDb.exec(`
+      DROP TRIGGER IF EXISTS messages_fts_insert;
+      DROP TRIGGER IF EXISTS messages_fts_delete;
+      DROP TRIGGER IF EXISTS messages_fts_update;
+      DROP TABLE IF EXISTS messages_fts;
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS messages_saved;
+      DROP TABLE IF EXISTS alert_matches;
+    `);
+    setupDb.exec(`
+      CREATE TABLE messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_type VARCHAR(32) NOT NULL,
+        msg_time INTEGER NOT NULL,
+        station_id VARCHAR(32) NOT NULL,
+        toaddr VARCHAR(32) NOT NULL,
+        fromaddr VARCHAR(32) NOT NULL,
+        depa VARCHAR(32) NOT NULL,
+        dsta VARCHAR(32) NOT NULL,
+        eta VARCHAR(32) NOT NULL,
+        gtout VARCHAR(32) NOT NULL,
+        gtin VARCHAR(32) NOT NULL,
+        wloff VARCHAR(32) NOT NULL,
+        wlin VARCHAR(32) NOT NULL,
+        lat VARCHAR(32) NOT NULL,
+        lon VARCHAR(32) NOT NULL,
+        alt VARCHAR(32) NOT NULL,
+        msg_text TEXT NOT NULL,
+        tail VARCHAR(32) NOT NULL,
+        flight VARCHAR(32) NOT NULL,
+        icao VARCHAR(32) NOT NULL,
+        freq VARCHAR(32) NOT NULL,
+        ack VARCHAR(32) NOT NULL,
+        mode VARCHAR(32) NOT NULL,
+        label VARCHAR(32) NOT NULL,
+        block_id VARCHAR(32) NOT NULL,
+        msgno VARCHAR(32) NOT NULL,
+        is_response VARCHAR(32) NOT NULL,
+        is_onground VARCHAR(32) NOT NULL,
+        error VARCHAR(32) NOT NULL,
+        libacars TEXT NOT NULL,
+        level VARCHAR(32) NOT NULL,
+        uid TEXT,
+        aircraft_id TEXT
+      );
+      CREATE UNIQUE INDEX ix_messages_uid ON messages(uid);
+
+      CREATE TABLE alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+      CREATE INDEX ix_alert_matches_message_uid ON alert_matches(message_uid);
+    `);
+
     // Insert three rows for the same slot (simulating two extra imports)
     // and one clean row for a different slot.
     setupDb.exec(`
@@ -851,6 +884,65 @@ describe("Migration from initial Alembic state", () => {
       CREATE UNIQUE INDEX idx_rrd_import_registry_hash
         ON rrd_import_registry (file_hash);
     `);
+    // Add messages table (with uid column) and alert_matches table (with
+    // message_uid column) so migrations 13 and 14 can operate on them.
+    // First drop the tables/triggers/FTS created by beforeEach.
+    setupDb.exec(`
+      DROP TRIGGER IF EXISTS messages_fts_insert;
+      DROP TRIGGER IF EXISTS messages_fts_delete;
+      DROP TRIGGER IF EXISTS messages_fts_update;
+      DROP TABLE IF EXISTS messages_fts;
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS messages_saved;
+      DROP TABLE IF EXISTS alert_matches;
+    `);
+    setupDb.exec(`
+      CREATE TABLE messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_type VARCHAR(32) NOT NULL,
+        msg_time INTEGER NOT NULL,
+        station_id VARCHAR(32) NOT NULL,
+        toaddr VARCHAR(32) NOT NULL,
+        fromaddr VARCHAR(32) NOT NULL,
+        depa VARCHAR(32) NOT NULL,
+        dsta VARCHAR(32) NOT NULL,
+        eta VARCHAR(32) NOT NULL,
+        gtout VARCHAR(32) NOT NULL,
+        gtin VARCHAR(32) NOT NULL,
+        wloff VARCHAR(32) NOT NULL,
+        wlin VARCHAR(32) NOT NULL,
+        lat VARCHAR(32) NOT NULL,
+        lon VARCHAR(32) NOT NULL,
+        alt VARCHAR(32) NOT NULL,
+        msg_text TEXT NOT NULL,
+        tail VARCHAR(32) NOT NULL,
+        flight VARCHAR(32) NOT NULL,
+        icao VARCHAR(32) NOT NULL,
+        freq VARCHAR(32) NOT NULL,
+        ack VARCHAR(32) NOT NULL,
+        mode VARCHAR(32) NOT NULL,
+        label VARCHAR(32) NOT NULL,
+        block_id VARCHAR(32) NOT NULL,
+        msgno VARCHAR(32) NOT NULL,
+        is_response VARCHAR(32) NOT NULL,
+        is_onground VARCHAR(32) NOT NULL,
+        error VARCHAR(32) NOT NULL,
+        libacars TEXT NOT NULL,
+        level VARCHAR(32) NOT NULL,
+        uid TEXT,
+        aircraft_id TEXT
+      );
+      CREATE UNIQUE INDEX ix_messages_uid ON messages(uid);
+
+      CREATE TABLE alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+      CREATE INDEX ix_alert_matches_message_uid ON alert_matches(message_uid);
+    `);
     setupDb.exec(`
       INSERT INTO timeseries_stats
         (timestamp, resolution, acars_count, vdlm_count, hfdl_count,
@@ -862,7 +954,7 @@ describe("Migration from initial Alembic state", () => {
     `);
     setupDb.close();
 
-    // Apply only migration 12.
+    // Apply only migration 12 (plus 13 and 14).
     runMigrations(TEST_DB_PATH);
 
     const testDb = new Database(TEST_DB_PATH);
@@ -927,6 +1019,65 @@ describe("Migration from initial Alembic state", () => {
       CREATE UNIQUE INDEX idx_rrd_import_registry_hash
         ON rrd_import_registry (file_hash);
     `);
+    // Add messages table (with uid column) and alert_matches table (with
+    // message_uid column) so migrations 13 and 14 can operate on them.
+    // First drop the tables/triggers/FTS created by beforeEach.
+    setupDb.exec(`
+      DROP TRIGGER IF EXISTS messages_fts_insert;
+      DROP TRIGGER IF EXISTS messages_fts_delete;
+      DROP TRIGGER IF EXISTS messages_fts_update;
+      DROP TABLE IF EXISTS messages_fts;
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS messages_saved;
+      DROP TABLE IF EXISTS alert_matches;
+    `);
+    setupDb.exec(`
+      CREATE TABLE messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_type VARCHAR(32) NOT NULL,
+        msg_time INTEGER NOT NULL,
+        station_id VARCHAR(32) NOT NULL,
+        toaddr VARCHAR(32) NOT NULL,
+        fromaddr VARCHAR(32) NOT NULL,
+        depa VARCHAR(32) NOT NULL,
+        dsta VARCHAR(32) NOT NULL,
+        eta VARCHAR(32) NOT NULL,
+        gtout VARCHAR(32) NOT NULL,
+        gtin VARCHAR(32) NOT NULL,
+        wloff VARCHAR(32) NOT NULL,
+        wlin VARCHAR(32) NOT NULL,
+        lat VARCHAR(32) NOT NULL,
+        lon VARCHAR(32) NOT NULL,
+        alt VARCHAR(32) NOT NULL,
+        msg_text TEXT NOT NULL,
+        tail VARCHAR(32) NOT NULL,
+        flight VARCHAR(32) NOT NULL,
+        icao VARCHAR(32) NOT NULL,
+        freq VARCHAR(32) NOT NULL,
+        ack VARCHAR(32) NOT NULL,
+        mode VARCHAR(32) NOT NULL,
+        label VARCHAR(32) NOT NULL,
+        block_id VARCHAR(32) NOT NULL,
+        msgno VARCHAR(32) NOT NULL,
+        is_response VARCHAR(32) NOT NULL,
+        is_onground VARCHAR(32) NOT NULL,
+        error VARCHAR(32) NOT NULL,
+        libacars TEXT NOT NULL,
+        level VARCHAR(32) NOT NULL,
+        uid TEXT,
+        aircraft_id TEXT
+      );
+      CREATE UNIQUE INDEX ix_messages_uid ON messages(uid);
+
+      CREATE TABLE alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+      CREATE INDEX ix_alert_matches_message_uid ON alert_matches(message_uid);
+    `);
     // Same timestamp with '1min' (acars=42) and '5min' (acars=7).
     // Migration 12 must keep acars=42 (the '1min' row).
     setupDb.exec(`
@@ -957,6 +1108,147 @@ describe("Migration from initial Alembic state", () => {
     expect(row).toBeDefined();
     // The '1min' row (acars=42) must have won.
     expect(row?.acars_count).toBe(42);
+
+    testDb.close();
+  });
+
+  test("regression: migration 12 DROP INDEX IF EXISTS is safe when indexes were never created (fresh install path)", () => {
+    // Simulate a DB at migration-11 state where timeseries_stats was created
+    // WITHOUT the two indexes (idx_timeseries_timestamp_resolution and
+    // idx_timeseries_resolution).  This is the state produced by migration 9
+    // after the PR removes the CREATE INDEX calls.  Migration 12's bare
+    // DROP INDEX would throw on this database; DROP INDEX IF EXISTS must not.
+    const setupDb = new Database(TEST_DB_PATH);
+    setupDb.exec(`
+      CREATE TABLE alembic_version (version_num VARCHAR(32) PRIMARY KEY NOT NULL);
+      INSERT INTO alembic_version VALUES ('f0a1b2c3d4e5');
+    `);
+    // timeseries_stats has the old id/resolution schema but NO indexes —
+    // exactly what migration 9 produces after removing the CREATE INDEX calls.
+    setupDb.exec(`
+      CREATE TABLE timeseries_stats (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        timestamp     INTEGER NOT NULL,
+        resolution    TEXT    NOT NULL DEFAULT '1min',
+        acars_count   INTEGER DEFAULT 0 NOT NULL,
+        vdlm_count    INTEGER DEFAULT 0 NOT NULL,
+        hfdl_count    INTEGER DEFAULT 0 NOT NULL,
+        imsl_count    INTEGER DEFAULT 0 NOT NULL,
+        irdm_count    INTEGER DEFAULT 0 NOT NULL,
+        total_count   INTEGER DEFAULT 0 NOT NULL,
+        error_count   INTEGER DEFAULT 0 NOT NULL
+      );
+    `);
+    setupDb.exec(`
+      CREATE TABLE rrd_import_registry (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        file_hash   TEXT    NOT NULL UNIQUE,
+        rrd_path    TEXT    NOT NULL,
+        imported_at INTEGER NOT NULL,
+        rows_imported INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE UNIQUE INDEX idx_rrd_import_registry_hash
+        ON rrd_import_registry (file_hash);
+    `);
+    // Add messages table (with uid column) and alert_matches table (with
+    // message_uid column) so migrations 13 and 14 can operate on them.
+    // First drop the tables/triggers/FTS created by beforeEach.
+    setupDb.exec(`
+      DROP TRIGGER IF EXISTS messages_fts_insert;
+      DROP TRIGGER IF EXISTS messages_fts_delete;
+      DROP TRIGGER IF EXISTS messages_fts_update;
+      DROP TABLE IF EXISTS messages_fts;
+      DROP TABLE IF EXISTS messages;
+      DROP TABLE IF EXISTS messages_saved;
+      DROP TABLE IF EXISTS alert_matches;
+    `);
+    setupDb.exec(`
+      CREATE TABLE messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_type VARCHAR(32) NOT NULL,
+        msg_time INTEGER NOT NULL,
+        station_id VARCHAR(32) NOT NULL,
+        toaddr VARCHAR(32) NOT NULL,
+        fromaddr VARCHAR(32) NOT NULL,
+        depa VARCHAR(32) NOT NULL,
+        dsta VARCHAR(32) NOT NULL,
+        eta VARCHAR(32) NOT NULL,
+        gtout VARCHAR(32) NOT NULL,
+        gtin VARCHAR(32) NOT NULL,
+        wloff VARCHAR(32) NOT NULL,
+        wlin VARCHAR(32) NOT NULL,
+        lat VARCHAR(32) NOT NULL,
+        lon VARCHAR(32) NOT NULL,
+        alt VARCHAR(32) NOT NULL,
+        msg_text TEXT NOT NULL,
+        tail VARCHAR(32) NOT NULL,
+        flight VARCHAR(32) NOT NULL,
+        icao VARCHAR(32) NOT NULL,
+        freq VARCHAR(32) NOT NULL,
+        ack VARCHAR(32) NOT NULL,
+        mode VARCHAR(32) NOT NULL,
+        label VARCHAR(32) NOT NULL,
+        block_id VARCHAR(32) NOT NULL,
+        msgno VARCHAR(32) NOT NULL,
+        is_response VARCHAR(32) NOT NULL,
+        is_onground VARCHAR(32) NOT NULL,
+        error VARCHAR(32) NOT NULL,
+        libacars TEXT NOT NULL,
+        level VARCHAR(32) NOT NULL,
+        uid TEXT,
+        aircraft_id TEXT
+      );
+      CREATE UNIQUE INDEX ix_messages_uid ON messages(uid);
+
+      CREATE TABLE alert_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_uid TEXT NOT NULL,
+        term TEXT NOT NULL,
+        match_type TEXT NOT NULL,
+        matched_at INTEGER NOT NULL
+      );
+      CREATE INDEX ix_alert_matches_message_uid ON alert_matches(message_uid);
+    `);
+    setupDb.exec(`
+      INSERT INTO timeseries_stats
+        (timestamp, resolution, acars_count, total_count)
+      VALUES
+        (1704067200, '1min', 5, 5),
+        (1704067260, '1min', 3, 3);
+    `);
+    setupDb.close();
+
+    // Must not throw — migration 12's DROP INDEX IF EXISTS handles absent indexes.
+    expect(() => runMigrations(TEST_DB_PATH)).not.toThrow();
+
+    const testDb = new Database(TEST_DB_PATH);
+
+    // Both rows must survive the rebuild.
+    const rowCount = (
+      testDb
+        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
+        .get() as { n: number }
+    ).n;
+    expect(rowCount).toBe(2);
+
+    // Schema must be the migration-12 final form.
+    const columns = testDb
+      .prepare("PRAGMA table_info(timeseries_stats)")
+      .all() as Array<{ name: string; pk: number }>;
+    const columnNames = columns.map((c) => c.name);
+    expect(columnNames).not.toContain("id");
+    expect(columnNames).not.toContain("resolution");
+    expect(columnNames).toContain("timestamp");
+
+    // Neither old index should exist.
+    const indexes = testDb
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='timeseries_stats'",
+      )
+      .all() as Array<{ name: string }>;
+    const indexNames = indexes.map((i) => i.name);
+    expect(indexNames).not.toContain("idx_timeseries_timestamp_resolution");
+    expect(indexNames).not.toContain("idx_timeseries_resolution");
 
     testDb.close();
   });

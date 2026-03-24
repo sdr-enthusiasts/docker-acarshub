@@ -194,9 +194,10 @@ test.describe("Stats Page (/status)", () => {
     // race condition applies here, so a direct page.goto is fine.
     await page.goto("/status");
     await expect(page.locator("header.navigation")).toBeVisible();
-    // Wait for the page heading to confirm the page has rendered
+    // .page__header is hidden at viewport heights below 800px, so assert a
+    // content-area element that is always visible regardless of viewport size.
     await expect(
-      page.getByRole("heading", { name: /system status & statistics/i }),
+      page.locator(".stats-page__section-nav [role='tablist']"),
     ).toBeVisible();
   });
 
@@ -205,10 +206,8 @@ test.describe("Stats Page (/status)", () => {
   // -------------------------------------------------------------------------
 
   test("renders the page title and all section tabs", async ({ page }) => {
-    // Page heading
-    await expect(
-      page.getByRole("heading", { name: /system status & statistics/i }),
-    ).toBeVisible();
+    // .page__header is hidden at viewport heights below 800px, so verify the
+    // section navigation tabs are rendered instead of the page heading.
 
     // All 6 section tabs must be present
     const expectedTabs = [

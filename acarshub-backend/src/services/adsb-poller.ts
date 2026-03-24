@@ -96,7 +96,7 @@ export class AdsbPoller extends EventEmitter<AdsbPollerEvents> {
 
     this.isRunning = true;
 
-    logger.info("Starting ADS-B poller", {
+    logger.debug("Starting ADS-B poller", {
       url: this.config.url,
       pollInterval: this.config.pollInterval,
     });
@@ -176,7 +176,7 @@ export class AdsbPoller extends EventEmitter<AdsbPollerEvents> {
       // Emit for broadcasting
       this.emit("data", optimizedData);
 
-      logger.debug("ADS-B data fetched", {
+      logger.trace("ADS-B data fetched", {
         aircraftCount: optimizedData.aircraft.length,
       });
     } catch (err) {

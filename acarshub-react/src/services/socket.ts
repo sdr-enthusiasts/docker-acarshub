@@ -123,6 +123,7 @@ export interface ServerToClientEvents {
   // Alert data
   alert_terms: (data: { data: AlertTerm }) => void;
   recent_alerts: (data: { alerts: AcarsMsg[] }) => void;
+  alerts_refreshed: (data: { messages: AcarsMsg[] }) => void;
   alert_matches: (data: HtmlMsg) => void;
   alert_matches_batch: (data: {
     messages: AcarsMsg[];

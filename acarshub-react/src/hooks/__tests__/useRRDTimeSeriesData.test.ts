@@ -15,10 +15,10 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Tests for useRRDTimeSeriesData (store-selector mode).
+ * Tests for useRRDTimeSeriesData.
  *
- * The hook no longer emits socket requests or maintains local state.
- * It is a thin Zustand selector over useAppStore.timeSeriesCache.
+ * The hook is a Zustand store selector for warm-tier periods (1hr, 6hr, 12hr)
+ * and an on-demand emitter for non-warm periods (24hr, 1wk, 30day, 6mon, 1yr).
  *
  * Test strategy:
  *  - Seed the store's timeSeriesCache directly with act() before rendering.
@@ -26,7 +26,8 @@
  *  - Verify that updating the cache triggers a re-render.
  *  - Verify backward-compat: the unused autoRefresh / refreshInterval params
  *    do not cause errors.
- *  - Regression: no socket.emit should ever be called by this hook.
+ *  - Regression: warm-tier periods never emit socket requests.
+ *  - On-demand: non-warm periods emit rrd_timeseries on cache miss.
  */
 
 import { act, renderHook } from "@testing-library/react";
@@ -406,22 +407,32 @@ describe("backward-compat: ignored parameters", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Regression: hook never emits a socket request
+// Regression: warm-tier periods never emit socket requests
 // ---------------------------------------------------------------------------
 
-describe("regression: no socket.emit", () => {
-  it("does not call socket.emit on mount (cache miss)", () => {
+describe("regression: warm-tier periods never emit socket requests", () => {
+  it("does not call socket.emit for 1hr on cache miss (backend pushes warm periods)", () => {
     renderHook(() => useRRDTimeSeriesData("1hr"));
     expect(mockSocket.emit).not.toHaveBeenCalled();
   });
 
-  it("does not call socket.emit on mount (cache hit)", () => {
-    seedCache(makeEntry("24hr"));
-    renderHook(() => useRRDTimeSeriesData("24hr"));
+  it("does not call socket.emit for 6hr on cache miss", () => {
+    renderHook(() => useRRDTimeSeriesData("6hr"));
     expect(mockSocket.emit).not.toHaveBeenCalled();
   });
 
-  it("does not call socket.emit when the period changes", () => {
+  it("does not call socket.emit for 12hr on cache miss", () => {
+    renderHook(() => useRRDTimeSeriesData("12hr"));
+    expect(mockSocket.emit).not.toHaveBeenCalled();
+  });
+
+  it("does not call socket.emit for a warm period on cache hit", () => {
+    seedCache(makeEntry("1hr"));
+    renderHook(() => useRRDTimeSeriesData("1hr"));
+    expect(mockSocket.emit).not.toHaveBeenCalled();
+  });
+
+  it("does not call socket.emit when switching between two warm cached periods", () => {
     seedCache(makeEntry("1hr"));
     seedCache(makeEntry("6hr"));
 
@@ -447,6 +458,109 @@ describe("regression: no socket.emit", () => {
     const { unmount } = renderHook(() => useRRDTimeSeriesData("1hr"));
     unmount();
     expect(mockSocket.off).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// On-demand emit: non-warm periods emit rrd_timeseries on cache miss
+// ---------------------------------------------------------------------------
+
+describe("on-demand emit: non-warm periods", () => {
+  it("emits rrd_timeseries for 24hr on cache miss", () => {
+    renderHook(() => useRRDTimeSeriesData("24hr"));
+    const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+      (call) => call[0] === "rrd_timeseries",
+    );
+    expect(rrdEmits).toHaveLength(1);
+    expect((rrdEmits[0][1] as { time_period: string }).time_period).toBe(
+      "24hr",
+    );
+  });
+
+  it("emits rrd_timeseries for 1wk on cache miss", () => {
+    renderHook(() => useRRDTimeSeriesData("1wk"));
+    const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+      (call) => call[0] === "rrd_timeseries",
+    );
+    expect(rrdEmits).toHaveLength(1);
+    expect((rrdEmits[0][1] as { time_period: string }).time_period).toBe("1wk");
+  });
+
+  it("emits rrd_timeseries for 30day on cache miss", () => {
+    renderHook(() => useRRDTimeSeriesData("30day"));
+    const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+      (call) => call[0] === "rrd_timeseries",
+    );
+    expect(rrdEmits).toHaveLength(1);
+    expect((rrdEmits[0][1] as { time_period: string }).time_period).toBe(
+      "30day",
+    );
+  });
+
+  it("emits rrd_timeseries for 6mon on cache miss", () => {
+    renderHook(() => useRRDTimeSeriesData("6mon"));
+    const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+      (call) => call[0] === "rrd_timeseries",
+    );
+    expect(rrdEmits).toHaveLength(1);
+    expect((rrdEmits[0][1] as { time_period: string }).time_period).toBe(
+      "6mon",
+    );
+  });
+
+  it("emits rrd_timeseries for 1yr on cache miss", () => {
+    renderHook(() => useRRDTimeSeriesData("1yr"));
+    const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+      (call) => call[0] === "rrd_timeseries",
+    );
+    expect(rrdEmits).toHaveLength(1);
+    expect((rrdEmits[0][1] as { time_period: string }).time_period).toBe("1yr");
+  });
+
+  it("includes /main as the third argument in the on-demand emit", () => {
+    renderHook(() => useRRDTimeSeriesData("24hr"));
+    const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
+      (call) => call[0] === "rrd_timeseries",
+    );
+    expect(rrdEmits[0][2]).toBe("/main");
+  });
+
+  it("does NOT emit for a non-warm period when the cache already has an entry", () => {
+    seedCache(makeEntry("24hr"));
+    renderHook(() => useRRDTimeSeriesData("24hr"));
+    expect(mockSocket.emit).not.toHaveBeenCalled();
+  });
+
+  it("does NOT emit for a non-warm period on cache hit after switching", () => {
+    seedCache(makeEntry("1hr"));
+    seedCache(makeEntry("24hr"));
+
+    const { rerender } = renderHook(
+      ({ period }: { period: "1hr" | "24hr" }) => useRRDTimeSeriesData(period),
+      { initialProps: { period: "1hr" } as { period: "1hr" | "24hr" } },
+    );
+
+    mockSocket.emit.mockClear();
+    rerender({ period: "24hr" });
+
+    // 24hr is already cached — no emit should fire
+    expect(mockSocket.emit).not.toHaveBeenCalled();
+  });
+
+  it("regression: switching from a cached non-warm period to another cached one does not re-emit", () => {
+    seedCache(makeEntry("24hr"));
+    seedCache(makeEntry("1yr"));
+
+    const { rerender } = renderHook(
+      ({ period }: { period: "24hr" | "1yr" }) => useRRDTimeSeriesData(period),
+      { initialProps: { period: "24hr" } as { period: "24hr" | "1yr" } },
+    );
+
+    mockSocket.emit.mockClear();
+    rerender({ period: "1yr" });
+
+    // Both already cached — no emit
+    expect(mockSocket.emit).not.toHaveBeenCalled();
   });
 });
 

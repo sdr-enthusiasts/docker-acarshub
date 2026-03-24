@@ -143,7 +143,7 @@ export const MessageCountChart = ({
       },
       layout: {
         padding: {
-          right: 70, // Add padding to prevent label clipping
+          top: 30, // Add padding to prevent data label clipping
         },
       },
       plugins: {
@@ -162,7 +162,7 @@ export const MessageCountChart = ({
           displayColors: true,
           callbacks: {
             label: (context: TooltipItem<"bar">) => {
-              const value = context.parsed.x;
+              const value = context.parsed.y;
               return `Count: ${value !== null ? value.toLocaleString() : "N/A"}`;
             },
           },
@@ -208,6 +208,17 @@ export const MessageCountChart = ({
       scales: {
         x: {
           grid: {
+            display: false,
+          },
+          ticks: {
+            color: textColor,
+            font: {
+              size: 12,
+            },
+          },
+        },
+        y: {
+          grid: {
             color: gridColor,
             drawBorder: false,
           },
@@ -225,17 +236,6 @@ export const MessageCountChart = ({
             font: {
               size: 12,
               weight: "bold" as const,
-            },
-          },
-        },
-        y: {
-          grid: {
-            display: false,
-          },
-          ticks: {
-            color: textColor,
-            font: {
-              size: 12,
             },
           },
         },
