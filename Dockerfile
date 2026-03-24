@@ -260,7 +260,7 @@ EXPOSE 5558/udp
 ENV ENABLE_ACARS="false" \
     ENABLE_VDLM="false" \
     ENABLE_ADSB="false" \
-    MIN_LOG_LEVEL=3 \
+    MIN_LOG_LEVEL=4 \
     DB_SAVEALL="true" \
     ENABLE_RANGE_RINGS="true" \
     ADSB_URL="http://tar1090/data/aircraft.json" \

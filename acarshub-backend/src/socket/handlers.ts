@@ -959,7 +959,7 @@ async function handleRRDTimeseries(
           time_period: period,
           points: 0,
         });
-        logger.info("Time-series response unavailable", {
+        logger.warn("Time-series response unavailable", {
           socketId: socket.id,
           period,
         });

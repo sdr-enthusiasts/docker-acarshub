@@ -61,7 +61,7 @@ services:
       # Disable ADS-B polling (no external URL available in CI)
       - ENABLE_ADSB=false
       # Reduce log verbosity in CI
-      - MIN_LOG_LEVEL=3
+      - MIN_LOG_LEVEL=4
       # Prevent the pruner from deleting seed messages during the test run.
       # Seed data is from May 2024; with the default 7-day retention the pruner
       # wipes everything ~60 s after startup, causing late-running tests to see

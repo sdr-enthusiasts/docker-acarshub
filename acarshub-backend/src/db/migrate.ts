@@ -213,7 +213,7 @@ function isAtInitialMigrationState(db: Database.Database): boolean {
  * Migration 1: Initial Schema (e7991f1644b1)
  */
 function migration01_initialSchema(db: Database.Database): void {
-  logger.warn("Applying migration 1: initial_schema");
+  logger.info("Applying migration 1: initial_schema");
 
   const hasMessages = db
     .prepare(
@@ -222,7 +222,7 @@ function migration01_initialSchema(db: Database.Database): void {
     .get();
 
   if (hasMessages) {
-    logger.warn("Messages table already exists, skipping initial schema");
+    logger.info("Messages table already exists, skipping initial schema");
     return;
   }
 
@@ -240,7 +240,7 @@ function migration01_initialSchema(db: Database.Database): void {
  * 3. Rebuilds signal level statistics from the messages table
  */
 function migration02_splitSignalLevelTable(db: Database.Database): void {
-  logger.warn("Applying migration 2: split_signal_level_table");
+  logger.info("Applying migration 2: split_signal_level_table");
 
   const hasLevelAcars = db
     .prepare(
@@ -249,7 +249,7 @@ function migration02_splitSignalLevelTable(db: Database.Database): void {
     .get();
 
   if (hasLevelAcars) {
-    logger.warn("Signal level tables already split, skipping");
+    logger.info("Signal level tables already split, skipping");
     return;
   }
 
@@ -262,12 +262,12 @@ function migration02_splitSignalLevelTable(db: Database.Database): void {
   // Wrap entire migration in transaction
   const migrate = db.transaction(() => {
     if (hasLevelTable) {
-      logger.warn("Dropping old level table (will rebuild from messages)");
+      logger.info("Dropping old level table (will rebuild from messages)");
       db.exec("DROP TABLE level");
     }
 
     // Create per-decoder signal level tables
-    logger.warn("Creating per-decoder level tables");
+    logger.info("Creating per-decoder level tables");
     db.exec(`
       CREATE TABLE level_acars (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -307,7 +307,7 @@ function migration02_splitSignalLevelTable(db: Database.Database): void {
 
     // Rebuild signal level statistics from messages table
     // This matches Alembic behavior - aggregate by message_type and level
-    logger.warn("Rebuilding signal level statistics from messages table");
+    logger.info("Rebuilding signal level statistics from messages table");
 
     const decoderMapping = {
       ACARS: "level_acars",
@@ -330,7 +330,7 @@ function migration02_splitSignalLevelTable(db: Database.Database): void {
       `);
     }
 
-    logger.warn("Signal level data rebuilt from messages");
+    logger.info("Signal level data rebuilt from messages");
   });
 
   migrate();
@@ -340,7 +340,7 @@ function migration02_splitSignalLevelTable(db: Database.Database): void {
  * Migration 3: Split freqs table (a589d271a0a4)
  */
 function migration03_splitFreqsTable(db: Database.Database): void {
-  logger.warn("Applying migration 3: split_freqs_table");
+  logger.info("Applying migration 3: split_freqs_table");
 
   const hasFreqsAcars = db
     .prepare(
@@ -349,7 +349,7 @@ function migration03_splitFreqsTable(db: Database.Database): void {
     .get();
 
   if (hasFreqsAcars) {
-    logger.warn("Frequency tables already split, skipping");
+    logger.info("Frequency tables already split, skipping");
     return;
   }
 
@@ -602,9 +602,9 @@ function createFtsTableAndTriggers(db: Database.Database): void {
   `);
 
   // Populate the index from the current messages table
-  logger.warn("Rebuilding FTS index from existing messages...");
+  logger.info("Rebuilding FTS index from existing messages...");
   db.exec("INSERT INTO messages_fts(messages_fts) VALUES ('rebuild')");
-  logger.warn("FTS rebuild complete");
+  logger.info("FTS rebuild complete");
 }
 
 // ---------------------------------------------------------------------------
@@ -613,7 +613,7 @@ function createFtsTableAndTriggers(db: Database.Database): void {
  * Migration 4: Create FTS table and triggers (94d97e655180)
  */
 function migration04_createFTS(db: Database.Database): void {
-  logger.warn("Applying migration 4: create_messages_fts_table_and_triggers");
+  logger.info("Applying migration 4: create_messages_fts_table_and_triggers");
 
   const hasFTS = db
     .prepare(
@@ -631,7 +631,7 @@ function migration04_createFTS(db: Database.Database): void {
     const triggersOk = areFtsTriggersCorrect(db);
 
     if (schemaOk && triggersOk) {
-      logger.warn("FTS table already exists with correct schema and triggers, skipping");
+      logger.info("FTS table already exists with correct schema and triggers, skipping");
       return;
     }
 
@@ -650,18 +650,18 @@ function migration04_createFTS(db: Database.Database): void {
  * Migration 5: Convert ICAO to hex (3168c906fb9e)
  */
 function migration05_convertIcaoToHex(db: Database.Database): void {
-  logger.warn("Applying migration 5: convert_icao_to_hex");
+  logger.info("Applying migration 5: convert_icao_to_hex");
 
   const sample = db
     .prepare("SELECT icao FROM messages WHERE icao != '' LIMIT 1")
     .get() as { icao: string } | undefined;
 
   if (!sample || /^[0-9a-f]+$/i.test(sample.icao)) {
-    logger.warn("ICAO values already converted to hex, skipping");
+    logger.info("ICAO values already converted to hex, skipping");
     return;
   }
 
-  logger.warn("Converting ICAO values to hexadecimal...");
+  logger.info("Converting ICAO values to hexadecimal...");
   db.exec(`
     UPDATE messages
     SET icao = printf('%06X', CAST(icao AS INTEGER))
@@ -673,7 +673,7 @@ function migration05_convertIcaoToHex(db: Database.Database): void {
  * Migration 6: Add message UIDs (204a67756b9a)
  */
 function migration06_addMessageUids(db: Database.Database): void {
-  logger.warn("Applying migration 6: add_message_uids");
+  logger.info("Applying migration 6: add_message_uids");
 
   const columns = db.prepare("PRAGMA table_info(messages)").all() as Array<{
     name: string;
@@ -681,7 +681,7 @@ function migration06_addMessageUids(db: Database.Database): void {
   const hasUid = columns.some((col) => col.name === "uid");
 
   if (hasUid) {
-    logger.warn("UID column already exists, skipping");
+    logger.info("UID column already exists, skipping");
     return;
   }
 
@@ -690,17 +690,17 @@ function migration06_addMessageUids(db: Database.Database): void {
   // this used to add actual uuids but they are no longer required
   // still add the column as we can then unconditionally drop the column in migration14
 
-  logger.warn("Creating unique index on uid column...");
+  logger.info("Creating unique index on uid column...");
   db.exec("CREATE UNIQUE INDEX ix_messages_uid ON messages(uid)");
 
-  logger.warn("Applying migration 6: add_message_uids: done");
+  logger.info("Applying migration 6: add_message_uids: done");
 }
 
 /**
  * Migration 7: Create alert_matches table (171fe2c07bd9)
  */
 function migration07_createAlertMatches(db: Database.Database): void {
-  logger.warn("Applying migration 7: create_alert_matches_table");
+  logger.info("Applying migration 7: create_alert_matches_table");
 
   const hasAlertMatches = db
     .prepare(
@@ -709,7 +709,7 @@ function migration07_createAlertMatches(db: Database.Database): void {
     .get();
 
   if (hasAlertMatches) {
-    logger.warn("alert_matches table already exists, skipping");
+    logger.info("alert_matches table already exists, skipping");
     return;
   }
 
@@ -733,7 +733,7 @@ function migration07_createAlertMatches(db: Database.Database): void {
       .get();
 
     if (hasMessagesSaved) {
-      logger.warn("Dropping old messages_saved table");
+      logger.info("Dropping old messages_saved table");
       db.exec("DROP TABLE messages_saved");
     }
   });
@@ -745,10 +745,10 @@ function migration07_createAlertMatches(db: Database.Database): void {
  * Migration 8: Final optimization (40fd0618348d)
  */
 function migration08_finalOptimization(db: Database.Database): void {
-  logger.warn("Applying migration 8: final_v4_optimization");
+  logger.info("Applying migration 8: final_v4_optimization");
 
   // 1. Add aircraft_id column for future aircraft tracking
-  logger.warn("Adding aircraft_id column for future use...");
+  logger.info("Adding aircraft_id column for future use...");
   const columns = db.prepare("PRAGMA table_info(messages)").all() as Array<{
     name: string;
   }>;
@@ -756,13 +756,13 @@ function migration08_finalOptimization(db: Database.Database): void {
 
   if (!hasAircraftId) {
     db.exec("ALTER TABLE messages ADD COLUMN aircraft_id TEXT");
-    logger.warn("✓ aircraft_id column added");
+    logger.info("✓ aircraft_id column added");
   } else {
-    logger.warn("aircraft_id column already exists, skipping");
+    logger.info("aircraft_id column already exists, skipping");
   }
 
   // 2. Create composite indexes for query optimization
-  logger.warn("Creating composite indexes for query optimization...");
+  logger.info("Creating composite indexes for query optimization...");
 
   const indexes = db
     .prepare("SELECT name FROM sqlite_master WHERE type='index'")
@@ -795,9 +795,9 @@ function migration08_finalOptimization(db: Database.Database): void {
 
   createIndexes();
 
-  logger.warn("✓ Composite indexes created");
+  logger.info("✓ Composite indexes created");
 
-  logger.warn("v4 migration complete - database is optimized for production");
+  logger.info("v4 migration complete - database is optimized for production");
 }
 
 /**
@@ -815,7 +815,7 @@ function migration08_finalOptimization(db: Database.Database): void {
  * conflicts with already-existing tables from previous migrations.
  */
 function migration09_addTimeseriesStats(db: Database.Database): void {
-  logger.warn("Applying migration 9: add_timeseries_stats");
+  logger.info("Applying migration 9: add_timeseries_stats");
 
   // Check if timeseries_stats table exists
   const hasTimeseriesStats = db
@@ -825,13 +825,13 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
     .get();
 
   if (hasTimeseriesStats) {
-    logger.warn("timeseries_stats table already exists, skipping");
+    logger.info("timeseries_stats table already exists, skipping");
     return;
   }
 
   // Manually create timeseries_stats table
   // This is the SQL from drizzle/0001_add_timeseries_stats.sql
-  logger.warn("Creating timeseries_stats table");
+  logger.info("Creating timeseries_stats table");
 
   const migrate = db.transaction(() => {
     db.exec(`
@@ -854,7 +854,7 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
 
   migrate();
 
-  logger.warn("✓ timeseries_stats table created successfully");
+  logger.info("✓ timeseries_stats table created successfully");
 }
 
 // ---------------------------------------------------------------------------
@@ -882,21 +882,21 @@ function migration09_addTimeseriesStats(db: Database.Database): void {
  * one-time startup cost.
  */
 function migration10_rebuildFts(db: Database.Database): void {
-  logger.warn("Applying migration 10: rebuild_fts");
+  logger.info("Applying migration 10: rebuild_fts");
 
   logger.warn(
     "Dropping FTS table and triggers to clear tombstone accumulation...",
   );
   dropFtsTableAndTriggers(db);
-  logger.warn("✓ FTS table and triggers dropped");
+  logger.info("✓ FTS table and triggers dropped");
 
   logger.warn(
     "Recreating FTS table and triggers from scratch...",
   );
   createFtsTableAndTriggers(db);
-  logger.warn("✓ FTS table and triggers recreated");
+  logger.info("✓ FTS table and triggers recreated");
 
-  logger.warn("✓ Migration 10 finished");
+  logger.info("✓ Migration 10 finished");
 }
 
 // ---------------------------------------------------------------------------
@@ -936,7 +936,7 @@ function migration10_rebuildFts(db: Database.Database): void {
 function migration11_deduplicateTimeseriesAndAddRegistry(
   db: Database.Database,
 ): void {
-  logger.warn(
+  logger.info(
     "Applying migration 11: deduplicate_timeseries_and_add_registry",
   );
 
@@ -976,11 +976,11 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
         )
       `);
 
-      logger.warn("Duplicate timeseries_stats rows removed", {
+      logger.info("Duplicate timeseries_stats rows removed", {
         removed: duplicateCount,
       });
     } else {
-      logger.warn("No duplicate timeseries_stats rows found — clean");
+      logger.info("No duplicate timeseries_stats rows found — clean");
     }
 
     // -------------------------------------------------------------------------
@@ -1001,12 +1001,12 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
       ON rrd_import_registry (file_hash)
     `);
 
-    logger.warn("Created rrd_import_registry table");
+    logger.info("Created rrd_import_registry table");
   });
 
   migrate();
 
-  logger.warn("✓ Migration 11 complete");
+  logger.info("✓ Migration 11 complete");
 }
 
 // ---------------------------------------------------------------------------
@@ -1048,7 +1048,7 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
 function migration12_dropResolutionPromoteTimestampPk(
   db: Database.Database,
 ): void {
-  logger.warn(
+  logger.info(
     "Applying migration 12: drop_resolution_promote_timestamp_pk",
   );
 
@@ -1077,7 +1077,7 @@ function migration12_dropResolutionPromoteTimestampPk(
         .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
         .get() as { n: number }
     ).n;
-    logger.warn("timeseries_stats row count before migration 12", {
+    logger.info("timeseries_stats row count before migration 12", {
       totalRows,
     });
 
@@ -1128,7 +1128,7 @@ function migration12_dropResolutionPromoteTimestampPk(
         .prepare("SELECT COUNT(*) AS n FROM timeseries_stats_new")
         .get() as { n: number }
     ).n;
-    logger.warn("Rows copied to new timeseries_stats", { copiedRows });
+    logger.info("Rows copied to new timeseries_stats", { copiedRows });
 
     // -----------------------------------------------------------------------
     // Step 4: Swap — drop old, rename new
@@ -1138,7 +1138,7 @@ function migration12_dropResolutionPromoteTimestampPk(
       "ALTER TABLE timeseries_stats_new RENAME TO timeseries_stats",
     );
 
-    logger.warn(
+    logger.info(
       "timeseries_stats rebuilt — timestamp is now INTEGER PRIMARY KEY, " +
         "resolution and id columns removed, old indexes dropped",
     );
@@ -1146,13 +1146,13 @@ function migration12_dropResolutionPromoteTimestampPk(
 
   migrate();
 
-  logger.warn("✓ Migration 12 complete");
+  logger.info("✓ Migration 12 complete");
 }
 
 function migration13_dropUnnecessaryIndexes(
   db: Database.Database,
 ): void {
-  logger.warn(
+  logger.info(
     "Applying migration 13: drop_unnecessary_indexes",
   );
 
@@ -1167,13 +1167,13 @@ function migration13_dropUnnecessaryIndexes(
 
   migrate();
 
-  logger.warn("✓ Migration 13 complete");
+  logger.info("✓ Migration 13 complete");
 }
 
 function migration14_removeUuid(
   db: Database.Database,
 ): void {
-  logger.warn(
+  logger.info(
     "Applying migration 14: remove_uuid",
   );
 
@@ -1200,13 +1200,13 @@ function migration14_removeUuid(
 
   migrate();
 
-  logger.warn("✓ Migration 14 complete");
+  logger.info("✓ Migration 14 complete");
 }
 
 function migration15_dropUnnecessaryIndexes2(
   db: Database.Database,
 ): void {
-  logger.warn(
+  logger.info(
     "Applying migration 15: drop_unnecessary_indexes2",
   );
 
@@ -1221,7 +1221,7 @@ function migration15_dropUnnecessaryIndexes2(
 
   migrate();
 
-  logger.warn("✓ Migration 15 complete");
+  logger.info("✓ Migration 15 complete");
 }
 
 // ---------------------------------------------------------------------------
@@ -1271,13 +1271,13 @@ function verifyAndRepairFtsIfNeeded(db: Database.Database): boolean {
     { schemaOk, triggersOk },
   );
 
-  logger.warn("Dropping stale FTS table and triggers...");
+  logger.info("Dropping stale FTS table and triggers...");
   dropFtsTableAndTriggers(db);
 
-  logger.warn("Recreating FTS table and triggers with correct schema...");
+  logger.info("Recreating FTS table and triggers with correct schema...");
   createFtsTableAndTriggers(db);
 
-  logger.warn("FTS repair finished");
+  logger.info("FTS repair finished");
   return true;
 }
 
@@ -1567,12 +1567,12 @@ export function runMigrations(dbPath?: string): void {
       startIndex++; // Start from next migration
     } else if (!hasAnyTables(db)) {
       // Fresh database - start from beginning
-      logger.warn("Fresh database detected - will apply all migrations");
+      logger.info("Fresh database detected - will apply all migrations");
       startIndex = 0;
     } else if (isAtInitialMigrationState(db)) {
       // Database matches initial Alembic migration state (e7991f1644b1)
       // Skip migration 1 and start from migration 2
-      logger.warn(
+      logger.info(
         "Database matches initial Alembic migration state (e7991f1644b1) - starting from migration 2",
       );
       startIndex = 1;
@@ -1594,7 +1594,7 @@ export function runMigrations(dbPath?: string): void {
       if (!migration) {
         throw new Error(`Migration at index ${i} is undefined`);
       }
-      logger.warn(`Applying migration ${i + 1}/${MIGRATIONS.length}`, {
+      logger.info(`Applying migration ${i + 1}/${MIGRATIONS.length}`, {
         revision: migration.revision,
         name: migration.name,
       });
@@ -1610,7 +1610,7 @@ export function runMigrations(dbPath?: string): void {
         version: LATEST_REVISION,
       });
     } else {
-      logger.warn("All migrations applied successfully", {
+      logger.info("All migrations applied successfully", {
         version: LATEST_REVISION,
       });
     }
@@ -1633,11 +1633,11 @@ export function runMigrations(dbPath?: string): void {
           "disk space roughly equal to the current database file size...",
       );
       db.exec("VACUUM");
-      logger.warn("✓ VACUUM complete");
+      logger.info("✓ VACUUM complete");
 
-      logger.warn("Running ANALYZE to update query planner statistics...");
+      logger.info("Running ANALYZE to update query planner statistics...");
       db.exec("ANALYZE");
-      logger.warn("✓ ANALYZE complete");
+      logger.info("✓ ANALYZE complete");
     }
 
     db.close();
