@@ -165,13 +165,13 @@ export function buildTimeSeriesResponse(
       sql.raw(`
         SELECT
           (timestamp / ${downsample}) * ${downsample} AS bucket_timestamp,
-          ROUND(AVG(acars_count))  AS acars_count,
-          ROUND(AVG(vdlm_count))   AS vdlm_count,
-          ROUND(AVG(hfdl_count))   AS hfdl_count,
-          ROUND(AVG(imsl_count))   AS imsl_count,
-          ROUND(AVG(irdm_count))   AS irdm_count,
-          ROUND(AVG(total_count))  AS total_count,
-          ROUND(AVG(error_count))  AS error_count
+          AVG(acars_count) as acars_count,
+          AVG(vdlm_count) as vdlm_count,
+          AVG(hfdl_count) as hfdl_count,
+          AVG(imsl_count) as imsl_count,
+          AVG(irdm_count) as irdm_count,
+          AVG(total_count) as total_count,
+          AVG(error_count) as error_count
         FROM timeseries_stats
         WHERE timestamp >= ${start}
           AND timestamp <= ${end}
