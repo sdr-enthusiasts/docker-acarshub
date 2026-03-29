@@ -23,7 +23,7 @@ jobs:
         run: just test-e2e-docker
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         if: failure()
         with:
           name: playwright-report
