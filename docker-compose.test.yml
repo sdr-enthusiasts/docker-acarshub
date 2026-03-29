@@ -28,7 +28,7 @@ services:
   # the RRD → SQLite migration has already been applied (the seed.db already
   # contains the pre-migrated timeseries_stats rows).
   db-init:
-    image: alpine:3
+    image: alpine:3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659
     volumes:
       - ./test-fixtures:/src:ro
       - acarshub-test-db:/run/acars
@@ -103,7 +103,7 @@ services:
   # builds, identical to the `test-e2e-docker` justfile target.  Docker reuses
   # the volumes on subsequent runs so `npm ci` is fast after the first install.
   playwright:
-    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    image: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d
     depends_on:
       backend:
         condition: service_healthy
