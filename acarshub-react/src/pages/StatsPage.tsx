@@ -146,7 +146,7 @@ export const StatsPage = () => {
 
   // Process frequency data by decoder type
   const frequencyDataByDecoder = useMemo(() => {
-    if (!signalFreqData || !signalFreqData.freqs) {
+    if (!signalFreqData?.freqs) {
       return {
         acars: [],
         vdlm: [],

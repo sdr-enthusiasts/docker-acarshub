@@ -216,9 +216,9 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
               : "No logs match current filters"}
           </div>
         ) : (
-          filteredLogs.map((log, index) => (
+          filteredLogs.map((log) => (
             <div
-              key={`${log.timestamp}-${index}`}
+              key={log.id}
               className={`log-entry log-entry--${log.level}`}
             >
               <span className="log-entry__timestamp">

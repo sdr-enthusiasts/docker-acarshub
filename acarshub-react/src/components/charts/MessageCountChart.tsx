@@ -75,7 +75,7 @@ export const MessageCountChart = ({
 
   // Process count data and prepare for chart
   const chartData = useMemo(() => {
-    if (!countData || !countData.count) {
+    if (!countData?.count) {
       return null;
     }
 

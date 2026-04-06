@@ -25,6 +25,7 @@ export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "silent";
  * Individual log entry stored in the buffer
  */
 export interface LogEntry {
+  id: number;
   timestamp: string;
   level: Exclude<LogLevel, "silent">;
   module?: string;
@@ -42,6 +43,7 @@ class LogBuffer {
   private listeners: Set<(logs: LogEntry[]) => void> = new Set();
   private storageKey = "acarshub-logs";
   private persistenceEnabled = false;
+  private nextId = 1;
 
   constructor() {
     // Load from localStorage if persistence is enabled
@@ -51,8 +53,9 @@ class LogBuffer {
   /**
    * Add a log entry to the buffer
    */
-  add(entry: LogEntry): void {
-    this.buffer.push(entry);
+  add(entry: Omit<LogEntry, "id">): void {
+    const entryWithId: LogEntry = { ...entry, id: this.nextId++ };
+    this.buffer.push(entryWithId);
     if (this.buffer.length > this.maxSize) {
       this.buffer.shift(); // Remove oldest
     }

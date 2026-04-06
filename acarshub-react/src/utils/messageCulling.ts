@@ -34,7 +34,7 @@ export function isGroupPairedWithADSB(
   adsbData: ADSBData | null,
 ): boolean {
   // If ADS-B is disabled or no data available, no pairing possible
-  if (!adsbData || !adsbData.aircraft || adsbData.aircraft.length === 0) {
+  if (!adsbData?.aircraft || adsbData.aircraft.length === 0) {
     return false;
   }
 
