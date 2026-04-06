@@ -31,7 +31,7 @@ All silhouettes, artwork, and metadata from pw-silhouettes are licensed under CC
 - **License**: MIT
 - **Usage**: TRACON (Terminal Radar Approach Control) boundary overlays on the live map
 - **Assets**: `src/assets/geojson/TRACONBoundaries.geojson`
-- **Version**: v1.2.6
+- **Version**: v1.2.7
 
 TRACON boundary data is provided by the VATSIM Network SimAware TRACON Project, a community-maintained dataset of approach control airspace boundaries.
 
