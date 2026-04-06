@@ -133,7 +133,7 @@
               enabledPackages
               ++ (with pkgs; [
                 nodejs
-                nodePackages.typescript
+                typescript
               ]);
 
             shellHook = ''
