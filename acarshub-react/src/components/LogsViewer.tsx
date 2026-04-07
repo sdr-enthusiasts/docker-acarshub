@@ -217,10 +217,7 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
           </div>
         ) : (
           filteredLogs.map((log) => (
-            <div
-              key={log.id}
-              className={`log-entry log-entry--${log.level}`}
-            >
+            <div key={log.id} className={`log-entry log-entry--${log.level}`}>
               <span className="log-entry__timestamp">
                 {new Date(log.timestamp).toLocaleTimeString()}
               </span>
