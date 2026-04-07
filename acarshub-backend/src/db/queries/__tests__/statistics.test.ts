@@ -307,7 +307,7 @@ describe("getAllFreqCounts", () => {
     expect(decoderLabels).toContain("ACARS");
     expect(decoderLabels).toContain("VDL-M2");
     expect(decoderLabels).toContain("HFDL");
-    expect(decoderLabels).toContain("IMSL");
+    expect(decoderLabels).toContain("IMS-L");
     expect(decoderLabels).toContain("IRDM");
   });
 
