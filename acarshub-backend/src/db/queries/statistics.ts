@@ -120,7 +120,7 @@ export function getAllFreqCounts(): Array<{
     ...item,
   }));
   const imsl = getFreqCount("imsl").map((item) => ({
-    decoder: "IMSL",
+    decoder: "IMS-L",
     ...item,
   }));
   const irdm = getFreqCount("irdm").map((item) => ({
