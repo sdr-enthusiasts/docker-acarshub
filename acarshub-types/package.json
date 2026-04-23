@@ -45,6 +45,6 @@
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "@biomejs/biome": "2.4.10",
-    "typescript": "6.0.2"
+    "typescript": "6.0.3"
   }
 }
