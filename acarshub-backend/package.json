@@ -30,7 +30,7 @@
     "@acarshub/types": "*",
     "@airframes/acars-decoder": "1.8.14",
     "@fastify/cors": "11.2.0",
-    "better-sqlite3": "12.8.0",
+    "better-sqlite3": "12.9.0",
     "drizzle-orm": "0.45.2",
     "fastify": "5.8.5",
     "pino": "10.3.1",
