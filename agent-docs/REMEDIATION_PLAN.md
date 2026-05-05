@@ -122,7 +122,7 @@ versus a wildcard.
 
 **Effort:** Low. **Tests required:** new + regression test for `%` DoS.
 
-### SEC-03 — Untyped Socket.IO inputs at handler boundaries — **HIGH** ✅ pending-commit
+### SEC-03 — Untyped Socket.IO inputs at handler boundaries — **HIGH** ✅ done (24c707bc)
 
 **Files:**
 
@@ -1405,7 +1405,7 @@ have a safety net.
 | ID                | Description                                                | Status        |
 | ----------------- | ---------------------------------------------------------- | ------------- |
 | SEC-02            | Escape LIKE wildcards                                      | ✅ `57acc60f` |
-| SEC-03            | Zod input validation at every `socket.on(...)`             | ✅ pending    |
+| SEC-03            | Zod input validation at every `socket.on(...)`             | ✅ done       |
 | LOG-01            | Replace `console.*` with logger (7 sites)                  | ✅ `b80454b9` |
 | TYPE-01 + TYPE-02 | Drop dead `, "/main"` 3rd-arg, kill 13 cast sites          | ✅ `5e9b2b76` |
 | STATE-01          | Convert `export let alertTerms` to getter                  | ✅ `ede55f53` |
