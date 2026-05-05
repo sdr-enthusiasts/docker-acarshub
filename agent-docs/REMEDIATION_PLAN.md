@@ -509,7 +509,7 @@ smaller value behind a desktop media query while keeping mobile at 44 px.
 
 ## 6. Module-level mutable state
 
-### STATE-01 — Mutable named exports cause stale snapshots — **HIGH**
+### STATE-01 — Mutable named exports cause stale snapshots — **HIGH** — ✅ DONE (`ede55f53`)
 
 **File:** `acarshub-backend/src/config.ts:415-416`.
 
@@ -1408,7 +1408,7 @@ have a safety net.
 | SEC-03            | Zod input validation at every `socket.on(...)`             |               |
 | LOG-01            | Replace `console.*` with logger (7 sites)                  |               |
 | TYPE-01 + TYPE-02 | Typed `emitToServer` wrapper, kill 7 `as any`              |               |
-| STATE-01          | Convert `export let alertTerms` to getter                  |               |
+| STATE-01          | Convert `export let alertTerms` to getter                  | ✅ `ede55f53` |
 | LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) |               |
 | LEAK-03           | Replace bare `catch {}` in zmq-listener                    |               |
 | LOG-04            | Replace `alert()` calls in LogsViewer with Toast           |               |
