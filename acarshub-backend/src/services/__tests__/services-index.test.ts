@@ -226,7 +226,10 @@ vi.mock("../message-ring-buffer.js", () => ({
   reheatMessageBuffers: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../stats-pruning.js", () => ({ startStatsPruning: vi.fn() }));
+vi.mock("../stats-pruning.js", () => ({
+  startStatsPruning: vi.fn(),
+  stopStatsPruning: vi.fn(),
+}));
 vi.mock("../stats-writer.js", () => ({
   startStatsWriter: vi.fn(),
   stopStatsWriter: vi.fn(),

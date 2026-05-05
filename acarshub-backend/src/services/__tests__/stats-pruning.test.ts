@@ -30,7 +30,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as clientModule from "../../db/client.js";
 import * as schema from "../../db/schema.js";
 import { timeseriesStats } from "../../db/schema.js";
-import { pruneOldStats } from "../stats-pruning.js";
+import {
+  pruneOldStats,
+  startStatsPruning,
+  stopStatsPruning,
+} from "../stats-pruning.js";
 
 // ---------------------------------------------------------------------------
 // Schema SQL for timeseries_stats (mirrors Drizzle schema)
@@ -339,5 +343,127 @@ describe("pruneOldStats — error handling", () => {
     vi.spyOn(clientModule, "getDatabase").mockReturnValue(brokenDb);
 
     await expect(pruneOldStats()).rejects.toThrow("Database is locked");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// startStatsPruning / stopStatsPruning — alignment-window timer lifecycle
+//
+// These tests focus on LEAK-01: the one-shot setTimeout that aligns the
+// first prune to 3:00 AM was previously fire-and-forget. If the process shut
+// down during the alignment window, the callback would still fire, attempt
+// to query a torn-down database, and register a recurring task on a
+// scheduler that may already be gone.
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal Scheduler stub that records `every().do()` registrations so tests
+ * can assert whether the alignment-window callback ran (which would register
+ * the recurring 24-hour stats_pruning task).
+ */
+type SchedulerStub = {
+  every: ReturnType<typeof vi.fn>;
+  do: ReturnType<typeof vi.fn>;
+};
+
+function makeSchedulerStub(): SchedulerStub {
+  const stub = {
+    do: vi.fn(),
+    every: vi.fn(),
+  } satisfies SchedulerStub;
+  stub.every.mockReturnValue({ do: stub.do });
+  return stub;
+}
+
+describe("startStatsPruning / stopStatsPruning — alignment timer", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // Anchor system time well before the next 3:00 AM so the alignment
+    // setTimeout is always pending after start. Choose a UTC moment so the
+    // calculation is stable regardless of test runner timezone (the absolute
+    // delay is what matters for "is the timeout still pending?").
+    vi.setSystemTime(new Date("2024-06-15T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    // Always cancel any pending alignment timer so it doesn't leak into the
+    // next test (defensive — the regression tests below also call stop()).
+    stopStatsPruning();
+    vi.useRealTimers();
+  });
+
+  it("registers the recurring 24-hour task once the alignment window fires", async () => {
+    const scheduler = makeSchedulerStub();
+    startStatsPruning(
+      scheduler as unknown as Parameters<typeof startStatsPruning>[0],
+    );
+
+    // Before the alignment window fires, the recurring task is NOT yet
+    // registered (would race against the first immediate prune).
+    expect(scheduler.every).not.toHaveBeenCalled();
+
+    // Advance past the next 3:00 AM (worst case ~24h ahead).
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000 + 1000);
+
+    expect(scheduler.every).toHaveBeenCalledWith(24, "hours");
+    expect(scheduler.do).toHaveBeenCalledTimes(1);
+    const [, name] = scheduler.do.mock.calls[0] as [unknown, string];
+    expect(name).toBe("stats_pruning");
+  });
+
+  it("regression: stop() during alignment window prevents the deferred task registration (LEAK-01)", async () => {
+    // Bug: startStatsPruning's setTimeout handle was never captured. If the
+    // process shut down before the first 3:00 AM, the callback would still
+    // fire later, perform a prune against a possibly-closed DB, and register
+    // a recurring task on a scheduler that callers thought was already torn
+    // down. This test fails before the fix (scheduler.every gets called)
+    // and passes after (timeout cancelled cleanly).
+    const scheduler = makeSchedulerStub();
+    startStatsPruning(
+      scheduler as unknown as Parameters<typeof startStatsPruning>[0],
+    );
+
+    // Stop while still inside the alignment window.
+    stopStatsPruning();
+
+    // Advance time well past the would-be first run.
+    await vi.advanceTimersByTimeAsync(48 * 60 * 60 * 1000);
+
+    expect(scheduler.every).not.toHaveBeenCalled();
+    expect(scheduler.do).not.toHaveBeenCalled();
+  });
+
+  it("stopStatsPruning is safe to call without a prior start", () => {
+    expect(() => {
+      stopStatsPruning();
+    }).not.toThrow();
+  });
+
+  it("stopStatsPruning is idempotent across repeated calls", () => {
+    const scheduler = makeSchedulerStub();
+    startStatsPruning(
+      scheduler as unknown as Parameters<typeof startStatsPruning>[0],
+    );
+    expect(() => {
+      stopStatsPruning();
+      stopStatsPruning();
+      stopStatsPruning();
+    }).not.toThrow();
+  });
+
+  it("a second startStatsPruning call while one is pending is a no-op (warn, no extra timer)", async () => {
+    const scheduler = makeSchedulerStub();
+    startStatsPruning(
+      scheduler as unknown as Parameters<typeof startStatsPruning>[0],
+    );
+    // Second call should be ignored (logger.warn) — without this guard, two
+    // overlapping alignment timers would race and double-register the task.
+    startStatsPruning(
+      scheduler as unknown as Parameters<typeof startStatsPruning>[0],
+    );
+
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000 + 1000);
+
+    expect(scheduler.do).toHaveBeenCalledTimes(1);
   });
 });
