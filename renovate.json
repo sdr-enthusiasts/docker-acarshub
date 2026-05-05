@@ -33,6 +33,11 @@
       "automerge": false
     },
     {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "enabled": false
+    },
+    {
       "matchManagers": ["github-actions", "nix"],
       "matchUpdateTypes": ["major", "minor", "patch", "pin"],
       "automerge": true
