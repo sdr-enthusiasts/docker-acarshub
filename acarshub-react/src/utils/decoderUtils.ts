@@ -20,6 +20,9 @@ import type {
   LibacarsData,
   LibacarsFrequencyData,
 } from "../types";
+import { createLogger } from "./logger";
+
+const logger = createLogger("decoderUtils");
 
 /**
  * Process decodedText.formatted array to generate formatted output
@@ -252,7 +255,9 @@ export function parseAndFormatLibacars(libacarsString: string): string | null {
     // Generic formatter for unknown types
     return formatLibacarsGeneric(parsedData);
   } catch (error) {
-    console.error("Error parsing libacars data:", error);
+    logger.error("Error parsing libacars data", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }

@@ -176,6 +176,9 @@ class LogBuffer {
         }
       }
     } catch (e) {
+      // Intentional console.error: this IS the logger module's persistence
+      // layer. Calling logger.error() here would loop back through buffer +
+      // saveToStorage and either recurse infinitely or mask the real failure.
       console.error("Failed to load logs from storage", e);
     }
   }
@@ -197,6 +200,9 @@ class LogBuffer {
         };
         localStorage.setItem(this.storageKey, JSON.stringify(data));
       } catch (e2) {
+        // Intentional console.error: see loadFromStorage() — same recursion
+        // hazard. This is the last-resort fallback when even the truncated
+        // buffer can't be persisted.
         console.error("Failed to save logs to storage", e2);
       }
     }
