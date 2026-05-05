@@ -869,7 +869,7 @@ parsers from the migration driver.
 
 ## 11. Testing
 
-### TEST-CFG-01 — Backend has zero coverage thresholds — **HIGH**
+### TEST-CFG-01 — Backend has zero coverage thresholds — **HIGH** — ✅ DONE (`88d44730`)
 
 **File:** `acarshub-backend/vitest.config.ts`.
 
@@ -891,7 +891,7 @@ thresholds: {
 **Effort:** Trivial. Will fail CI immediately if coverage is below — coordinate
 with TEST-GAP-\* fixes.
 
-### TEST-CFG-02 — Frontend thresholds don't enforce per-area goals — **HIGH**
+### TEST-CFG-02 — Frontend thresholds don't enforce per-area goals — **HIGH** — ✅ DONE (`dbed992a`)
 
 **File:** `acarshub-react/vitest.config.ts:57-62`.
 
@@ -1397,8 +1397,8 @@ have a safety net.
 | SEC-01       | SQL injection fix + regression test                | ✅ `c0fbc176`              |
 | REPO-01      | `.gitignore` root-level `*.db` / `*.rrd*` patterns | ❌ false (already ignored) |
 | TEST-SKIP-01 | Address 4 unjustified scheduler `it.skip`          |                            |
-| TEST-CFG-01  | Add backend coverage thresholds                    |                            |
-| TEST-CFG-02  | Add per-area frontend coverage thresholds          |                            |
+| TEST-CFG-01  | Add backend coverage thresholds                    | ✅ `88d44730`              |
+| TEST-CFG-02  | Add per-area frontend coverage thresholds          | ✅ `dbed992a`              |
 
 ### Phase 2 — High-impact correctness (3-5 days)
 
