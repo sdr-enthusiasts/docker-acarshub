@@ -153,7 +153,7 @@ handler)` helper that parses input, emits a structured error on failure,
 
 ## 2. Type safety and `any` elimination
 
-### TYPE-01 — Flask-SocketIO `as any` cast cluster — **HIGH** ✅ pending-commit
+### TYPE-01 — Flask-SocketIO `as any` cast cluster — **HIGH** ✅ `5e9b2b76`
 
 **Files:**
 
@@ -189,7 +189,7 @@ documented in AGENTS.md as critical, and the workaround has been to cast
 **Effort:** Low. Eliminates seven `any`s and centralises the namespace quirk
 that SEC-04 (below) revisits.
 
-### TYPE-02 — `any[]` and `any` in mock socket implementation — **MEDIUM** ✅ pending-commit
+### TYPE-02 — `any[]` and `any` in mock socket implementation — **MEDIUM** ✅ `5e9b2b76`
 
 **File:** `acarshub-react/src/services/socket.ts:214, 226, 259, 615`.
 
@@ -1407,7 +1407,7 @@ have a safety net.
 | SEC-02            | Escape LIKE wildcards                                      | ✅ `57acc60f` |
 | SEC-03            | Zod input validation at every `socket.on(...)`             |               |
 | LOG-01            | Replace `console.*` with logger (7 sites)                  | ✅ `b80454b9` |
-| TYPE-01 + TYPE-02 | Drop dead `, "/main"` 3rd-arg, kill 13 cast sites          | ✅ pending    |
+| TYPE-01 + TYPE-02 | Drop dead `, "/main"` 3rd-arg, kill 13 cast sites          | ✅ `5e9b2b76` |
 | STATE-01          | Convert `export let alertTerms` to getter                  | ✅ `ede55f53` |
 | LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) | ✅ `4b414b30` |
 | LEAK-03           | Replace bare `catch {}` in zmq-listener                    | ✅ `7ca13e0b` |
