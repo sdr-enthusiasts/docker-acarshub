@@ -144,8 +144,15 @@ export class ZmqListener
       try {
         // zeromq Subscriber exposes .close() synchronously.
         (this.socket as { close(): void }).close();
-      } catch {
-        // Ignore errors closing an already-closed socket.
+      } catch (error) {
+        // The "expected" case is calling close() on an already-closed socket,
+        // which the zeromq add-on can throw on. Anything else (OOM, native
+        // crash, type error) needs to be observable rather than silently
+        // discarded — log at trace because routine double-close is benign.
+        logger.trace("Error closing zmq socket", {
+          type: this.messageType,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
       this.socket = null;
     }
@@ -290,8 +297,15 @@ export class ZmqListener
           this.emit("disconnected", this.messageType);
         }
       }
-    } catch {
-      // Monitor loop exits when the socket is closed — normal stop() path.
+    } catch (error) {
+      // The "expected" case here is the iterator throwing because the socket
+      // was closed by stop() — that is the normal lifecycle exit and not
+      // worth surfacing above trace. Anything else (e.g. native zeromq error,
+      // OOM) used to be silently swallowed; now it is at least observable.
+      logger.trace("ZMQ monitor loop exited", {
+        type: this.messageType,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
