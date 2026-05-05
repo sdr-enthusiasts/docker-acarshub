@@ -1410,7 +1410,7 @@ have a safety net.
 | TYPE-01 + TYPE-02 | Typed `emitToServer` wrapper, kill 7 `as any`              |               |
 | STATE-01          | Convert `export let alertTerms` to getter                  | ✅ `ede55f53` |
 | LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) | ✅ `4b414b30` |
-| LEAK-03           | Replace bare `catch {}` in zmq-listener                    |               |
+| LEAK-03           | Replace bare `catch {}` in zmq-listener                    | ✅ `7ca13e0b` |
 | LOG-04            | Replace `alert()` calls in LogsViewer with Toast           |               |
 
 ### Phase 3 — Design-language compliance (3-5 days)
