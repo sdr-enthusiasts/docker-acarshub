@@ -97,7 +97,7 @@ no SQL-injection risk") applies only to that file, not to the handler copy.
 **Effort:** Low. **Tests required:** regression test (mandatory per AGENTS.md
 bug-fix policy).
 
-### SEC-02 — LIKE-wildcard injection / DoS in search builder — **HIGH**
+### SEC-02 — LIKE-wildcard injection / DoS in search builder — **HIGH** — ✅ DONE (`57acc60f`)
 
 **File:** `acarshub-backend/src/db/queries/messages.ts:773, 777, 786, 791, 795,
 799, 803, 807, 819`.
@@ -1402,16 +1402,16 @@ have a safety net.
 
 ### Phase 2 — High-impact correctness (3-5 days)
 
-| ID                | Description                                                |
-| ----------------- | ---------------------------------------------------------- |
-| SEC-02            | Escape LIKE wildcards                                      |
-| SEC-03            | Zod input validation at every `socket.on(...)`             |
-| LOG-01            | Replace `console.*` with logger (7 sites)                  |
-| TYPE-01 + TYPE-02 | Typed `emitToServer` wrapper, kill 7 `as any`              |
-| STATE-01          | Convert `export let alertTerms` to getter                  |
-| LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) |
-| LEAK-03           | Replace bare `catch {}` in zmq-listener                    |
-| LOG-04            | Replace `alert()` calls in LogsViewer with Toast           |
+| ID                | Description                                                | Status        |
+| ----------------- | ---------------------------------------------------------- | ------------- |
+| SEC-02            | Escape LIKE wildcards                                      | ✅ `57acc60f` |
+| SEC-03            | Zod input validation at every `socket.on(...)`             |               |
+| LOG-01            | Replace `console.*` with logger (7 sites)                  |               |
+| TYPE-01 + TYPE-02 | Typed `emitToServer` wrapper, kill 7 `as any`              |               |
+| STATE-01          | Convert `export let alertTerms` to getter                  |               |
+| LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) |               |
+| LEAK-03           | Replace bare `catch {}` in zmq-listener                    |               |
+| LOG-04            | Replace `alert()` calls in LogsViewer with Toast           |               |
 
 ### Phase 3 — Design-language compliance (3-5 days)
 
