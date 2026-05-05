@@ -45,7 +45,7 @@ read top-to-bottom and used as a working checklist.
 
 ## 1. Security
 
-### SEC-01 — SQL injection in RRD timeseries handler — **CRITICAL**
+### SEC-01 — SQL injection in RRD timeseries handler — **CRITICAL** — ✅ DONE (`c0fbc176`)
 
 **File:** `acarshub-backend/src/socket/handlers.ts:920-1019` (and the parallel
 non-downsampled block lower in the same handler).
@@ -1405,13 +1405,13 @@ have a safety net.
 
 ### Phase 1 — Stop the bleeding (1-2 days)
 
-| ID           | Description                                        |
-| ------------ | -------------------------------------------------- |
-| SEC-01       | SQL injection fix + regression test                |
-| REPO-01      | `.gitignore` root-level `*.db` / `*.rrd*` patterns |
-| TEST-SKIP-01 | Address 4 unjustified scheduler `it.skip`          |
-| TEST-CFG-01  | Add backend coverage thresholds                    |
-| TEST-CFG-02  | Add per-area frontend coverage thresholds          |
+| ID           | Description                                        | Status        |
+| ------------ | -------------------------------------------------- | ------------- |
+| SEC-01       | SQL injection fix + regression test                | ✅ `c0fbc176` |
+| REPO-01      | `.gitignore` root-level `*.db` / `*.rrd*` patterns |               |
+| TEST-SKIP-01 | Address 4 unjustified scheduler `it.skip`          |               |
+| TEST-CFG-01  | Add backend coverage thresholds                    |               |
+| TEST-CFG-02  | Add per-area frontend coverage thresholds          |               |
 
 ### Phase 2 — High-impact correctness (3-5 days)
 
