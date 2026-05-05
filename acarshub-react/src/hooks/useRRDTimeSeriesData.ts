@@ -117,8 +117,7 @@ export const useRRDTimeSeriesData = (
     const isWarm = (WARM_PERIODS as readonly string[]).includes(timePeriod);
     if (!isWarm && entry === undefined && socketService.isInitialized()) {
       const socket = socketService.getSocket();
-      // @ts-expect-error — Flask-SocketIO requires namespace as third arg
-      socket.emit("rrd_timeseries", { time_period: timePeriod }, "/main");
+      socket.emit("rrd_timeseries", { time_period: timePeriod });
     }
   }, [timePeriod, entry]);
 

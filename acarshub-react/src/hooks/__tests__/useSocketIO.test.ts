@@ -735,21 +735,6 @@ describe("useSocketIO", () => {
       }
     });
 
-    it("includes the /main namespace as the third argument in each warm-up emit", () => {
-      renderHook(() => useSocketIO());
-      mockSocket.emit.mockClear();
-
-      fireEvent("connect", undefined);
-
-      const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
-        (call) => call[0] === "rrd_timeseries",
-      );
-
-      for (const call of rrdEmits) {
-        expect(call[2]).toBe("/main");
-      }
-    });
-
     it("re-requests warm-tier periods on reconnect (warm-up fires on every connect event)", () => {
       renderHook(() => useSocketIO());
       mockSocket.emit.mockClear();

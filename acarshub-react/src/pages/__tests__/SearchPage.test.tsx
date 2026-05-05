@@ -381,7 +381,6 @@ describe("SearchPage", () => {
         expect.objectContaining({
           search_term: expect.objectContaining({ flight: "UAL123" }),
         }),
-        "/main",
       );
     });
 
@@ -405,13 +404,15 @@ describe("SearchPage", () => {
       const submitButton = screen.getByRole("button", { name: /^search$/i });
       await user.click(submitButton);
 
-      // The component calls (socket as any).emit("query_search", payload, "/main")
+      // The component calls socket.emit("query_search", payload). The
+      // legacy Flask-SocketIO 3rd-arg "/main" was removed in TYPE-01/02
+      // because the React frontend already binds to the /main namespace
+      // at connection time.
       expect(mockSocket.emit).toHaveBeenCalledWith(
         "query_search",
         expect.objectContaining({
           search_term: expect.objectContaining({ flight: "UAL123" }),
         }),
-        "/main",
       );
     });
 
@@ -433,7 +434,6 @@ describe("SearchPage", () => {
         expect.objectContaining({
           search_term: expect.objectContaining({ flight: "" }),
         }),
-        "/main",
       );
     });
 
@@ -663,7 +663,6 @@ describe("SearchPage", () => {
         expect.objectContaining({
           results_after: 1, // page 1 (0-indexed)
         }),
-        "/main",
       );
     });
 
