@@ -34,6 +34,28 @@ import type { ConnectionDescriptor } from "../../config.js";
 import { ZmqListener } from "../zmq-listener.js";
 
 // ---------------------------------------------------------------------------
+// Mock the logger so tests can assert on log calls (LEAK-03 regression
+// specifically depends on observability — we need to verify that errors
+// thrown by socket.close() are routed through logger.trace rather than
+// swallowed).
+//
+// vi.hoisted() ensures the mock spies are constructed before vi.mock factory
+// runs (the factory itself is hoisted above imports).
+// ---------------------------------------------------------------------------
+
+const loggerMocks = vi.hoisted(() => ({
+  info: vi.fn(),
+  debug: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  trace: vi.fn(),
+}));
+
+vi.mock("../../utils/logger.js", () => ({
+  createLogger: () => loggerMocks,
+}));
+
+// ---------------------------------------------------------------------------
 // Mock zeromq module
 // ---------------------------------------------------------------------------
 
@@ -99,6 +121,7 @@ interface MockSubscriberState {
   connected: boolean;
   subscribed: boolean;
   closedCalled: boolean;
+  closeError: Error | null;
   endpoint: string;
   frames: ControllableAsyncIterable<[Buffer]>;
   events: ControllableAsyncIterable<{ type: string }>;
@@ -116,6 +139,7 @@ vi.mock("zeromq", () => {
         connected: false,
         subscribed: false,
         closedCalled: false,
+        closeError: null,
         endpoint: "",
         frames: new ControllableAsyncIterable<[Buffer]>(),
         events: new ControllableAsyncIterable<{ type: string }>(),
@@ -136,6 +160,11 @@ vi.mock("zeromq", () => {
       this.state.closedCalled = true;
       this.state.frames.close();
       this.state.events.close();
+      if (this.state.closeError !== null) {
+        // Simulates the zeromq native add-on throwing on a double-close
+        // (or other failure modes such as native OOM).
+        throw this.state.closeError;
+      }
     }
 
     get events(): AsyncIterable<{ type: string }> {
@@ -488,6 +517,66 @@ describe("ZmqListener", () => {
       await new Promise((r) => setTimeout(r, 50));
 
       expect(emitCount).toBe(1);
+    });
+
+    it("regression: stop() does not crash when the underlying socket.close() throws (LEAK-03)", async () => {
+      // Bug: closeSocket() previously had `} catch {}` — a bare swallow.
+      // Any error thrown by the native zeromq close (including non-double-
+      // close cases like OOM or TypeError) was invisible. The fix logs it
+      // at trace level. The contract under regression test is two-fold:
+      //   1. stop() does not crash (held by both pre- and post-fix code).
+      //   2. the throw is observable via logger.trace (held only post-fix
+      //      — this is what fails on the bare-catch version).
+      loggerMocks.trace.mockClear();
+
+      listener = new ZmqListener("ACARS", makeDescriptor());
+      listener.start();
+      await waitForSubscriberState();
+
+      // Mark connected so we can verify cleanup still emits 'disconnected'.
+      getState().events.push({ type: "connect" });
+      await flushMicrotasks();
+      expect(listener.connected).toBe(true);
+
+      // Arm the mock to throw on close().
+      const simulatedError = new Error("simulated native close failure");
+      getState().closeError = simulatedError;
+
+      const disconnectedPromise = waitForEvent<[string]>(
+        listener,
+        "disconnected",
+      );
+
+      // The throw must not propagate out of stop().
+      expect(() => listener.stop()).not.toThrow();
+
+      // Cleanup contract: connected flag flipped, 'disconnected' emitted.
+      const [type] = await disconnectedPromise;
+      expect(type).toBe("ACARS");
+      expect(listener.connected).toBe(false);
+
+      // Observability contract (the part that fails on the bare-catch bug):
+      // the close error must reach logger.trace with the original message.
+      const traceCalls = loggerMocks.trace.mock.calls.filter(
+        (call) => call[0] === "Error closing zmq socket",
+      );
+      expect(traceCalls).toHaveLength(1);
+      const [, meta] = traceCalls[0] as [string, Record<string, unknown>];
+      expect(meta.error).toBe(simulatedError.message);
+      expect(meta.type).toBe("ACARS");
+    });
+
+    it("regression: a second stop() after a throwing close is a no-op (LEAK-03)", async () => {
+      // The first stop() with a throwing close still must null out the
+      // internal socket reference; otherwise a follow-up stop() would
+      // attempt to close again and re-throw out of the catch path.
+      listener = new ZmqListener("ACARS", makeDescriptor());
+      listener.start();
+      await waitForSubscriberState();
+      getState().closeError = new Error("simulated native close failure");
+
+      expect(() => listener.stop()).not.toThrow();
+      expect(() => listener.stop()).not.toThrow();
     });
   });
 });
