@@ -1060,4 +1060,175 @@ describe("Message Query Functions", () => {
       expect(Number(result.uid)).toBeGreaterThan(0);
     });
   });
+
+  describe("SEC-02: LIKE wildcard escaping (regression)", () => {
+    // Helper: insert a message with a single overridden field. The base row
+    // matches the schema but uses values that won't accidentally match the
+    // poison patterns we're searching for.
+    const insertWithField = <K extends string>(
+      field: K,
+      value: string,
+      timeOffset = 0,
+    ): void => {
+      addMessage({
+        messageType: "ACARS",
+        time: 1704070000 + timeOffset,
+        stationId: "ZZZZ",
+        toaddr: "999999",
+        fromaddr: ".ZZZZZZ",
+        depa: "ZZZZ",
+        dsta: "ZZZZ",
+        eta: "",
+        gtout: "",
+        gtin: "",
+        wloff: "",
+        wlin: "",
+        tail: "ZZZZZZ",
+        flight: "ZZZ999",
+        icao: "ZZZZZZ",
+        freq: "999.999",
+        label: "ZZ",
+        text: "BASELINE TEXT",
+        lat: "",
+        lon: "",
+        alt: "",
+        ack: "",
+        mode: "",
+        msgno: "ZZZ999",
+        blockId: "",
+        isResponse: "",
+        isOnground: "",
+        error: "",
+        libacars: "",
+        level: "",
+        // Override the targeted field with the poison literal value
+        [field]: value,
+      } as Parameters<typeof addMessage>[0]);
+    };
+
+    it("regression: bare '%' in stationId must not match every row (DoS)", () => {
+      // The seeded fixture has 4 rows. Without escaping, LIKE '%%%' matches
+      // them all and turns user-supplied input into a full-table-scan trigger.
+      // After SEC-02 the search must only match rows whose stationId contains
+      // a literal '%' character — none of the 4 fixture rows do.
+      const result = databaseSearch({ stationId: "%" });
+      expect(result.totalCount).toBe(0);
+      expect(result.messages).toHaveLength(0);
+    });
+
+    it("regression: bare '_' in flight must not match every row (DoS)", () => {
+      // Without escaping, LIKE '%_%' matches every row that has any character
+      // in the flight field — i.e. all of them.
+      const result = databaseSearch({ flight: "_" });
+      expect(result.totalCount).toBe(0);
+      expect(result.messages).toHaveLength(0);
+    });
+
+    it("regression: '__' in tail must not match every 2+ char tail", () => {
+      // Without escaping LIKE '%__%' matches any tail with ≥2 chars and forces
+      // a slow scan over the whole table.
+      const result = databaseSearch({ tail: "__" });
+      expect(result.totalCount).toBe(0);
+    });
+
+    it("matches a literal '%' character when one exists in the data", () => {
+      // Seed a row whose stationId genuinely contains a percent sign and
+      // verify it's findable via the literal search. This is the positive
+      // counterpart to the DoS regression test.
+      insertWithField("stationId", "ABC%XYZ", 1);
+
+      const result = databaseSearch({ stationId: "%" });
+      expect(result.totalCount).toBe(1);
+      expect(result.messages[0].stationId).toBe("ABC%XYZ");
+    });
+
+    it("matches a literal '_' character when one exists in the data", () => {
+      insertWithField("stationId", "ABC_XYZ", 2);
+
+      const result = databaseSearch({ stationId: "_" });
+      expect(result.totalCount).toBe(1);
+      expect(result.messages[0].stationId).toBe("ABC_XYZ");
+    });
+
+    it("matches a literal backslash when one exists in the data", () => {
+      // Backslash is the escape character itself, so it must also be escaped
+      // to remain searchable as a literal.
+      insertWithField("stationId", "AB\\CD", 3);
+
+      const result = databaseSearch({ stationId: "\\" });
+      expect(result.totalCount).toBe(1);
+      expect(result.messages[0].stationId).toBe("AB\\CD");
+    });
+
+    it("text search with '%' is treated as literal", () => {
+      insertWithField("text", "FUEL 50% REMAINING", 4);
+
+      const result = databaseSearch({ text: "50%" });
+      expect(result.totalCount).toBe(1);
+      expect(result.messages[0].text).toBe("FUEL 50% REMAINING");
+    });
+
+    it("icao wildcard contract: '*' still acts as a wildcard", () => {
+      // The icao field intentionally treats '*' as a user-facing wildcard
+      // (translated to SQL '%' after escaping). Verify the contract is
+      // preserved post-fix: 'A*' should match anything starting with 'A'.
+      // Fixture has icao values: ABC123, C0FFEE, DEADBE, CAFE01.
+      const result = databaseSearch({ icao: "A*" });
+      expect(result.totalCount).toBe(1);
+      expect(result.messages[0].icao).toBe("ABC123");
+    });
+
+    it("icao wildcard contract: '_' is a literal, not a single-char wildcard", () => {
+      // Pre-fix, an icao input of 'A_C123' would match 'ABC123' because '_'
+      // means "any single char" in SQL LIKE. Post-fix the underscore is
+      // escaped, so this search must find zero rows.
+      const result = databaseSearch({ icao: "A_C123" });
+      expect(result.totalCount).toBe(0);
+    });
+
+    it("icao wildcard contract: literal '%' before fix would have been wildcard", () => {
+      // Pre-fix the icao branch routed any '%' through a raw replaceAll that
+      // already passed '%' through to SQL — so 'A%' matched anything starting
+      // with 'A'. Post-fix '%' is escaped first, then '*' (none present) is
+      // translated. So 'A%' now matches only icao values containing the
+      // literal characters 'A' followed by '%'. None of the fixture rows
+      // do, so the result must be empty.
+      //
+      // This locks in the new behaviour: '*' is the sole user-facing
+      // wildcard; '%' and '_' are literals.
+      const result = databaseSearch({ icao: "A%" });
+      expect(result.totalCount).toBe(0);
+    });
+
+    it("legacy contract: 6-char exact icao still uses eq, not LIKE", () => {
+      // Sanity check that the exact-match shortcut on the icao branch still
+      // works. Fixture row 1 has icao 'ABC123' (lowercased input must be
+      // upper-cased before the eq comparison).
+      const result = databaseSearch({ icao: "abc123" });
+      expect(result.totalCount).toBe(1);
+      expect(result.messages[0].icao).toBe("ABC123");
+    });
+
+    it("structural: searchWithLike pattern is bound, never inlined", () => {
+      // Belt-and-suspenders: pull the SQL chunks via drizzle's toSQL() to
+      // assert the user input never appears in the static SQL string. The
+      // pattern must be a parameter ($placeholder), and 'ESCAPE \\' must be
+      // present so SQLite honours the escapes inserted by the helper.
+      //
+      // We can't easily call toSQL() on the internal searchWithLike, but we
+      // can verify the public behaviour: searches for SQL metacharacters
+      // ('; DROP TABLE messages;--`) must not error and must not match
+      // anything (no fixture row contains that string).
+      expect(() =>
+        databaseSearch({ tail: "'; DROP TABLE messages;--" }),
+      ).not.toThrow();
+
+      const result = databaseSearch({ tail: "'; DROP TABLE messages;--" });
+      expect(result.totalCount).toBe(0);
+
+      // Table must still exist after that search.
+      const after = databaseSearch({});
+      expect(after.totalCount).toBeGreaterThan(0);
+    });
+  });
 });

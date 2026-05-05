@@ -18,7 +18,8 @@
  */
 
 import { statSync } from "node:fs";
-import { and, asc, desc, eq, like, sql } from "drizzle-orm";
+import type { AnyColumn } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { DB_ALERT_SAVE_DAYS, DB_SAVE_DAYS, DB_SAVEALL } from "../../config.js";
 import { createLogger } from "../../utils/logger.js";
 import { getDatabase, getSqliteConnection } from "../client.js";
@@ -758,7 +759,52 @@ function searchWithFts(params: SearchParams): SearchResult | null {
 }
 
 /**
+ * Escape SQL LIKE wildcards in user input.
+ *
+ * SQLite's LIKE operator treats `%` as "any sequence" and `_` as "any single
+ * character". Without escaping, a user search for `%` matches every row and a
+ * search for `__` forces a slow full table scan — both denial-of-service
+ * vectors. We escape `\`, `%`, and `_` and pair every LIKE clause with
+ * `ESCAPE '\\'` so these characters become literals in the pattern.
+ *
+ * Order matters: backslash must be escaped first, otherwise we double-escape
+ * the escapes we just inserted.
+ *
+ * @param input Raw user string
+ * @returns String safe to embed inside a LIKE pattern that uses ESCAPE '\\'
+ */
+function escapeLikeWildcards(input: string): string {
+  return input.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+}
+
+/**
+ * Build a substring LIKE clause with proper wildcard escaping.
+ *
+ * The pattern is bound as a parameter; only the column reference and the
+ * literal `ESCAPE '\\'` clause are inlined into SQL, so this is safe from
+ * injection. The ESCAPE clause is required for the escapes inserted by
+ * {@link escapeLikeWildcards} to be honoured by SQLite.
+ *
+ * Wildcard contract: this helper performs a literal substring match. The
+ * caller is responsible for translating any user-facing wildcards (e.g. the
+ * `*` wildcard accepted by the icao field) before calling.
+ *
+ * @param column Drizzle column reference
+ * @param pattern LIKE pattern, with `\` as the escape character
+ */
+function likeEscaped(column: AnyColumn, pattern: string) {
+  return sql`${column} LIKE ${pattern} ESCAPE '\\'`;
+}
+
+/**
  * Search using LIKE queries (slow but supports substring matching)
+ *
+ * Wildcard contract:
+ * - All fields except `icao` perform a literal substring match. `%` and `_` in
+ *   user input are escaped so they cannot match arbitrary characters or trigger
+ *   full table scans (DoS).
+ * - `icao` honours `*` as a user-facing wildcard (translated to SQL `%` after
+ *   escaping). A 6-character input without `*` short-circuits to an exact match.
  *
  * @param params Search parameters
  * @returns Search result with messages and total count
@@ -770,41 +816,46 @@ function searchWithLike(params: SearchParams): SearchResult {
   const conditions = [];
 
   if (params.tail) {
-    conditions.push(like(messages.tail, `%${params.tail}%`));
+    conditions.push(likeEscaped(messages.tail, `%${escapeLikeWildcards(params.tail)}%`));
   }
 
   if (params.flight) {
-    conditions.push(like(messages.flight, `%${params.flight}%`));
+    conditions.push(likeEscaped(messages.flight, `%${escapeLikeWildcards(params.flight)}%`));
   }
 
   if (params.icao) {
     if (params.icao.includes("*") || params.icao.includes("%")) {
-        conditions.push(like(messages.icao, params.icao.replaceAll("*", "%")));
+      // User-facing wildcard contract: `*` (and the legacy raw `%`) become SQL
+      // `%`. Other LIKE metacharacters are escaped first so a search like
+      // `A_*` means "starts with A followed by literal underscore, then
+      // anything", not "starts with A, any char, anything".
+      const pattern = escapeLikeWildcards(params.icao).replaceAll("*", "%");
+      conditions.push(likeEscaped(messages.icao, pattern));
     } else if (params.icao.length === 6) {
       conditions.push(eq(messages.icao, params.icao.toUpperCase()));
     } else {
-      conditions.push(like(messages.icao, `%${params.icao}%`));
+      conditions.push(likeEscaped(messages.icao, `%${escapeLikeWildcards(params.icao)}%`));
     }
   }
 
   if (params.depa) {
-    conditions.push(like(messages.depa, `%${params.depa}%`));
+    conditions.push(likeEscaped(messages.depa, `%${escapeLikeWildcards(params.depa)}%`));
   }
 
   if (params.dsta) {
-    conditions.push(like(messages.dsta, `%${params.dsta}%`));
+    conditions.push(likeEscaped(messages.dsta, `%${escapeLikeWildcards(params.dsta)}%`));
   }
 
   if (params.label) {
-    conditions.push(like(messages.label, `%${params.label}%`));
+    conditions.push(likeEscaped(messages.label, `%${escapeLikeWildcards(params.label)}%`));
   }
 
   if (params.msgno) {
-    conditions.push(like(messages.msgno, `%${params.msgno}%`));
+    conditions.push(likeEscaped(messages.msgno, `%${escapeLikeWildcards(params.msgno)}%`));
   }
 
   if (params.text) {
-    conditions.push(like(messages.text, `%${params.text}%`));
+    conditions.push(likeEscaped(messages.text, `%${escapeLikeWildcards(params.text)}%`));
   }
 
   if (params.freq) {
@@ -816,7 +867,9 @@ function searchWithLike(params: SearchParams): SearchResult {
   }
 
   if (params.stationId) {
-    conditions.push(like(messages.stationId, `%${params.stationId}%`));
+    conditions.push(
+      likeEscaped(messages.stationId, `%${escapeLikeWildcards(params.stationId)}%`),
+    );
   }
 
   if (params.startTime !== undefined) {
