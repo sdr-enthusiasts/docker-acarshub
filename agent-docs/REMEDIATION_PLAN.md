@@ -352,7 +352,7 @@ skip metadata should appear in vitest output.
 
 **Effort:** Trivial.
 
-### LOG-04 — `alert()` calls in `LogsViewer` — **MEDIUM**
+### LOG-04 — `alert()` calls in `LogsViewer` — **MEDIUM** ✅ pending-commit
 
 **File:** `acarshub-react/src/components/LogsViewer.tsx:106, 109`.
 
@@ -1411,7 +1411,7 @@ have a safety net.
 | STATE-01          | Convert `export let alertTerms` to getter                  | ✅ `ede55f53` |
 | LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) | ✅ `4b414b30` |
 | LEAK-03           | Replace bare `catch {}` in zmq-listener                    | ✅ `7ca13e0b` |
-| LOG-04            | Replace `alert()` calls in LogsViewer with Toast           |               |
+| LOG-04            | Replace `alert()` calls in LogsViewer with Toast           | ✅ pending    |
 
 ### Phase 3 — Design-language compliance (3-5 days)
 
