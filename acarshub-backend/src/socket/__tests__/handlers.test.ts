@@ -1684,6 +1684,256 @@ describe("handleRRDTimeseries — explicit start/end", () => {
 });
 
 // ---------------------------------------------------------------------------
+// SEC-01 — handleRRDTimeseries explicit-path input validation
+//
+// Regression: the explicit start/end/downsample path historically interpolated
+// caller-supplied values straight into a raw SQL template via sql.raw(...).
+// TypeScript typed them as `number?` but Socket.IO is an untyped wire, so a
+// malicious or buggy client could send a string and inject SQL. These tests
+// lock in runtime validation that rejects anything other than safe integers.
+// ---------------------------------------------------------------------------
+
+describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () => {
+  /** Wire up a mock DB; return the captured `db.all` mock so tests can assert
+   *  on whether and how the SQL path was reached. */
+  async function mockExplicitDb(): Promise<Mock> {
+    const mockAll = vi.fn().mockReturnValue([]);
+    const { getDatabase } = await import("../../db/index.js");
+    vi.mocked(getDatabase).mockReturnValue({
+      all: mockAll,
+    } as unknown as ReturnType<typeof getDatabase>);
+    return mockAll;
+  }
+
+  it("regression: rejects a string `start` payload (SQL injection vector) without touching the DB", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // The exact payload that motivated SEC-01: a SQL-injection attempt as a
+    // string where TypeScript expects a number.
+    socket.handlers.rrd_timeseries({
+      start: "0; DROP TABLE timeseries_stats--" as unknown as number,
+      end: Math.floor(Date.now() / 1000),
+      downsample: 300,
+    });
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // The handler must NOT have reached the DB.
+    expect(mockAll).not.toHaveBeenCalled();
+
+    // It must have emitted a structured error payload to the caller.
+    const payloads = emittedAs<{ error?: string; data: unknown[] }>(
+      socket,
+      "rrd_timeseries_data",
+    );
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0].error).toBeDefined();
+    expect(payloads[0].data).toEqual([]);
+  });
+
+  it("rejects a string `end` payload", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: "now()" as unknown as number,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeDefined();
+  });
+
+  it("rejects a string `downsample` payload", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: "300; DELETE FROM timeseries_stats--" as unknown as number,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeDefined();
+  });
+
+  it("rejects a negative `start`", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: -1,
+      end: 1_700_000_000,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeDefined();
+  });
+
+  it("rejects a non-integer (fractional) `start`", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000.5,
+      end: 1_700_086_400,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeDefined();
+  });
+
+  it("rejects NaN/Infinity `end`", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: Number.POSITIVE_INFINITY,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeDefined();
+  });
+
+  it("rejects `end` <= `start`", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_086_400,
+      end: 1_700_000_000,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeDefined();
+  });
+
+  it("rejects out-of-range `downsample` (< 60s or > 1 day)", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Below floor — would create absurdly small buckets and is also nonsensical.
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: 30,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(mockAll).not.toHaveBeenCalled();
+
+    socket.emit.mockClear();
+
+    // Above ceiling — protects against denial-of-service via giant buckets.
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: 86_401,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(mockAll).not.toHaveBeenCalled();
+  });
+
+  it("accepts valid integer parameters and reaches the DB layer", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).toHaveBeenCalledTimes(1);
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeUndefined();
+  });
+
+  it("regression: even when validation passes, parameters bind via the sql tagged template (no raw interpolation)", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).toHaveBeenCalledTimes(1);
+
+    // Drizzle's `sql` tagged template returns a SQL object with a
+    // `queryChunks` array that alternates between static SQL fragments
+    // (objects of shape `{ value: string[] }`) and bound parameter values.
+    // With the (insecure) `sql.raw` template, the numbers would be baked
+    // into those static `value` strings. With the (secure) `sql` template,
+    // they live as separate chunks alongside the SQL fragments.
+    //
+    // We assert that NONE of the static fragments contain the literal
+    // numeric values — proving the fix isn't merely string-equivalent to
+    // the old `sql.raw` behaviour but structurally parameterised.
+    const sqlArg = mockAll.mock.calls[0]?.[0] as {
+      queryChunks?: Array<{ value?: string[] } | unknown>;
+    };
+    expect(sqlArg).toBeDefined();
+    expect(Array.isArray(sqlArg.queryChunks)).toBe(true);
+
+    const staticFragments =
+      sqlArg.queryChunks
+        ?.filter(
+          (c): c is { value: string[] } =>
+            typeof c === "object" &&
+            c !== null &&
+            "value" in c &&
+            Array.isArray((c as { value: unknown }).value),
+        )
+        .flatMap((c) => c.value)
+        .join("") ?? "";
+
+    expect(staticFragments).not.toContain("1700000000");
+    expect(staticFragments).not.toContain("1700086400");
+    expect(staticFragments).not.toContain("300");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // zeroFillBuckets — tested directly in utils/__tests__/timeseries.test.ts
 // The explicit start/end path below still exercises zero-fill end-to-end.
 // ---------------------------------------------------------------------------
