@@ -970,10 +970,75 @@ async function handleRRDTimeseries(
     // -----------------------------------------------------------------
     // Legacy/debug path: explicit start / end / downsample → query DB
     // -----------------------------------------------------------------
+    //
+    // SECURITY (SEC-01): start/end/downsample arrive over the Socket.IO wire
+    // and TypeScript's `number?` annotation is *not* a runtime guarantee.
+    // A malicious or buggy client can send a string, and historically those
+    // values were interpolated directly into a `sql.raw` template — a
+    // textbook SQL-injection vector. Validate aggressively here and bind
+    // the values via the parameterised `sql` tagged template below.
+    //
+    // Bounds rationale:
+    //   * Unix seconds: 0 .. 4_102_444_800 (year 2100) — generous but finite
+    //   * downsample:   60 .. 86_400 — at least one minute, at most one day;
+    //     smaller buckets would defeat the cache; larger ones blow memory
+    //     when zero-filled.
     const now = Math.floor(Date.now() / 1000);
-    const start = params.start ?? now - 86400;
-    const end = params.end ?? now;
+    const MAX_UNIX_SECONDS = 4_102_444_800; // 2100-01-01
+    const MIN_DOWNSAMPLE = 60;
+    const MAX_DOWNSAMPLE = 86_400;
+
+    const isValidUnixSeconds = (v: unknown): v is number =>
+      typeof v === "number" &&
+      Number.isInteger(v) &&
+      v >= 0 &&
+      v <= MAX_UNIX_SECONDS;
+
+    const isValidDownsample = (v: unknown): v is number =>
+      typeof v === "number" &&
+      Number.isInteger(v) &&
+      v >= MIN_DOWNSAMPLE &&
+      v <= MAX_DOWNSAMPLE;
+
+    const start = params.start === undefined ? now - 86_400 : params.start;
+    const end = params.end === undefined ? now : params.end;
     const downsample = params.downsample;
+
+    // Defaults are safe by construction; only user-supplied values need checking.
+    const startInvalid =
+      params.start !== undefined && !isValidUnixSeconds(start);
+    const endInvalid = params.end !== undefined && !isValidUnixSeconds(end);
+    const downsampleInvalid =
+      downsample !== undefined && !isValidDownsample(downsample);
+    const rangeInvalid =
+      isValidUnixSeconds(start) && isValidUnixSeconds(end) && end <= start;
+
+    if (startInvalid || endInvalid || downsampleInvalid || rangeInvalid) {
+      const reason = startInvalid
+        ? "start must be an integer Unix timestamp in seconds"
+        : endInvalid
+          ? "end must be an integer Unix timestamp in seconds"
+          : downsampleInvalid
+            ? `downsample must be an integer between ${MIN_DOWNSAMPLE} and ${MAX_DOWNSAMPLE} seconds`
+            : "end must be greater than start";
+
+      logger.warn("Rejected RRD timeseries explicit query (invalid params)", {
+        socketId: socket.id,
+        reason,
+        // Log raw values so operators can spot abuse patterns. JSON.stringify
+        // safely renders strings/objects without executing anything.
+        start: JSON.stringify(params.start),
+        end: JSON.stringify(params.end),
+        downsample: JSON.stringify(params.downsample),
+      });
+
+      socket.emit("rrd_timeseries_data", {
+        error: `Invalid parameter: ${reason}`,
+        data: [],
+        points: 0,
+      });
+      return;
+    }
 
     logger.debug("RRD timeseries explicit query", {
       socketId: socket.id,
@@ -987,11 +1052,12 @@ async function handleRRDTimeseries(
     const minuteStep = 60;
 
     if (downsample && downsample > 60) {
-      // Downsampled SQL path
+      // Downsampled SQL path — bind every numeric value via the `sql` tagged
+      // template so values travel as bound parameters, NOT raw text.
       const db = getDatabase();
 
       const results = db.all(
-        sql.raw(`
+        sql`
           SELECT
             (timestamp / ${downsample}) * ${downsample} as bucket_timestamp,
             AVG(acars_count) as acars_count,
@@ -1006,7 +1072,7 @@ async function handleRRDTimeseries(
             AND timestamp <= ${end}
           GROUP BY bucket_timestamp
           ORDER BY bucket_timestamp
-        `),
+        `,
       ) as Array<{
         bucket_timestamp: number;
         acars_count: number;
