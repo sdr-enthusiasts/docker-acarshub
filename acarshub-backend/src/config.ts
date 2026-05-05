@@ -411,9 +411,39 @@ export const RRD_PATH = process.env.RRD_PATH || "/run/acars/acarshub.rrd";
 
 /**
  * Alert terms (loaded from environment or defaults)
+ *
+ * STATE-01: These are kept as module-private mutable state and exposed only
+ * through getters/setters. Previously they were `export let` bindings, which
+ * are live ESM bindings — but consumers that did
+ *
+ *   import { alertTerms } from "./config.js";
+ *
+ * captured the *binding identifier*, and any code that took a value snapshot
+ * (e.g. destructuring, `const t = alertTerms`) would see a stale array
+ * forever. The bug at `socket/handlers.ts` previously had to defensively
+ * read from the DB cache to work around this. Forcing every read through a
+ * function call eliminates the hazard entirely.
  */
-export let alertTerms: string[] = [];
-export let alertTermsIgnore: string[] = [];
+let _alertTerms: string[] = [];
+let _alertTermsIgnore: string[] = [];
+
+/**
+ * Get the current alert terms.
+ *
+ * Always reflects the latest value — safe to call after `setAlertTerms()`.
+ */
+export function getAlertTerms(): string[] {
+  return _alertTerms;
+}
+
+/**
+ * Get the current alert ignore terms.
+ *
+ * Always reflects the latest value — safe to call after `setAlertIgnoreTerms()`.
+ */
+export function getAlertIgnoreTerms(): string[] {
+  return _alertTermsIgnore;
+}
 
 /**
  * Ground stations (loaded from data file)
@@ -442,14 +472,14 @@ export const iataOverrides: Record<string, { icao: string; name: string }> = {};
  * Set alert terms at runtime
  */
 export function setAlertTerms(terms: string[]): void {
-  alertTerms = terms.map((t) => t.toUpperCase());
+  _alertTerms = terms.map((t) => t.toUpperCase());
 }
 
 /**
  * Set alert ignore terms at runtime
  */
 export function setAlertIgnoreTerms(terms: string[]): void {
-  alertTermsIgnore = terms.map((t) => t.toUpperCase());
+  _alertTermsIgnore = terms.map((t) => t.toUpperCase());
 }
 
 /**
@@ -624,8 +654,8 @@ export function getConfig(): Config & {
     flightTrackingUrl: FLIGHT_TRACKING_URL,
     minLogLevel: MIN_LOG_LEVEL,
     rrdPath: RRD_PATH,
-    alertTerms,
-    alertIgnoreTerms: alertTermsIgnore,
+    alertTerms: getAlertTerms(),
+    alertIgnoreTerms: getAlertIgnoreTerms(),
     groundStations,
     messageLabels,
     airlines,
