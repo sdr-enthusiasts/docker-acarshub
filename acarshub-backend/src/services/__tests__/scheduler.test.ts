@@ -631,4 +631,73 @@ describe("Scheduler", () => {
       scheduler2.stop();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // LEAK-01: at-time alignment-window setTimeout handles
+  //
+  // Tasks scheduled with .at() schedule a one-shot setTimeout to align the
+  // first run to the requested wall-clock minute, then register a recurring
+  // setInterval. Previously the alignment setTimeout was fire-and-forget, so
+  // stop()/disable()/removeTask() called during the alignment window left
+  // the callback to fire later — running the task once after stop and
+  // arming a recurring setInterval that nothing owned.
+  // -------------------------------------------------------------------------
+  describe("LEAK-01: at-time alignment timer cancellation", () => {
+    it("regression: stop() during alignment window prevents the deferred first run", async () => {
+      let executionCount = 0;
+      // CRITICAL: schedule AFTER start() so scheduleTaskAt() takes the
+      // running-scheduler branch and calls startTaskAt(), which is the path
+      // that creates the alignment-window setTimeout. Pre-start scheduling
+      // takes a different code path (startTask with plain setInterval).
+      scheduler.start();
+      scheduler
+        .every(1, "minutes")
+        .at(":30")
+        .do(() => {
+          executionCount += 1;
+        }, "at-task");
+
+      // Stop immediately, while the alignment setTimeout is still pending.
+      scheduler.stop();
+
+      // Advance past where the alignment callback would have fired.
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+      expect(executionCount).toBe(0);
+    });
+
+    it("regression: disableTask() during alignment window prevents the deferred first run", async () => {
+      let executionCount = 0;
+      scheduler.start();
+      const taskId = scheduler
+        .every(1, "minutes")
+        .at(":30")
+        .do(() => {
+          executionCount += 1;
+        }, "at-task");
+
+      scheduler.disableTask(taskId);
+
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+      expect(executionCount).toBe(0);
+    });
+
+    it("regression: removeTask() during alignment window prevents the deferred first run", async () => {
+      let executionCount = 0;
+      scheduler.start();
+      const taskId = scheduler
+        .every(1, "minutes")
+        .at(":30")
+        .do(() => {
+          executionCount += 1;
+        }, "at-task");
+
+      scheduler.removeTask(taskId);
+
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+      expect(executionCount).toBe(0);
+    });
+  });
 });

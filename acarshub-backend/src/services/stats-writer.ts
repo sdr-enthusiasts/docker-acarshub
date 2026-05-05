@@ -37,6 +37,11 @@ const logger = createLogger("stats-writer");
  */
 
 let writeInterval: NodeJS.Timeout | null = null;
+// Tracks the one-shot setTimeout used to align the first write to the next
+// minute boundary. Captured so stopStatsWriter() can cancel it if shutdown
+// happens during the alignment window (otherwise the callback would fire
+// after stop and re-arm the interval, leaking timers).
+let alignmentTimer: NodeJS.Timeout | null = null;
 
 /**
  * Write current statistics to timeseries_stats table, then reset per-minute
@@ -125,7 +130,8 @@ export function startStatsWriter(): void {
 
   // Schedule first write at next minute boundary, then every 60 seconds.
   // writeStats() is synchronous (better-sqlite3) so no .catch() needed.
-  setTimeout(() => {
+  alignmentTimer = setTimeout(() => {
+    alignmentTimer = null;
     writeStats();
 
     writeInterval = setInterval(() => {
@@ -140,6 +146,10 @@ export function startStatsWriter(): void {
  * Stop the stats writer task
  */
 export function stopStatsWriter(): void {
+  if (alignmentTimer) {
+    clearTimeout(alignmentTimer);
+    alignmentTimer = null;
+  }
   if (writeInterval) {
     clearInterval(writeInterval);
     writeInterval = null;

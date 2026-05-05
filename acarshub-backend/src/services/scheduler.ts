@@ -54,6 +54,12 @@ export interface SchedulerEvents {
 export class Scheduler extends EventEmitter<SchedulerEvents> {
   private tasks: Map<string, ScheduledTask> = new Map();
   private timers: Map<string, NodeJS.Timeout> = new Map();
+  // One-shot setTimeout handles for tasks scheduled with .at() that are
+  // currently waiting for their first aligned run. Once the alignment window
+  // fires, the entry is removed and the recurring setInterval handle takes
+  // over in `timers`. Tracked separately so stop()/disable()/removeTask() can
+  // cancel a pending alignment without leaking it into a fresh interval.
+  private alignmentTimers: Map<string, NodeJS.Timeout> = new Map();
   private isRunning = false;
   private taskCounter = 0;
 
@@ -136,6 +142,15 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
     }
     this.timers.clear();
 
+    // Cancel any pending alignment-window setTimeouts. Without this, a task
+    // scheduled with .at() that was still waiting for its first aligned run
+    // would fire after stop() and register a fresh setInterval that nothing
+    // owns.
+    for (const timer of this.alignmentTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.alignmentTimers.clear();
+
     logger.info("Scheduler stopped");
   }
 
@@ -186,6 +201,14 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
       clearInterval(timer);
       this.timers.delete(taskId);
     }
+    // Also cancel a pending alignment-window setTimeout, if any: a task
+    // disabled during its alignment window would otherwise still fire its
+    // first run and register a recurring interval that ignores `enabled`.
+    const alignment = this.alignmentTimers.get(taskId);
+    if (alignment) {
+      clearTimeout(alignment);
+      this.alignmentTimers.delete(taskId);
+    }
 
     logger.info("Task disabled", { taskId, taskName: task.name });
   }
@@ -205,6 +228,14 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
     if (timer) {
       clearInterval(timer);
       this.timers.delete(taskId);
+    }
+    // Also cancel a pending alignment-window setTimeout: removing a task
+    // mid-alignment would otherwise leave a callback that fires against a
+    // task no longer in the registry.
+    const alignment = this.alignmentTimers.get(taskId);
+    if (alignment) {
+      clearTimeout(alignment);
+      this.alignmentTimers.delete(taskId);
     }
 
     this.tasks.delete(taskId);
@@ -357,8 +388,12 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
     const now = Date.now();
     const delayToFirstRun = task.nextRun - now;
 
-    // Schedule first run at aligned time
-    setTimeout(async () => {
+    // Schedule first run at aligned time. Capture the handle so stop(),
+    // disable(), and removeTask() can cancel a pending alignment that has
+    // not yet fired — without this, the callback would run after the task
+    // was disabled and register a fresh setInterval that nothing owns.
+    const alignmentTimer = setTimeout(async () => {
+      this.alignmentTimers.delete(task.id);
       await this.executeTask(task);
 
       // Then run at regular intervals
@@ -368,6 +403,7 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
 
       this.timers.set(task.id, timer);
     }, delayToFirstRun);
+    this.alignmentTimers.set(task.id, alignmentTimer);
 
     logger.debug("Task timer started with at-time", {
       taskId: task.id,

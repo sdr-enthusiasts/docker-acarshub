@@ -59,7 +59,7 @@ import {
 } from "./message-ring-buffer.js";
 import { destroyScheduler, getScheduler } from "./scheduler.js";
 import { checkAndAddStationId, getStationIds } from "./station-ids.js";
-import { startStatsPruning } from "./stats-pruning.js";
+import { startStatsPruning, stopStatsPruning } from "./stats-pruning.js";
 import type { MessageType } from "./tcp-listener.js";
 
 /**
@@ -234,6 +234,12 @@ export class BackgroundServices extends EventEmitter {
     for (const listener of this.decoderListeners.values()) {
       listener.stop();
     }
+
+    // Cancel pending stats-pruning alignment-window setTimeout (if the first
+    // 3:00 AM run hasn't fired yet). The recurring 24-hour task it would have
+    // registered lives on the scheduler and is cleared by destroyScheduler()
+    // below.
+    stopStatsPruning();
 
     // Stop scheduler
     destroyScheduler();

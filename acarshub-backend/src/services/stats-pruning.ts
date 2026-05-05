@@ -23,6 +23,18 @@ import type { Scheduler } from "./scheduler.js";
 const logger = createLogger("stats-pruning");
 
 /**
+ * Tracks the one-shot setTimeout used to align the first prune to 3:00 AM.
+ * Captured at module scope so stopStatsPruning() can cancel it if shutdown
+ * happens during the alignment window (otherwise the callback fires after
+ * stop and registers a recurring task on a scheduler that may already be
+ * gone, leaking the timer and producing confusing late logs).
+ *
+ * The recurring 24-hour task itself is owned by the Scheduler; its handle
+ * lives in scheduler.timers and is cleared by destroyScheduler().
+ */
+let alignmentTimer: NodeJS.Timeout | null = null;
+
+/**
  * Default retention period in days
  * Can be overridden with TIMESERIES_RETENTION_DAYS environment variable
  */
@@ -125,6 +137,11 @@ function msUntilNextHour(targetHour: number): number {
  * @param scheduler - Scheduler instance
  */
 export function startStatsPruning(scheduler: Scheduler): void {
+  if (alignmentTimer) {
+    logger.warn("Stats pruning already started");
+    return;
+  }
+
   const retentionDays = getRetentionDays();
   const TARGET_HOUR = 3; // 3:00 AM local time
 
@@ -138,7 +155,9 @@ export function startStatsPruning(scheduler: Scheduler): void {
   });
 
   // Delay to next 3:00 AM, then hand off to the 24-hour scheduler
-  setTimeout(() => {
+  alignmentTimer = setTimeout(() => {
+    alignmentTimer = null;
+
     // Run immediately at the aligned time
     pruneOldStats().catch((error: unknown) => {
       logger.error("Scheduled stats pruning failed", {
@@ -152,4 +171,21 @@ export function startStatsPruning(scheduler: Scheduler): void {
       await pruneOldStats();
     }, "stats_pruning");
   }, delayMs);
+}
+
+/**
+ * Stop stats pruning by cancelling the pending alignment-window setTimeout.
+ *
+ * Idempotent and safe to call without a prior start.
+ *
+ * Note: the recurring 24-hour scheduler task (registered after the alignment
+ * window fires) is not removed here; it is owned by the Scheduler and is
+ * cleared when the scheduler itself is stopped/destroyed.
+ */
+export function stopStatsPruning(): void {
+  if (alignmentTimer) {
+    clearTimeout(alignmentTimer);
+    alignmentTimer = null;
+    logger.info("Stats pruning stopped");
+  }
 }
