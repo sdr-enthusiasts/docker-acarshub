@@ -1406,7 +1406,7 @@ have a safety net.
 | ----------------- | ---------------------------------------------------------- | ------------- |
 | SEC-02            | Escape LIKE wildcards                                      | ✅ `57acc60f` |
 | SEC-03            | Zod input validation at every `socket.on(...)`             |               |
-| LOG-01            | Replace `console.*` with logger (7 sites)                  |               |
+| LOG-01            | Replace `console.*` with logger (7 sites)                  | ✅ `b80454b9` |
 | TYPE-01 + TYPE-02 | Typed `emitToServer` wrapper, kill 7 `as any`              |               |
 | STATE-01          | Convert `export let alertTerms` to getter                  | ✅ `ede55f53` |
 | LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) | ✅ `4b414b30` |
