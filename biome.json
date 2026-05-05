@@ -23,13 +23,40 @@
         "useTemplate": "off"
       },
       "suspicious": {
-        "noExplicitAny": "on"
+        "noExplicitAny": "on",
+        "noConsole": {
+          "level": "error",
+          "options": {
+            "allow": []
+          }
+        }
       },
       "correctness": {
         "noUnusedVariables": "error"
       }
     }
   },
+  "overrides": [
+    {
+      "includes": [
+        "**/__tests__/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/test/setup.ts",
+        "**/utils/logger.ts",
+        "**/components/icons/index.tsx",
+        "acarshub-backend/scripts/**",
+        "acarshub-react/scripts/**"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double"

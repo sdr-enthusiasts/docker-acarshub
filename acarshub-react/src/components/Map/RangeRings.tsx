@@ -18,6 +18,9 @@ import { useCallback, useMemo } from "react";
 import { Layer, Source, useMap } from "react-map-gl/maplibre";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
+import { createLogger } from "../../utils/logger";
+
+const logger = createLogger("RangeRings");
 
 interface RangeRingsProps {
   /** Current map viewport state (used to calculate dynamic ring sizes) */
@@ -186,7 +189,9 @@ export function RangeRings({ viewState }: RangeRingsProps) {
       // Generate 3 rings with nice rounded intervals
       return [roundedSpacing, roundedSpacing * 2, roundedSpacing * 3];
     } catch (error) {
-      console.error("Error calculating dynamic range rings:", error);
+      logger.error("Error calculating dynamic range rings", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Fallback to settings or defaults
       return settings.map.rangeRings.length > 0
         ? settings.map.rangeRings

@@ -32,7 +32,9 @@ import type {
   TimeFormat,
   UserSettings,
 } from "../types";
-import { syncLoggerWithSettings } from "../utils/logger";
+import { createLogger, syncLoggerWithSettings } from "../utils/logger";
+
+const logger = createLogger("settingsStore");
 
 /**
  * Settings Store State
@@ -752,7 +754,7 @@ export const useSettingsStore = create<SettingsState>()(
             !imported.data ||
             !imported.map
           ) {
-            console.error("Invalid settings format");
+            logger.error("Invalid settings format");
             return false;
           }
 
@@ -767,7 +769,9 @@ export const useSettingsStore = create<SettingsState>()(
 
           return true;
         } catch (error) {
-          console.error("Failed to import settings:", error);
+          logger.error("Failed to import settings", {
+            error: error instanceof Error ? error.message : String(error),
+          });
           return false;
         }
       },

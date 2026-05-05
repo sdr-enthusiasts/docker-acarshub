@@ -17,6 +17,26 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserSettings } from "../../types";
+
+const loggerMocks = vi.hoisted(() => ({
+  info: vi.fn(),
+  debug: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  trace: vi.fn(),
+}));
+
+vi.mock("../../utils/logger", async () => {
+  const actual =
+    await vi.importActual<typeof import("../../utils/logger")>(
+      "../../utils/logger",
+    );
+  return {
+    ...actual,
+    createLogger: () => loggerMocks,
+  };
+});
+
 import {
   useLocale,
   useSettingsStore,
@@ -626,26 +646,20 @@ describe("useSettingsStore", () => {
 
     it("should reject invalid JSON during import", () => {
       const { importSettings } = useSettingsStore.getState();
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      loggerMocks.error.mockClear();
 
       const result = importSettings("not valid json");
 
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to import settings:",
-        expect.any(Error),
+      expect(loggerMocks.error).toHaveBeenCalledWith(
+        "Failed to import settings",
+        expect.objectContaining({ error: expect.any(String) }),
       );
-
-      consoleErrorSpy.mockRestore();
     });
 
     it("should reject settings with missing required sections", () => {
       const { importSettings } = useSettingsStore.getState();
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      loggerMocks.error.mockClear();
 
       const invalidSettings = {
         appearance: { theme: "latte" },
@@ -655,9 +669,7 @@ describe("useSettingsStore", () => {
       const result = importSettings(JSON.stringify(invalidSettings));
 
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Invalid settings format");
-
-      consoleErrorSpy.mockRestore();
+      expect(loggerMocks.error).toHaveBeenCalledWith("Invalid settings format");
     });
 
     it("should update timestamp and version when importing", () => {

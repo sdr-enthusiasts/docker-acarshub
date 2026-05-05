@@ -16,8 +16,15 @@
 
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { type LogEntry, type LogLevel, logBuffer } from "../utils/logger";
+import {
+  createLogger,
+  type LogEntry,
+  type LogLevel,
+  logBuffer,
+} from "../utils/logger";
 import { Button } from "./Button";
+
+const logger = createLogger("LogsViewer");
 
 type LogLevelFilter = LogLevel | "all";
 
@@ -105,7 +112,9 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
       // Could add a toast notification here
       alert("Logs copied to clipboard!");
     } catch (err) {
-      console.error("Failed to copy logs:", err);
+      logger.error("Failed to copy logs", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       alert("Failed to copy logs to clipboard");
     }
   };
