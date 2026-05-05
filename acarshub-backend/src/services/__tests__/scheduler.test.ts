@@ -366,7 +366,7 @@ describe("Scheduler", () => {
       expect(startEvents[0].taskName).toBe("test-task");
     });
 
-    it.skip("should emit taskComplete event with duration", () => {
+    it("should emit taskComplete event with duration", async () => {
       const completeEvents: Array<{
         taskId: string;
         taskName: string;
@@ -382,7 +382,12 @@ describe("Scheduler", () => {
       }, "test-task");
 
       scheduler.start();
-      vi.advanceTimersByTime(1100); // Slightly more than 1 second
+      // executeTask() is async and emits taskComplete *after* `await
+      // task.handler()`. With fake timers, advanceTimersByTime() schedules
+      // the timer callback synchronously, but post-await code only runs
+      // after the microtask queue drains. advanceTimersByTimeAsync() flushes
+      // both, which is required to observe taskComplete.
+      await vi.advanceTimersByTimeAsync(1100); // Slightly more than 1 second
 
       expect(completeEvents.length).toBeGreaterThanOrEqual(1);
       expect(completeEvents[0].taskId).toBe(taskId);
@@ -447,7 +452,7 @@ describe("Scheduler", () => {
       expect(errorCount).toBe(2);
     });
 
-    it.skip("should handle async errors gracefully", () => {
+    it("should handle async errors gracefully", async () => {
       let errorCount = 0;
 
       scheduler.on("taskError", () => {
@@ -460,7 +465,9 @@ describe("Scheduler", () => {
 
       scheduler.start();
 
-      vi.advanceTimersByTime(1100);
+      // Async handler rejection lands in executeTask's catch block after
+      // the microtask queue drains; needs the *Async timer helper.
+      await vi.advanceTimersByTimeAsync(1100);
 
       expect(errorCount).toBeGreaterThan(0);
     });
@@ -484,7 +491,7 @@ describe("Scheduler", () => {
   });
 
   describe("Task Metadata", () => {
-    it.skip("should track last run time", () => {
+    it("should track last run time", async () => {
       const taskId = scheduler.every(1, "seconds").do(() => {});
 
       scheduler.start();
@@ -492,7 +499,9 @@ describe("Scheduler", () => {
       const taskBefore = scheduler.getTask(taskId);
       expect(taskBefore?.lastRun).toBeNull();
 
-      vi.advanceTimersByTime(1100);
+      // task.lastRun is assigned after `await task.handler()` in executeTask;
+      // requires microtask flush via the *Async timer helper.
+      await vi.advanceTimersByTimeAsync(1100);
 
       const taskAfter = scheduler.getTask(taskId);
       expect(taskAfter?.lastRun).not.toBeNull();
@@ -508,16 +517,17 @@ describe("Scheduler", () => {
       expect(task?.nextRun).toBeGreaterThan(Date.now());
     });
 
-    it.skip("should update metadata after each execution", () => {
+    it("should update metadata after each execution", async () => {
       const taskId = scheduler.every(1, "seconds").do(() => {});
 
       scheduler.start();
 
-      vi.advanceTimersByTime(1100);
+      // task.lastRun is assigned post-await in executeTask; needs *Async.
+      await vi.advanceTimersByTimeAsync(1100);
       const task1 = scheduler.getTask(taskId);
       const lastRun1 = task1?.lastRun;
 
-      vi.advanceTimersByTime(1100);
+      await vi.advanceTimersByTimeAsync(1100);
       const task2 = scheduler.getTask(taskId);
       const lastRun2 = task2?.lastRun;
 
