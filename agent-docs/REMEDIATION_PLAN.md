@@ -1409,7 +1409,7 @@ have a safety net.
 | LOG-01            | Replace `console.*` with logger (7 sites)                  |               |
 | TYPE-01 + TYPE-02 | Typed `emitToServer` wrapper, kill 7 `as any`              |               |
 | STATE-01          | Convert `export let alertTerms` to getter                  | ✅ `ede55f53` |
-| LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) |               |
+| LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) | ✅ `4b414b30` |
 | LEAK-03           | Replace bare `catch {}` in zmq-listener                    |               |
 | LOG-04            | Replace `alert()` calls in LogsViewer with Toast           |               |
 
