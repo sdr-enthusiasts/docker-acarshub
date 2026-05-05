@@ -166,6 +166,24 @@ export interface SocketEvents {
     };
   }) => void;
   regenerate_alert_matches_error: (data: { error: string }) => void;
+
+  // Input validation failure (SEC-03).
+  //
+  // Emitted to the originating socket when the payload of a client→server
+  // event fails the zod schema for that event.  The handler is NOT invoked.
+  // `event` names the rejected event so the client can route the error;
+  // `issues` carries zod's structured issue list (path, code, message);
+  // `summary` is a human-readable one-liner suitable for surfacing in the
+  // toast UI without exposing internal field paths.
+  validation_error: (data: {
+    event: string;
+    summary: string;
+    issues: Array<{
+      path: Array<string | number>;
+      code: string;
+      message: string;
+    }>;
+  }) => void;
 }
 
 /**

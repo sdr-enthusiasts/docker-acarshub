@@ -74,6 +74,7 @@ import { isMigrationRunning, registerPendingSocket } from "../startup-state.js";
 import { createLogger } from "../utils/logger.js";
 import { isValidTimePeriod, zeroFillBuckets } from "../utils/timeseries.js";
 import type { TypedSocket, TypedSocketServer } from "./types.js";
+import { validatedHandler } from "./validatedHandler.js";
 
 const logger = createLogger("socket:handlers");
 
@@ -108,10 +109,26 @@ export function registerHandlers(io: TypedSocketServer): void {
       handleConnect(socket, namespace.server);
     }
 
-    // Register all event handlers
-    socket.on("query_search", (params) => handleQuerySearch(socket, params));
-    socket.on("update_alerts", (terms) =>
-      handleUpdateAlerts(socket, namespace.server, terms),
+    // Register all event handlers.
+    //
+    // The five handlers that take a payload are wrapped with
+    // validatedHandler() so that malformed input never reaches the
+    // business logic — see SEC-03 in agent-docs/REMEDIATION_PLAN.md.
+    // Handlers that take no payload (request_status, signal_freqs,
+    // signal_count, signal_graphs, request_recent_alerts,
+    // regenerate_alert_matches) are intentionally not wrapped because
+    // there is no input to validate.
+    socket.on(
+      "query_search",
+      validatedHandler("query_search", socket, (params) =>
+        handleQuerySearch(socket, params),
+      ),
+    );
+    socket.on(
+      "update_alerts",
+      validatedHandler("update_alerts", socket, (terms) =>
+        handleUpdateAlerts(socket, namespace.server, terms),
+      ),
     );
     socket.on("regenerate_alert_matches", () =>
       handleRegenerateAlertMatches(socket, namespace.server),
@@ -119,14 +136,23 @@ export function registerHandlers(io: TypedSocketServer): void {
     socket.on("request_status", () => handleRequestStatus(socket));
     socket.on("signal_freqs", () => handleSignalFreqs(socket));
     socket.on("signal_count", () => handleSignalCount(socket));
-    socket.on("alert_term_query", (params) =>
-      handleAlertTermQuery(socket, params),
+    socket.on(
+      "alert_term_query",
+      validatedHandler("alert_term_query", socket, (params) =>
+        handleAlertTermQuery(socket, params),
+      ),
     );
-    socket.on("query_alerts_by_term", (params) =>
-      handleQueryAlertsByTerm(socket, params),
+    socket.on(
+      "query_alerts_by_term",
+      validatedHandler("query_alerts_by_term", socket, (params) =>
+        handleQueryAlertsByTerm(socket, params),
+      ),
     );
-    socket.on("rrd_timeseries", (params) =>
-      handleRRDTimeseries(socket, params),
+    socket.on(
+      "rrd_timeseries",
+      validatedHandler("rrd_timeseries", socket, (params) =>
+        handleRRDTimeseries(socket, params),
+      ),
     );
     socket.on("signal_graphs", () => handleSignalGraphs(socket));
     socket.on("request_recent_alerts", () => handleRequestRecentAlerts(socket));
@@ -971,69 +997,40 @@ async function handleRRDTimeseries(
     // Legacy/debug path: explicit start / end / downsample → query DB
     // -----------------------------------------------------------------
     //
-    // SECURITY (SEC-01): start/end/downsample arrive over the Socket.IO wire
-    // and TypeScript's `number?` annotation is *not* a runtime guarantee.
-    // A malicious or buggy client can send a string, and historically those
-    // values were interpolated directly into a `sql.raw` template — a
-    // textbook SQL-injection vector. Validate aggressively here and bind
-    // the values via the parameterised `sql` tagged template below.
+    // SECURITY (SEC-01 / SEC-03):  start / end / downsample arrive over the
+    // Socket.IO wire and TypeScript's `number?` annotations are not a
+    // runtime guarantee.  A malicious or buggy client can send a string,
+    // and historically those values were interpolated directly into a
+    // `sql.raw` template — a textbook SQL-injection vector.
     //
-    // Bounds rationale:
-    //   * Unix seconds: 0 .. 4_102_444_800 (year 2100) — generous but finite
-    //   * downsample:   60 .. 86_400 — at least one minute, at most one day;
-    //     smaller buckets would defeat the cache; larger ones blow memory
-    //     when zero-filled.
+    // As of SEC-03 (acarshub-backend/src/socket/schemas.ts → RRDTimeseriesSchema)
+    // every field of `params` is validated by zod *before* this handler is
+    // invoked: each field is asserted to be a finite integer in the bounds
+    // chosen below.  By the time we reach this code, params.start /
+    // params.end / params.downsample are guaranteed to be numbers (or
+    // undefined) within those bounds, so we only need to enforce the
+    // cross-field invariant `end > start` and apply defaults.
+    //
+    // Bounds (replicated from SEC-01 for the audit trail; authoritative
+    // copies live in schemas.ts):
+    //   * Unix seconds: 0 .. 4_102_444_800 (year 2100)
+    //   * downsample:   60 .. 86_400 — at least one minute, at most one day
     const now = Math.floor(Date.now() / 1000);
-    const MAX_UNIX_SECONDS = 4_102_444_800; // 2100-01-01
-    const MIN_DOWNSAMPLE = 60;
-    const MAX_DOWNSAMPLE = 86_400;
-
-    const isValidUnixSeconds = (v: unknown): v is number =>
-      typeof v === "number" &&
-      Number.isInteger(v) &&
-      v >= 0 &&
-      v <= MAX_UNIX_SECONDS;
-
-    const isValidDownsample = (v: unknown): v is number =>
-      typeof v === "number" &&
-      Number.isInteger(v) &&
-      v >= MIN_DOWNSAMPLE &&
-      v <= MAX_DOWNSAMPLE;
 
     const start = params.start === undefined ? now - 86_400 : params.start;
     const end = params.end === undefined ? now : params.end;
     const downsample = params.downsample;
 
-    // Defaults are safe by construction; only user-supplied values need checking.
-    const startInvalid =
-      params.start !== undefined && !isValidUnixSeconds(start);
-    const endInvalid = params.end !== undefined && !isValidUnixSeconds(end);
-    const downsampleInvalid =
-      downsample !== undefined && !isValidDownsample(downsample);
-    const rangeInvalid =
-      isValidUnixSeconds(start) && isValidUnixSeconds(end) && end <= start;
-
-    if (startInvalid || endInvalid || downsampleInvalid || rangeInvalid) {
-      const reason = startInvalid
-        ? "start must be an integer Unix timestamp in seconds"
-        : endInvalid
-          ? "end must be an integer Unix timestamp in seconds"
-          : downsampleInvalid
-            ? `downsample must be an integer between ${MIN_DOWNSAMPLE} and ${MAX_DOWNSAMPLE} seconds`
-            : "end must be greater than start";
-
-      logger.warn("Rejected RRD timeseries explicit query (invalid params)", {
+    // Cross-field invariant zod cannot express in a per-field schema.
+    if (end <= start) {
+      logger.warn("Rejected RRD timeseries explicit query (end <= start)", {
         socketId: socket.id,
-        reason,
-        // Log raw values so operators can spot abuse patterns. JSON.stringify
-        // safely renders strings/objects without executing anything.
-        start: JSON.stringify(params.start),
-        end: JSON.stringify(params.end),
-        downsample: JSON.stringify(params.downsample),
+        start,
+        end,
       });
 
       socket.emit("rrd_timeseries_data", {
-        error: `Invalid parameter: ${reason}`,
+        error: "Invalid parameter: end must be greater than start",
         data: [],
         points: 0,
       });
