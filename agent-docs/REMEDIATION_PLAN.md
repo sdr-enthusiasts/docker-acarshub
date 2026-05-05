@@ -915,7 +915,7 @@ thresholds: {
 
 **Effort:** Trivial.
 
-### TEST-SKIP-01 — Four unjustified `it.skip` in scheduler tests — **HIGH**
+### TEST-SKIP-01 — Four unjustified `it.skip` in scheduler tests — **HIGH** — ✅ DONE (`768074a7`)
 
 **File:** `acarshub-backend/src/services/__tests__/scheduler.test.ts:369, 450,
 487, 511`.
@@ -1396,7 +1396,7 @@ have a safety net.
 | ------------ | -------------------------------------------------- | -------------------------- |
 | SEC-01       | SQL injection fix + regression test                | ✅ `c0fbc176`              |
 | REPO-01      | `.gitignore` root-level `*.db` / `*.rrd*` patterns | ❌ false (already ignored) |
-| TEST-SKIP-01 | Address 4 unjustified scheduler `it.skip`          |                            |
+| TEST-SKIP-01 | Address 4 unjustified scheduler `it.skip`          | ✅ `768074a7`              |
 | TEST-CFG-01  | Add backend coverage thresholds                    | ✅ `88d44730`              |
 | TEST-CFG-02  | Add per-area frontend coverage thresholds          | ✅ `dbed992a`              |
 
