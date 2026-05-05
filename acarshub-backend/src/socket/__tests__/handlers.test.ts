@@ -1723,14 +1723,19 @@ describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () =
     // The handler must NOT have reached the DB.
     expect(mockAll).not.toHaveBeenCalled();
 
-    // It must have emitted a structured error payload to the caller.
-    const payloads = emittedAs<{ error?: string; data: unknown[] }>(
-      socket,
-      "rrd_timeseries_data",
-    );
-    expect(payloads).toHaveLength(1);
-    expect(payloads[0].error).toBeDefined();
-    expect(payloads[0].data).toEqual([]);
+    // Post-SEC-03 contract: rejection now arrives as a structured
+    // `validation_error` event from validatedHandler() rather than a
+    // `rrd_timeseries_data { error }` from the in-handler check.  The
+    // protection against the SQL-injection vector is the same — the DB
+    // is never touched — but the wire response is the new generic shape.
+    const validationErrors = emittedAs<{
+      event: string;
+      summary: string;
+      issues: Array<{ path: Array<string | number>; code: string }>;
+    }>(socket, "validation_error");
+    expect(validationErrors).toHaveLength(1);
+    expect(validationErrors[0].event).toBe("rrd_timeseries");
+    expect(validationErrors[0].issues[0].path).toEqual(["start"]);
   });
 
   it("rejects a string `end` payload", async () => {
@@ -1746,9 +1751,7 @@ describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () =
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     expect(mockAll).not.toHaveBeenCalled();
-    expect(
-      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
-    ).toBeDefined();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
   });
 
   it("rejects a string `downsample` payload", async () => {
@@ -1764,9 +1767,7 @@ describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () =
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     expect(mockAll).not.toHaveBeenCalled();
-    expect(
-      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
-    ).toBeDefined();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
   });
 
   it("rejects a negative `start`", async () => {
@@ -1782,9 +1783,7 @@ describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () =
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     expect(mockAll).not.toHaveBeenCalled();
-    expect(
-      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
-    ).toBeDefined();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
   });
 
   it("rejects a non-integer (fractional) `start`", async () => {
@@ -1800,9 +1799,7 @@ describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () =
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     expect(mockAll).not.toHaveBeenCalled();
-    expect(
-      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
-    ).toBeDefined();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
   });
 
   it("rejects NaN/Infinity `end`", async () => {
@@ -1818,12 +1815,13 @@ describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () =
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     expect(mockAll).not.toHaveBeenCalled();
-    expect(
-      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
-    ).toBeDefined();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
   });
 
   it("rejects `end` <= `start`", async () => {
+    // This is the one cross-field invariant that zod cannot express in a
+    // per-field schema, so it remains in the handler and emits the legacy
+    // `rrd_timeseries_data { error }` shape rather than `validation_error`.
     const mockAll = await mockExplicitDb();
     const socket = makeMockSocket();
     simulateConnect(socket);
@@ -1854,6 +1852,7 @@ describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () =
     });
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
 
     socket.emit.mockClear();
 
@@ -1865,6 +1864,7 @@ describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () =
     });
     await new Promise<void>((resolve) => setImmediate(resolve));
     expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
   });
 
   it("accepts valid integer parameters and reaches the DB layer", async () => {
@@ -2118,5 +2118,212 @@ describe("TYPE-01/02 regression: legacy 3rd-arg namespace is inert", () => {
         "/main",
       ),
     ).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-03 regression: zod-validated handler inputs
+//
+// Socket.IO is an untyped wire — TypeScript on a `socket.on(...)` handler is
+// documentation-only, so without runtime validation any client can send any
+// shape and trigger TypeError or worse downstream.  These tests pin down the
+// post-SEC-03 contract:
+//
+//   1. Invalid shape → handler is NOT invoked, `validation_error` is emitted,
+//      no business-logic side effects (DB / cache / namespace-broadcast).
+//   2. Valid shape → handler runs and emits its normal response event.
+//   3. Unknown keys → rejected (strict() schemas).
+//   4. The structured `validation_error` payload identifies the rejected
+//      event and includes a zod-style issue list the frontend can render.
+//
+// To prove these tests really cover the regression, run them against a
+// commit where validatedHandler() is bypassed: every assertion should fail.
+// ---------------------------------------------------------------------------
+
+describe("SEC-03 regression: zod-validated socket inputs", () => {
+  it("regression: query_search rejects a non-object payload without invoking the handler", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Untyped wire — a client could send a string, a number, or null.
+    socket.handlers.query_search("malicious string" as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // The handler emits database_search_results on success.  It must NOT
+    // have done so for a string input.
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+
+    // A structured validation_error must have been sent instead.
+    const errors = emittedAs<{
+      event: string;
+      summary: string;
+      issues: Array<{ path: Array<string | number>; code: string }>;
+    }>(socket, "validation_error");
+    expect(errors).toHaveLength(1);
+    expect(errors[0].event).toBe("query_search");
+    expect(errors[0].issues.length).toBeGreaterThan(0);
+    expect(typeof errors[0].summary).toBe("string");
+  });
+
+  it("regression: query_search rejects a missing search_term without invoking the handler", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_search({ results_after: 0 } as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("regression: query_search rejects a non-string field inside search_term", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // icao is typed as string in CurrentSearch; sending a number would
+    // historically reach databaseSearch where the cast would silently
+    // coerce or fail.
+    socket.handlers.query_search({
+      search_term: { icao: 123 as unknown as string },
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+    const error = firstEmit<{
+      event: string;
+      issues: Array<{ path: Array<string | number> }>;
+    }>(socket, "validation_error");
+    expect(error).toBeDefined();
+    expect(error?.issues[0].path).toEqual(["search_term", "icao"]);
+  });
+
+  it("regression: query_search strict() rejects unknown keys inside search_term", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_search({
+      search_term: { icao: "ABC123", unexpected_field: "drop" },
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("query_search accepts a partial search_term and reaches the handler", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Only icao supplied; other fields default to "" per CurrentSearchSchema.
+    // This matches the runtime contract the handler always honoured —
+    // SEC-03 is not allowed to break that.
+    socket.handlers.query_search({
+      search_term: { icao: "ABC123" },
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(1);
+    expect(emittedAs(socket, "validation_error")).toHaveLength(0);
+  });
+
+  it("regression: update_alerts rejects a payload missing the `terms` array", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Set allowRemoteUpdates so update_alerts isn't short-circuited.
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ allowRemoteUpdates: true }),
+    );
+
+    socket.handlers.update_alerts({ ignore: ["foo"] } as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+    expect(mockSetAlertTerms).not.toHaveBeenCalled();
+  });
+
+  it("regression: update_alerts rejects non-string entries inside terms", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ allowRemoteUpdates: true }),
+    );
+
+    socket.handlers.update_alerts({
+      terms: ["valid", 42 as unknown as string],
+      ignore: [],
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+    expect(mockSetAlertTerms).not.toHaveBeenCalled();
+  });
+
+  it("regression: alert_term_query rejects non-string field types", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.alert_term_query({
+      icao: { $ne: null } as unknown as string,
+      flight: "",
+      tail: "",
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("regression: query_alerts_by_term rejects a missing `term`", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_alerts_by_term({ page: 0 } as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "alerts_by_term_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("regression: query_alerts_by_term rejects a negative `page`", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_alerts_by_term({ term: "foo", page: -5 });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "alerts_by_term_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("validation_error payload is well-formed: { event, summary, issues[] }", async () => {
+    // Tight assertion on the wire shape so the frontend toast UI can rely on it.
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_search(null as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const error = firstEmit<{
+      event: string;
+      summary: string;
+      issues: Array<{
+        path: Array<string | number>;
+        code: string;
+        message: string;
+      }>;
+    }>(socket, "validation_error");
+
+    expect(error).toBeDefined();
+    expect(error?.event).toBe("query_search");
+    expect(typeof error?.summary).toBe("string");
+    expect(error?.summary.length).toBeGreaterThan(0);
+    expect(Array.isArray(error?.issues)).toBe(true);
+    expect(error?.issues.length).toBeGreaterThan(0);
+    for (const issue of error?.issues ?? []) {
+      expect(Array.isArray(issue.path)).toBe(true);
+      expect(typeof issue.code).toBe("string");
+      expect(typeof issue.message).toBe("string");
+    }
   });
 });
