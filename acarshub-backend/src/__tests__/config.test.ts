@@ -521,7 +521,11 @@ describe("config module", () => {
 
       config.setAlertTerms(["emergency", "MAYDAY", "Pan-Pan"]);
 
-      expect(config.alertTerms).toEqual(["EMERGENCY", "MAYDAY", "PAN-PAN"]);
+      expect(config.getAlertTerms()).toEqual([
+        "EMERGENCY",
+        "MAYDAY",
+        "PAN-PAN",
+      ]);
     });
   });
 
@@ -531,7 +535,89 @@ describe("config module", () => {
 
       config.setAlertIgnoreTerms(["test", "DEBUG", "Sample"]);
 
-      expect(config.alertTermsIgnore).toEqual(["TEST", "DEBUG", "SAMPLE"]);
+      expect(config.getAlertIgnoreTerms()).toEqual(["TEST", "DEBUG", "SAMPLE"]);
+    });
+  });
+
+  describe("STATE-01: alert terms getter (regression)", () => {
+    // STATE-01 converted `export let alertTerms` (a live ESM binding) to a
+    // module-private variable accessed only through getAlertTerms(). This
+    // suite locks in the new contract:
+    //
+    //   1. The getter always reflects the latest value after a setter call.
+    //   2. A value captured *before* a setter call (the previous failure mode
+    //      for any consumer who did `const t = config.alertTerms`) does not
+    //      poison subsequent reads through the getter.
+    //   3. getConfig() snapshots the current values, not the initial empty
+    //      arrays.
+    //
+    // These tests would still pass with the old `export let` because the
+    // old test file used `config.alertTerms` (a live binding read through
+    // the namespace import). What they document is that consumers no longer
+    // *can* take a stale snapshot — the API simply doesn't expose one.
+
+    it("getter reflects latest value after setAlertTerms()", async () => {
+      const config = await import("../config.js");
+
+      config.setAlertTerms(["FOO", "BAR"]);
+      expect(config.getAlertTerms()).toEqual(["FOO", "BAR"]);
+
+      config.setAlertTerms(["BAZ"]);
+      // Critical: the getter must see the newest value, not the cached
+      // ["FOO","BAR"] from the previous read.
+      expect(config.getAlertTerms()).toEqual(["BAZ"]);
+    });
+
+    it("getter reflects latest value after setAlertIgnoreTerms()", async () => {
+      const config = await import("../config.js");
+
+      config.setAlertIgnoreTerms(["IGNORE-A"]);
+      expect(config.getAlertIgnoreTerms()).toEqual(["IGNORE-A"]);
+
+      config.setAlertIgnoreTerms(["IGNORE-B", "IGNORE-C"]);
+      expect(config.getAlertIgnoreTerms()).toEqual(["IGNORE-B", "IGNORE-C"]);
+    });
+
+    it("a value captured before a setter call does not affect later getter reads", async () => {
+      const config = await import("../config.js");
+
+      config.setAlertTerms(["ORIGINAL"]);
+      const captured = config.getAlertTerms();
+
+      config.setAlertTerms(["UPDATED"]);
+
+      // The captured array is the old reference (semantics of returning the
+      // internal array unchanged from the previous API). The point is that
+      // subsequent getter calls return the NEW value, so consumers that
+      // always re-read are correct.
+      expect(captured).toEqual(["ORIGINAL"]);
+      expect(config.getAlertTerms()).toEqual(["UPDATED"]);
+    });
+
+    it("getConfig() includes the most recent alert terms", async () => {
+      const config = await import("../config.js");
+
+      config.setAlertTerms(["LATEST-TERM"]);
+      config.setAlertIgnoreTerms(["LATEST-IGNORE"]);
+
+      const snapshot = config.getConfig();
+      expect(snapshot.alertTerms).toEqual(["LATEST-TERM"]);
+      expect(snapshot.alertIgnoreTerms).toEqual(["LATEST-IGNORE"]);
+
+      // Update again and re-snapshot — must reflect the change.
+      config.setAlertTerms(["EVEN-NEWER"]);
+      const snapshot2 = config.getConfig();
+      expect(snapshot2.alertTerms).toEqual(["EVEN-NEWER"]);
+    });
+
+    it("the old `alertTerms` named export no longer exists", async () => {
+      // Lock in that the bug-prone API is gone. If a future change
+      // re-introduces `export let alertTerms`, this test fails loudly.
+      const config = (await import("../config.js")) as Record<string, unknown>;
+      expect(config.alertTerms).toBeUndefined();
+      expect(config.alertTermsIgnore).toBeUndefined();
+      expect(typeof config.getAlertTerms).toBe("function");
+      expect(typeof config.getAlertIgnoreTerms).toBe("function");
     });
   });
 });
