@@ -455,10 +455,7 @@ export const SearchPage = () => {
       queryPayload.results_after = page;
     }
 
-    // Flask-SocketIO requires namespace as third argument when emitting from client
-    // Type assertion needed because Socket.IO client types don't match Flask-SocketIO pattern
-    // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO client typing limitation
-    (socket as any).emit("query_search", queryPayload, "/main");
+    socket?.emit("query_search", queryPayload);
 
     uiLogger.debug("Executing search query", {
       params,

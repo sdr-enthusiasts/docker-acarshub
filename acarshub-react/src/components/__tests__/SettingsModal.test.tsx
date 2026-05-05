@@ -596,14 +596,10 @@ describe("SettingsModal", () => {
       // Wait for Socket.IO emission (async dynamic import)
       await waitFor(
         () => {
-          expect(mockSocket.emit).toHaveBeenCalledWith(
-            "update_alerts",
-            {
-              terms: ["MAYDAY"],
-              ignore: [],
-            },
-            "/main",
-          );
+          expect(mockSocket.emit).toHaveBeenCalledWith("update_alerts", {
+            terms: ["MAYDAY"],
+            ignore: [],
+          });
         },
         { timeout: 5000 },
       );
@@ -838,14 +834,10 @@ describe("SettingsModal", () => {
 
       // Wait for Socket.IO emission
       await waitFor(() => {
-        expect(mockSocket.emit).toHaveBeenCalledWith(
-          "update_alerts",
-          {
-            terms: ["EMERGENCY"],
-            ignore: [],
-          },
-          "/main",
-        );
+        expect(mockSocket.emit).toHaveBeenCalledWith("update_alerts", {
+          terms: ["EMERGENCY"],
+          ignore: [],
+        });
       });
     });
 

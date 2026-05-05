@@ -2023,3 +2023,100 @@ describe("migration-aware connection handling", () => {
     expect(socket.handlers.disconnect).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// TYPE-01/02 regression: legacy Flask-SocketIO 3rd-argument namespace shape
+// ---------------------------------------------------------------------------
+//
+// Prior to TYPE-01/02 the React frontend emitted with a trailing "/main"
+// namespace argument:
+//
+//   socket.emit("query_search", payload, "/main")
+//
+// That signature is a Flask-SocketIO Python-client quirk; in Socket.IO v4
+// the namespace is bound at connection time (`io.of("/main")` server-side
+// matches `io("${origin}/main", ...)` client-side) and any extra positional
+// arg after `payload` is silently ignored by the server-side handler unless
+// the handler explicitly reads more parameters.
+//
+// These tests pin that contract: handlers must produce identical output
+// for `(payload)` and `(payload, "/main")`. Without this guarantee a future
+// handler that adds a 2nd parameter would silently start consuming the
+// dead namespace string and corrupt its own behaviour.
+// ---------------------------------------------------------------------------
+describe("TYPE-01/02 regression: legacy 3rd-arg namespace is inert", () => {
+  it("query_search produces identical results with and without trailing namespace arg", () => {
+    mockDatabaseSearch.mockReturnValue({
+      messages: [{ uid: "uid-1" }],
+      totalCount: 1,
+    });
+    mockEnrichMessages.mockReturnValue([makeEnrichedMsg("uid-1")]);
+
+    const socketA = makeMockSocket();
+    simulateConnect(socketA);
+    // New-shape: payload only.
+    (socketA.handlers.query_search as (...args: unknown[]) => void)({
+      search_term: { flight: "UAL123" },
+    });
+
+    mockDatabaseSearch.mockReturnValue({
+      messages: [{ uid: "uid-1" }],
+      totalCount: 1,
+    });
+    mockEnrichMessages.mockReturnValue([makeEnrichedMsg("uid-1")]);
+
+    const socketB = makeMockSocket();
+    simulateConnect(socketB);
+    // Legacy-shape: payload + stale namespace string.
+    (socketB.handlers.query_search as (...args: unknown[]) => void)(
+      { search_term: { flight: "UAL123" } },
+      "/main",
+    );
+
+    const a = emittedAs<{ num_results: number }>(
+      socketA,
+      "database_search_results",
+    );
+    const b = emittedAs<{ num_results: number }>(
+      socketB,
+      "database_search_results",
+    );
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(1);
+    expect(a[0].num_results).toBe(b[0].num_results);
+  });
+
+  it("request_status accepts both shapes without throwing", () => {
+    const socketA = makeMockSocket();
+    simulateConnect(socketA);
+    expect(() =>
+      (socketA.handlers.request_status as (...args: unknown[]) => void)(),
+    ).not.toThrow();
+
+    const socketB = makeMockSocket();
+    simulateConnect(socketB);
+    expect(() =>
+      (socketB.handlers.request_status as (...args: unknown[]) => void)(
+        {},
+        "/main",
+      ),
+    ).not.toThrow();
+  });
+
+  it("signal_freqs accepts both shapes without throwing", () => {
+    const socketA = makeMockSocket();
+    simulateConnect(socketA);
+    expect(() =>
+      (socketA.handlers.signal_freqs as (...args: unknown[]) => void)(),
+    ).not.toThrow();
+
+    const socketB = makeMockSocket();
+    simulateConnect(socketB);
+    expect(() =>
+      (socketB.handlers.signal_freqs as (...args: unknown[]) => void)(
+        { freqs: true },
+        "/main",
+      ),
+    ).not.toThrow();
+  });
+});

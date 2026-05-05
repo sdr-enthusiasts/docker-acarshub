@@ -517,14 +517,6 @@ describe("on-demand emit: non-warm periods", () => {
     expect((rrdEmits[0][1] as { time_period: string }).time_period).toBe("1yr");
   });
 
-  it("includes /main as the third argument in the on-demand emit", () => {
-    renderHook(() => useRRDTimeSeriesData("24hr"));
-    const rrdEmits = (mockSocket.emit.mock.calls as unknown[][]).filter(
-      (call) => call[0] === "rrd_timeseries",
-    );
-    expect(rrdEmits[0][2]).toBe("/main");
-  });
-
   it("does NOT emit for a non-warm period when the cache already has an entry", () => {
     seedCache(makeEntry("24hr"));
     renderHook(() => useRRDTimeSeriesData("24hr"));

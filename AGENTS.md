@@ -339,14 +339,23 @@ export const useSettingsStore = create<SettingsState>()(
 - `update_alerts` - Update alert terms
 - `request_status` - Request system status
 
-**Flask-SocketIO Quirk** (CRITICAL):
+**Namespace Binding** (Socket.IO v4):
+
+The frontend connects to the `/main` namespace at construction time
+(`io("${origin}/main", ...)`); the backend binds handlers via
+`io.of("/main")`. Emit calls do **not** pass a namespace argument — that
+was a Flask-SocketIO Python-client quirk that became dead-but-harmless
+code after the backend port to Node Socket.IO v4 and was removed in
+TYPE-01/02 (commit pinned in `agent-docs/REMEDIATION_PLAN.md`).
 
 ```typescript
-// Flask-SocketIO requires namespace as THIRD argument
-socket.emit("query_search", payload, "/main"); // ✅ Correct
+// ✅ Correct
+socket.emit("query_search", payload);
 
-// Standard Socket.IO (won't work with Flask-SocketIO)
-socket.emit("query_search", payload); // ❌ Wrong
+// ❌ Wrong — extra "/main" arg is silently passed as a 2nd handler
+//    parameter no handler reads, but a future handler that adds a
+//    second parameter would silently consume it.
+socket.emit("query_search", payload, "/main");
 ```
 
 ## Testing Standards
