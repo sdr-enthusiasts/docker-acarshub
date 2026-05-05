@@ -273,8 +273,7 @@ export const SettingsModal = () => {
     // Emit to backend via Socket.IO
     import("../services/socket").then((socketModule) => {
       const socket = socketModule.socketService.getSocket();
-      // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
-      (socket as any).emit("update_alerts", newTerms, "/main");
+      socket?.emit("update_alerts", newTerms);
     });
 
     alert(
@@ -303,8 +302,7 @@ export const SettingsModal = () => {
       // Emit to backend via Socket.IO
       import("../services/socket").then((socketModule) => {
         const socket = socketModule.socketService.getSocket();
-        // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
-        (socket as any).emit("update_alerts", newTerms, "/main");
+        socket?.emit("update_alerts", newTerms);
       });
     }
   }, [newAlertTerm, alertTerms, setAlertTerms]);
@@ -320,8 +318,7 @@ export const SettingsModal = () => {
       // Emit to backend via Socket.IO
       import("../services/socket").then((socketModule) => {
         const socket = socketModule.socketService.getSocket();
-        // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
-        (socket as any).emit("update_alerts", newTerms, "/main");
+        socket?.emit("update_alerts", newTerms);
       });
     },
     [alertTerms, setAlertTerms],
@@ -358,8 +355,7 @@ export const SettingsModal = () => {
       // Emit to backend via Socket.IO
       import("../services/socket").then((socketModule) => {
         const socket = socketModule.socketService.getSocket();
-        // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
-        (socket as any).emit("update_alerts", newTerms, "/main");
+        socket?.emit("update_alerts", newTerms);
       });
     }
   }, [newIgnoreTerm, alertTerms, setAlertTerms]);
@@ -375,8 +371,7 @@ export const SettingsModal = () => {
       // Emit to backend via Socket.IO
       import("../services/socket").then((socketModule) => {
         const socket = socketModule.socketService.getSocket();
-        // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO requires namespace as third argument
-        (socket as any).emit("update_alerts", newTerms, "/main");
+        socket?.emit("update_alerts", newTerms);
       });
     },
     [alertTerms, setAlertTerms],
