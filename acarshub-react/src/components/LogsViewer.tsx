@@ -16,6 +16,7 @@
 
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useToastStore } from "../store/useToastStore";
 import {
   createLogger,
   type LogEntry,
@@ -49,6 +50,7 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
   const [autoScroll, setAutoScroll] = useState(true);
   const logsEndRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
+  const showToast = useToastStore((state) => state.showToast);
 
   // Subscribe to log updates
   useEffect(() => {
@@ -109,13 +111,18 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
     const content = logBuffer.exportLogs();
     try {
       await navigator.clipboard.writeText(content);
-      // Could add a toast notification here
-      alert("Logs copied to clipboard!");
+      showToast({
+        variant: "success",
+        message: "Logs copied to clipboard",
+      });
     } catch (err) {
       logger.error("Failed to copy logs", {
         error: err instanceof Error ? err.message : String(err),
       });
-      alert("Failed to copy logs to clipboard");
+      showToast({
+        variant: "error",
+        message: "Failed to copy logs to clipboard",
+      });
     }
   };
 
