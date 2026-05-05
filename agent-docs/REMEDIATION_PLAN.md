@@ -1249,32 +1249,19 @@ done (or remove that phase entirely if V4.2 is itself a historical plan).
 
 ## 13. Repository hygiene
 
-### REPO-01 — Multi-gigabyte binary files at repo root — **HIGH**
+### REPO-01 — Multi-gigabyte binary files at repo root — ❌ FALSE FINDING
 
-**Files (all untracked, none in `.gitignore`):**
+**Status:** Audit error. The original finding claimed these files were
+"untracked but not gitignored" — wrong. `.gitignore` lines 152-158 already
+cover `*.db`, `*.db-shm`, `*.db-wal`, `*.rrd`, `*.rrd.back`, `*.rrd.back2`,
+with explicit `!test-fixtures/` allowlist exceptions for the committed
+fixtures. Verified with `git check-ignore -v` against every file listed
+below; all are properly ignored. No code change required.
 
-- `acarshub.rrd.back` — 1.0 MB
-- `messages.db` — 2.4 MB
-- `test.db` — 49 MB (live, has `-shm`/`-wal` siblings)
-- `test_back.db` — 2.5 GB
-- `messages_large.db` — 6.0 GB
+**Files (all correctly ignored by existing rules):**
 
-**Finding.** A single accidental `git add .` commits a multi-GB blob. Tracked
-fixtures (`test-fixtures/seed.db`, `test-fixtures/test.rrd`) are intentional
-and stay.
-
-**Remediation.** Add to root `.gitignore`:
-
-```gitignore
-# Local databases and RRD backups (do not commit; use test-fixtures/ for fixtures)
-/*.db
-/*.db-shm
-/*.db-wal
-/*.rrd
-/*.rrd.back
-```
-
-**Effort:** Trivial.
+- `acarshub.rrd.back` — ignored by `*.rrd.back` (line 153)
+- `messages.db`, `test.db`, `test_back.db`, `messages_large.db` — ignored by `*.db` (line 156)
 
 ### REPO-02 — Dead lint configs at repo root — **LOW**
 
@@ -1405,13 +1392,13 @@ have a safety net.
 
 ### Phase 1 — Stop the bleeding (1-2 days)
 
-| ID           | Description                                        | Status        |
-| ------------ | -------------------------------------------------- | ------------- |
-| SEC-01       | SQL injection fix + regression test                | ✅ `c0fbc176` |
-| REPO-01      | `.gitignore` root-level `*.db` / `*.rrd*` patterns |               |
-| TEST-SKIP-01 | Address 4 unjustified scheduler `it.skip`          |               |
-| TEST-CFG-01  | Add backend coverage thresholds                    |               |
-| TEST-CFG-02  | Add per-area frontend coverage thresholds          |               |
+| ID           | Description                                        | Status                     |
+| ------------ | -------------------------------------------------- | -------------------------- |
+| SEC-01       | SQL injection fix + regression test                | ✅ `c0fbc176`              |
+| REPO-01      | `.gitignore` root-level `*.db` / `*.rrd*` patterns | ❌ false (already ignored) |
+| TEST-SKIP-01 | Address 4 unjustified scheduler `it.skip`          |                            |
+| TEST-CFG-01  | Add backend coverage thresholds                    |                            |
+| TEST-CFG-02  | Add per-area frontend coverage thresholds          |                            |
 
 ### Phase 2 — High-impact correctness (3-5 days)
 
