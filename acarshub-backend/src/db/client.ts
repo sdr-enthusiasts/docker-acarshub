@@ -85,7 +85,15 @@ export function initDatabase(
     // Create SQLite connection
     sqliteConnection = new Database(path, {
       timeout: DB_TIMEOUT,
-      verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
+      verbose:
+        process.env.NODE_ENV === "development"
+          ? (message?: unknown, ...additionalArgs: unknown[]) => {
+              // better-sqlite3's verbose hook fires for every prepared
+              // statement; route through logger at trace so it can be
+              // turned on/off via log-level config rather than NODE_ENV.
+              logger.trace("sqlite", { message, additionalArgs });
+            }
+          : undefined,
     });
 
     // Enable WAL mode for better concurrent read performance

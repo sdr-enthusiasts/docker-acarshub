@@ -14,8 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DecodedText, DecodedTextItem } from "../../types";
+
+const loggerMocks = vi.hoisted(() => ({
+  info: vi.fn(),
+  debug: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  trace: vi.fn(),
+}));
+
+vi.mock("../logger", () => ({
+  createLogger: () => loggerMocks,
+}));
+
 import {
   formatDecodedText,
   highlightMatchedText,
@@ -415,14 +428,8 @@ describe("decoderUtils", () => {
   });
 
   describe("parseAndFormatLibacars", () => {
-    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
     beforeEach(() => {
-      consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      consoleErrorSpy.mockRestore();
+      loggerMocks.error.mockClear();
     });
 
     describe("frequency data", () => {
@@ -642,14 +649,14 @@ describe("decoderUtils", () => {
         const result = parseAndFormatLibacars(libacarsString);
 
         expect(result).toBeNull();
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerMocks.error).toHaveBeenCalled();
       });
 
       it("should return null for empty string", () => {
         const result = parseAndFormatLibacars("");
 
         expect(result).toBeNull();
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerMocks.error).toHaveBeenCalled();
       });
 
       it("should return null for malformed JSON", () => {
@@ -658,7 +665,7 @@ describe("decoderUtils", () => {
         const result = parseAndFormatLibacars(libacarsString);
 
         expect(result).toBeNull();
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerMocks.error).toHaveBeenCalled();
       });
 
       it("should handle JSON with no braces", () => {
@@ -667,7 +674,7 @@ describe("decoderUtils", () => {
         const result = parseAndFormatLibacars(libacarsString);
 
         expect(result).toBeNull();
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerMocks.error).toHaveBeenCalled();
       });
     });
 

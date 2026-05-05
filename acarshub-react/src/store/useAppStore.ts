@@ -186,7 +186,9 @@ const loadReadMessageUids = (): Set<string> => {
       return new Set(parsed);
     }
   } catch (error) {
-    console.error("Failed to load read messages from localStorage:", error);
+    storeLogger.error("Failed to load read messages from localStorage", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
   return new Set();
 };
