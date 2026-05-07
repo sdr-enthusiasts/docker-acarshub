@@ -1,5 +1,6 @@
 server {
-  listen 80 default_server;
+  listen ACARSHUB_NGINX_PORT default_server;
+  listen [::]:ACARSHUB_NGINX_PORT default_server;
 
   root /webapp/dist;
   server_name _;

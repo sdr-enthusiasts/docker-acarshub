@@ -104,7 +104,7 @@ Most configuration options below are not required to get started. See [Setting-U
 
 | Port       | Description                                                                                 |
 | ---------- | ------------------------------------------------------------------------------------------- |
-| `80`       | Port used for the web interface                                                             |
+| `80`       | Port used for the web interface (can be changed by setting `ACARSHUB_NGINX_PORT`)           |
 | `5550/udp` | Default UDP port for receiving ACARS JSON data (used when `ACARS_CONNECTIONS=udp`)          |
 | `5555/udp` | Default UDP port for receiving VDLM2 JSON data (used when `VDLM_CONNECTIONS=udp`)           |
 | `5556/udp` | Default UDP port for receiving HFDL JSON data (used when `HFDL_CONNECTIONS=udp`)            |
