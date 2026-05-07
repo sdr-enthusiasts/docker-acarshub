@@ -265,6 +265,7 @@ ENV ENABLE_ACARS="false" \
     ENABLE_RANGE_RINGS="true" \
     ADSB_URL="http://tar1090/data/aircraft.json" \
     PORT=8888 \
+    ACARSHUB_NGINX_PORT=80 \
     ACARSHUB_DB="/run/acars/messages.db" \
     GROUND_STATION_PATH="/webapp/data/ground-stations.json" \
     MESSAGE_LABELS_PATH="/webapp/data/metadata.json" \
