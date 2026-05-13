@@ -338,7 +338,8 @@ export const AboutPage = () => {
             </p>
             {version.is_outdated && (
               <p style={{ color: "var(--color-warning)", fontWeight: 600 }}>
-                ⚠️ A newer version is available on GitHub
+                <span aria-hidden="true">⚠️</span> A newer version is available
+                on GitHub
               </p>
             )}
           </Card>
