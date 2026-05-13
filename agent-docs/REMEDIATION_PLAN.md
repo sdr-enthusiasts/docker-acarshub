@@ -389,7 +389,7 @@ companion `.scss` module gets the rule. Naming: BEM-style, e.g.
 
 **Effort:** Low (mechanical).
 
-### STYLE-INLINE-DYNAMIC — Dynamic inline styles must use CSS custom properties — **MEDIUM**
+### STYLE-INLINE-DYNAMIC — Dynamic inline styles must use CSS custom properties — **MEDIUM** — ✅ DONE `cf8ee727`
 
 **Files:**
 
@@ -1383,6 +1383,37 @@ acarshub-backend/src acarshub-react/src` and wire into CI.
 
 **Effort:** Trivial.
 
+### BUG-SETTINGS-SCROLL — Settings → Advanced auto-scrolls to bottom on open — **LOW**
+
+**File:** `acarshub-react/src/components/SettingsModal.tsx` (Advanced
+section, log-viewer area).
+
+**Finding.** When the user opens the Settings modal and navigates to the
+Advanced tab, the panel auto-scrolls to the bottom to reveal the embedded
+log viewer. This is a long-standing UX annoyance: settings appearing above
+the log viewer become invisible without a manual scroll, and there is no
+user-facing reason for the modal to begin focused on the logs rather than
+the top of the panel.
+
+**Remediation.**
+
+- Identify and remove the auto-scroll behaviour (likely an `useEffect`
+  with `scrollIntoView({ block: "end" })` or similar on the LogsViewer
+  mount inside the modal).
+- Confirm the LogsViewer itself still auto-scrolls _within its own
+  container_ when new log entries arrive (that behaviour is desirable and
+  in scope of the viewer's own logic — only the modal-level scroll is
+  wrong).
+
+**Tests required.**
+
+- Regression: mount the Settings modal at the Advanced tab and assert the
+  scroll container's `scrollTop` is `0` after mount and after navigating
+  to the tab. Must fail without the fix.
+
+**Effort:** Trivial. Scheduled at the end of Phase 3 alongside the other
+small polish items.
+
 ---
 
 ## 15. User audibles (out-of-audit additions)
@@ -1496,6 +1527,62 @@ the vendor-split commit).
 
 ---
 
+### FEAT-RANGE-RINGS — Dynamic range-ring sizing on the map — **FEATURE**
+
+**Motivation.** The map currently renders three range rings sized to the
+display range. In practice the algorithm favours smaller rings — at typical
+zoom-out levels users see three closely-spaced inner rings and the outer
+edge of the visible area is unannotated. Two hypotheses to investigate
+before writing code:
+
+1. The clipping-buffer threshold is too conservative — rings that _would_
+   fit are being dropped to keep them away from the viewport edge.
+2. The fixed count of three is wrong for wide ranges — a fourth (or fifth)
+   ring should appear dynamically as the visible area grows.
+
+These are not mutually exclusive; the fix may be both.
+
+**Phase A — Audit (deliverable: a written analysis with screenshots, not
+code yet).**
+
+1. Identify the current implementation site(s) (likely
+   `acarshub-react/src/components/Map/RangeRings.tsx` or similar) and
+   document the exact sizing algorithm: ring count, spacing strategy,
+   clipping logic, and any zoom-level branching.
+2. Reproduce the favours-small-rings behaviour at several zoom levels and
+   capture screenshots at 320px, 768px, 1024px, and 1920px viewport
+   widths.
+3. Quantify the clipping buffer: at what viewport-fraction does a ring get
+   dropped? Is the buffer expressed in pixels, viewport-percentage, or
+   nautical miles?
+4. Survey comparable tooling (tar1090, dump1090 web UI) for ring-sizing
+   strategies and document differences.
+5. Decide between three candidate strategies:
+   - (a) reduce the clipping buffer (keep ring count fixed at 3)
+   - (b) keep the buffer but allow ring count to grow with viewport size
+   - (c) both — adaptive count _and_ a more permissive buffer
+
+**Phase B — Implementation (only after Phase A is reviewed).**
+
+1. Implement the chosen strategy.
+2. Preserve Catppuccin theming and existing ring-label styling — sizing
+   changes must not regress visual design.
+3. Ensure mobile (320px) still renders sensibly — possibly fewer rings on
+   small viewports.
+
+**Tests required.**
+
+- Unit tests for the ring-sizing algorithm covering: small/medium/large
+  display ranges, narrow/wide viewports, zoom-level transitions, and the
+  clipping-buffer boundary.
+- Regression test capturing the original behaviour (so we can prove the
+  before/after difference numerically, not just visually).
+- Visual E2E check (Playwright snapshot) at canonical viewport widths.
+
+**Effort:** Phase A: 0.5-1 day. Phase B: 1-2 days.
+
+---
+
 ## 16. Suggested execution order
 
 This sequence keeps each PR small, testable, and independently reviewable. It
@@ -1532,9 +1619,10 @@ have a safety net.
 | SCSS-COLOR-01        | Fix hardcoded `#ffffff` / `#000`                                | ✅ `74e353ba` |
 | SCSS-TOUCH           | Bump touch targets to ≥44 px                                    |               |
 | STYLE-INLINE-STATIC  | Move 8 static inline-style sites to SCSS                        | ✅ `f9732120` |
-| STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties |               |
+| STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties | ✅ `cf8ee727` |
 | NIT-02               | `⚠️` `aria-hidden` fix                                          | ✅ `1c968297` |
 | NIT-03               | Verify `MessageGroup` biome-ignore                              | ✅ `2d4ef6c1` |
+| BUG-SETTINGS-SCROLL  | Settings → Advanced no longer auto-scrolls to bottom            |               |
 
 ### Phase 4 — Test infrastructure backfill (1-2 weeks)
 
@@ -1610,10 +1698,11 @@ Scheduled after the architecture refactors so the refactored module
 boundaries (split `SettingsModal`, split `AircraftMarkers` tooltip code,
 extracted hooks) are in place before new feature surface lands on them.
 
-| ID               | Description                                           |
-| ---------------- | ----------------------------------------------------- |
-| FEAT-MARKER-SIZE | User-configurable aircraft marker size on the map     |
-| PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction |
+| ID               | Description                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| FEAT-MARKER-SIZE | User-configurable aircraft marker size on the map                                           |
+| PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction                                       |
+| FEAT-RANGE-RINGS | Dynamic range-ring sizing on the map — investigate clipping buffer and/or dynamic 4th+ ring |
 
 ### Phase 9 — Cleanup
 
