@@ -939,11 +939,6 @@ export function AircraftMarkers({
                   <img
                     src={markerData.iconHtml}
                     alt={`Aircraft ${markerData.hex}`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      pointerEvents: "none",
-                    }}
                   />
                 </button>
               )}

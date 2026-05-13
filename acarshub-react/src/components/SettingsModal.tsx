@@ -1208,8 +1208,7 @@ export const SettingsModal = () => {
                   <input
                     id="custom-tile-url"
                     type="text"
-                    className="settings-input"
-                    style={{ width: "100%" }}
+                    className="settings-input settings-input--full"
                     placeholder="https://example.com/{z}/{x}/{y}.png"
                     value={customTileUrl || ""}
                     onChange={(e) => {
@@ -1324,17 +1323,11 @@ export const SettingsModal = () => {
                   <label htmlFor="ground-altitude-threshold">
                     Ground Altitude Threshold
                   </label>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
+                  <div className="settings-form-field__inline-row">
                     <input
                       id="ground-altitude-threshold"
                       type="number"
-                      className="settings-input"
+                      className="settings-input settings-input--fixed-narrow"
                       min="0"
                       max="10000"
                       step="100"
@@ -1345,7 +1338,6 @@ export const SettingsModal = () => {
                           setGroundAltitudeThreshold(value);
                         }
                       }}
-                      style={{ width: "120px" }}
                     />
                     <span>ft MSL</span>
                   </div>
