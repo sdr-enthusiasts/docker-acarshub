@@ -1415,14 +1415,14 @@ have a safety net.
 
 ### Phase 3 — Design-language compliance (3-5 days)
 
-| ID                   | Description                                                     |
-| -------------------- | --------------------------------------------------------------- |
-| SCSS-COLOR-01        | Fix hardcoded `#ffffff` / `#000`                                |
-| SCSS-TOUCH           | Bump touch targets to ≥44 px                                    |
-| STYLE-INLINE-STATIC  | Move 8 static inline-style sites to SCSS                        |
-| STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties |
-| NIT-02               | `⚠️` `aria-hidden` fix                                          |
-| NIT-03               | Verify `MessageGroup` biome-ignore                              |
+| ID                   | Description                                                     | Status        |
+| -------------------- | --------------------------------------------------------------- | ------------- |
+| SCSS-COLOR-01        | Fix hardcoded `#ffffff` / `#000`                                |               |
+| SCSS-TOUCH           | Bump touch targets to ≥44 px                                    |               |
+| STYLE-INLINE-STATIC  | Move 8 static inline-style sites to SCSS                        |               |
+| STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties |               |
+| NIT-02               | `⚠️` `aria-hidden` fix                                          | ✅ `1c968297` |
+| NIT-03               | Verify `MessageGroup` biome-ignore                              |               |
 
 ### Phase 4 — Test infrastructure backfill (1-2 weeks)
 
