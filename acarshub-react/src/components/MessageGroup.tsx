@@ -182,9 +182,25 @@ export const MessageGroup = ({
   // Get aircraft identifier for display
   const aircraftId = plane.identifiers.find((id) => id.length > 0) || "Unknown";
 
+  // NIT-03 (verified): both biome a11y suppressions below are required.
+  //
+  // 1. noStaticElementInteractions — this div is a keyboard-navigable
+  //    container of message tabs. role="group" + tabIndex implement a
+  //    focus-management pattern (arrow-key navigation between tabs is
+  //    handled in handleKeyDown). The rule fires because "group" is not
+  //    in biome's list of interactive roles, but per WAI-ARIA the pattern
+  //    is valid: a non-interactive role can host keyboard handlers when
+  //    those handlers manage focus within composite descendants.
+  //
+  // 2. useAriaPropsSupportedByRole — aria-label IS supported by
+  //    role="group" per ARIA 1.2 §6.2.2 — the group role inherits from
+  //    section, which includes aria-label in its supported properties.
+  //    Biome's rule is over-conservative for this combination and would
+  //    force us to use aria-labelledby (requiring an extra DOM node just
+  //    to host the label text).
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: Interactive keyboard navigation for message tabs
-    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: aria-label is appropriate for group role with keyboard interaction
+    // biome-ignore lint/a11y/noStaticElementInteractions: see NIT-03 note above
+    // biome-ignore lint/a11y/useAriaPropsSupportedByRole: see NIT-03 note above
     <div
       className={`message-group ${plane.has_alerts ? "message-group--alert" : ""}`}
       role={hasMultipleMessages ? "group" : undefined}
