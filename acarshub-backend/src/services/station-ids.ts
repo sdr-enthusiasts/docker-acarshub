@@ -49,9 +49,8 @@ const knownStationIds = new Set<string>();
  * Safe to call multiple times – subsequent calls are no-ops (warn + return).
  */
 export function initializeStationIds(): void {
-  const db = getDatabase();
-
   try {
+    const db = getDatabase();
     const twoDaysAgo = Date.now() / 1000 - 2 * 24 * 3600;
     const request = db
       .selectDistinct({ stationId: messages.stationId })
