@@ -615,8 +615,11 @@
     font-size: 0.875rem;
 
     &__remove {
-      width: 28px;
-      height: 28px;
+      // SCSS-TOUCH: chip removal × on mobile. Previously 28×28 — below WCAG
+      // 2.1 AA 44×44 mandate. Desktop stays compact at 18×18 (chips can be
+      // dense; mouse pointer doesn't need the affordance).
+      width: 44px;
+      height: 44px;
       font-size: 1.5rem;
     }
   }

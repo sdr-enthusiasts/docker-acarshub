@@ -211,6 +211,8 @@
 
     input,
     select {
+      // SCSS-TOUCH: 10 search-form fields. Desktop ~29px from compact padding;
+      // mobile gets a 44px floor + 16px font (also fixes iOS focus-zoom).
       padding: var(--spacing-xs) var(--spacing-sm);
       background: var(--color-base);
       border: 2px solid var(--color-surface2);
@@ -218,6 +220,11 @@
       color: var(--color-text);
       font-size: var(--font-size-sm);
       transition: all var(--transition-normal);
+
+      @media (max-width: #{$breakpoint-md - 1px}) {
+        min-height: 44px;
+        font-size: 1rem;
+      }
 
       &::placeholder {
         color: var(--color-subtext0);
@@ -342,11 +349,13 @@
   }
 
   &__pagination-button {
+    // SCSS-TOUCH: was 36×36 at all viewports — inconsistent with the sister
+    // .alerts-page__page-button which correctly bumps to 44×44 on mobile.
+    // Mobile-first: 44×44 base, relax to 36×36 desktop.
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 36px;
-    height: 36px;
+    @include touch-target(44px, 36px);
     padding: var(--spacing-xs) var(--spacing-sm);
     background: var(--color-surface0);
     border: 2px solid var(--color-surface2);
@@ -392,11 +401,19 @@
   }
 
   &__pagination-ellipsis {
+    // SCSS-TOUCH: visual alignment with pagination buttons (non-interactive,
+    // but should match the row height to avoid jagged paginator).
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 36px;
-    height: 36px;
+    min-width: 44px;
+    min-height: 44px;
+
+    @media (min-width: $breakpoint-md) {
+      min-width: 36px;
+      min-height: 36px;
+    }
+
     color: var(--color-subtext0);
     font-size: var(--font-size-sm);
     font-weight: 600;

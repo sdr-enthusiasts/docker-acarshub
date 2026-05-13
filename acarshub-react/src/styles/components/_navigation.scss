@@ -412,6 +412,11 @@
   color: var(--color-text);
   user-select: none;
 
+  // SCSS-TOUCH: mobile-only header control — must be 44px hit target.
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+
   &:hover {
     color: var(--color-primary);
   }
@@ -423,10 +428,23 @@
   @include focus-visible;
 }
 
-.small_nav {
+// Note: the `.small_nav` rules below are intentionally scoped under
+// `.navigation` to win specificity against the desktop `.navigation nav a`
+// rule above (`.navigation nav a` = (0,1,2)). Without this scoping,
+// properties like `display: flex`, `padding`, `border-radius`, and
+// `min-height` would be silently overridden by the desktop rule and the
+// flyout would render with desktop's `display: block` + `padding:
+// $spacing-sm $spacing-md`, which is why earlier iterations had broken
+// vertical centring on the active item.
+.navigation .small_nav {
   padding: 0;
-  display: inline-flex;
-  flex-direction: column;
+  // `position: relative` makes this the positioning context for the
+  // absolutely-positioned `.small_nav__panel` below.  Keeps the panel
+  // anchored to the menu toggle without affecting other navbar siblings.
+  position: relative;
+  // The element itself is now just the inline summary trigger; the panel
+  // is detached from the flow when open.
+  display: inline-block;
 
   summary {
     cursor: pointer;
@@ -435,6 +453,11 @@
     list-style: none;
     color: var(--color-text);
     user-select: none;
+
+    // SCSS-TOUCH: mobile menu toggle ("▼ Menu") — 44px hit target.
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
 
     &::-webkit-details-marker {
       display: none;
@@ -454,26 +477,71 @@
     transform: rotate(180deg);
   }
 
+  // Flyout panel — the menu content that appears below the summary when
+  // the `<details>` is open.  Absolutely positioned so opening the menu
+  // does not push the sibling Filters button or message-rate widget down
+  // (which previously made them float in the vertical middle of a tall
+  // expanded `<details>` element).
+  &__panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: $z-index-sticky + 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 12rem;
+    padding: $spacing-xs;
+    background-color: var(--color-crust);
+    border: 1px solid var(--color-surface1);
+    border-radius: $radius-md;
+    box-shadow: $shadow-lg;
+    gap: 2px;
+  }
+
   a,
   .link-button {
     @include button-reset;
-    display: block;
-    padding: $spacing-sm 0;
+    display: flex;
+    align-items: center;
+    padding: 0 $spacing-sm;
     color: var(--color-text);
     text-decoration: none;
     text-align: left;
     width: 100%;
-    transition: color $transition-fast;
+    border-radius: $radius-sm;
+    transition:
+      color $transition-fast,
+      background-color $transition-fast;
+    line-height: 1;
+
+    // SCSS-TOUCH: flyout menu items — 44px hit target on mobile.
+    min-height: 44px;
 
     &:hover {
       color: var(--color-primary);
+      background-color: var(--color-surface0);
     }
 
     @include focus-visible;
   }
 
+  // Active highlight pill.  All padding/sizing properties match the base
+  // link rule above so the pill is exactly the same box as a non-active
+  // link, just with a visible background.  The cascading desktop rule
+  // (`.navigation nav a.active`) is overridden by this rule because we're
+  // now scoped under `.navigation` too (same specificity, but later in
+  // source order).
   a.active {
     color: var(--color-primary);
     font-weight: $font-weight-semibold;
+    background-color: var(--color-surface0);
+    border-radius: $radius-sm;
+    padding: 0 $spacing-sm;
+    min-height: 44px;
+
+    &:hover {
+      background-color: var(--color-surface0);
+      opacity: 0.9;
+    }
   }
 }
