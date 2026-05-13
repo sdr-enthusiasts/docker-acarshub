@@ -17,39 +17,100 @@
 /**
  * Tests for runMigrationsInWorker()
  *
- * The function has two execution paths:
+ * The function has THREE relevant execution paths in the current
+ * (child_process.spawn-based) implementation:
  *
- *   1. Dev (tsx) mode  — import.meta.url ends with '.ts'.
- *      Falls back to calling runMigrations() synchronously so that the
- *      dev workflow doesn't require a compiled worker file.
+ *   1. tsx-loader-absent fallback (the "dev/test" branch):
+ *      `isDev && !hasTsxLoader` ⇒ run runMigrations() synchronously on
+ *      the main thread.  This is the path vitest hits by default because
+ *      vitest does not put `/tsx/` in process.execArgv.  See L1441-1453
+ *      of migrate.ts.
  *
- *   2. Production mode — import.meta.url ends with '.js'.
- *      Spawns a Worker thread pointing at migrate-worker.js.
+ *   2. Worker file missing (production-degraded):
+ *      `existsSync(workerPath) === false` ⇒ warn and fall back to
+ *      synchronous runMigrations().  Reached when the Docker image was
+ *      built without the migrate-worker.mjs esbuild step.  L1474-1498.
  *
- * Because vitest runs .ts source files directly (via tsx), every test in
- * this suite runs under path (1) by default.  We test path (2) by mocking
- * the `worker_threads` module to inject a fake Worker class.
+ *   3. spawn() / child failure:
+ *      - child.on('error') ⇒ warn and fall back to synchronous
+ *        runMigrations() (L1516-1533).
+ *      - child.on('close', code) with non-zero code ⇒ reject with
+ *        "Migration process exited with code <n>" (L1535-1544).
+ *      - child.on('close', 0) ⇒ resolve.
+ *
+ * Vitest cannot natively reach paths (2) and (3) because:
+ *   - import.meta.url ends with '.ts' (vitest evaluates source) ⇒
+ *     isDev=true, but
+ *   - process.execArgv contains no '/tsx/' fragment ⇒ hasTsxLoader=false,
+ *   - so the function takes the early-return at L1441 unconditionally.
+ *
+ * To reach (2) and (3) we monkey-patch `process.execArgv` to contain a
+ * synthetic '/tsx/' entry (making hasTsxLoader=true) and override the
+ * `existsSync` and `spawn` exports via `vi.mock` partial factories.  The
+ * partial-factory approach preserves the rest of `node:fs` and
+ * `node:child_process` so unrelated test setup code (fs.mkdtempSync,
+ * fs.rmSync, etc.) still functions.
  *
  * Regression tests:
- *   - runMigrationsInWorker resolves when the underlying work succeeds
- *   - runMigrationsInWorker rejects when runMigrations() throws (dev path)
- *   - runMigrationsInWorker rejects when the worker posts { success: false }
- *   - runMigrationsInWorker rejects when the worker emits an 'error' event
- *   - runMigrationsInWorker rejects when the worker exits with a non-zero code
+ *   - Dev/tsx fallback: runMigrations succeeds, rejects on bad path,
+ *     idempotent on second call.
+ *   - Worker-missing fallback: existsSync=false ⇒ resolves and DB is
+ *     actually migrated synchronously (proves we fell back, not
+ *     silently skipped).
+ *   - Worker-missing fallback rejects when the underlying sync migration
+ *     throws (e.g. unwritable DB path).
+ *   - Spawn error fallback: spawn-emitted 'error' triggers sync fallback
+ *     and resolves when the sync migration succeeds.
+ *   - Spawn error fallback: spawn 'error' + bad DB path rejects.
+ *   - Close non-zero: child exits with code 1 ⇒ rejects with
+ *     "Migration process exited with code 1".
+ *   - Close zero: child exits with code 0 ⇒ resolves.
  */
 
+import type { ChildProcess } from "node:child_process";
+import * as child_process from "node:child_process";
+import { EventEmitter } from "node:events";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import Database from "better-sqlite3";
 import {
+  afterAll,
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
   it,
   vi,
 } from "vitest";
+
+// ---------------------------------------------------------------------------
+// Module-level mocks for the production-path suite.
+//
+// We use partial factories so unrelated callers (fs.mkdtempSync,
+// fs.rmSync, the dev-mode suite below) keep their real implementations.
+// Only `existsSync` and `spawn` are replaced with vi.fn() spies whose
+// default implementation is the real one — individual tests override
+// behaviour via mockImplementationOnce().
+// ---------------------------------------------------------------------------
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    existsSync: vi.fn(actual.existsSync),
+  };
+});
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("node:child_process")>();
+  return {
+    ...actual,
+    spawn: vi.fn(actual.spawn),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -86,8 +147,9 @@ import { runMigrationsInWorker } from "../migrate.js";
 // ---------------------------------------------------------------------------
 // Suite: dev-mode (tsx) synchronous fallback
 //
-// When vitest/tsx runs tests, import.meta.url ends with '.ts', so
-// runMigrationsInWorker takes the synchronous branch unconditionally.
+// When vitest/tsx runs tests, import.meta.url ends with '.ts' AND
+// process.execArgv does not contain '/tsx/', so runMigrationsInWorker
+// takes the synchronous branch unconditionally.
 // ---------------------------------------------------------------------------
 
 describe("runMigrationsInWorker – dev mode (tsx synchronous fallback)", () => {
@@ -143,173 +205,203 @@ describe("runMigrationsInWorker – dev mode (tsx synchronous fallback)", () => 
 });
 
 // ---------------------------------------------------------------------------
-// Suite: production-worker path (mocked Worker)
+// Suite: spawn path (mocked spawn + existsSync)
 //
-// We cannot run actual compiled worker threads in vitest, so we replace the
-// Worker class with a fake that drives the same promise-resolution logic.
+// To reach the spawn-based branches we monkey-patch process.execArgv so
+// it contains a '/tsx/' fragment.  That makes hasTsxLoader=true, which
+// bypasses the early sync-fallback return at L1441 and forces the
+// function to walk through existsSync(workerPath) and (if present)
+// spawn().
 // ---------------------------------------------------------------------------
 
-describe("runMigrationsInWorker – production path (mocked worker_threads)", () => {
-  // We need to trick runMigrationsInWorker into thinking it is running from a
-  // compiled .js file so it takes the worker-thread branch.
-  //
-  // The check inside the function is:
-  //   const isDev = import.meta.url.endsWith(".ts");
-  //
-  // We cannot change import.meta.url at runtime; instead we patch the
-  // `worker_threads` module so that, even in dev mode, we can verify the
-  // Worker-construction and event-handling logic.
-  //
-  // Strategy: mock the `worker_threads` module and expose a factory that lets
-  // each test control Worker behaviour.
+describe("runMigrationsInWorker – spawn path (mocked)", () => {
+  let tmpDir: string;
+  let dbPath: string;
+  let originalExecArgv: string[];
 
-  type EventName = "message" | "error" | "exit";
-  type Listener = (...args: unknown[]) => void;
+  // Cast vitest's mocked exports.  These are the same instances created by
+  // the vi.mock() factories above; we grab references once for ergonomic
+  // mockImplementationOnce() in each test.
+  const existsSyncMock = vi.mocked(fs.existsSync);
+  const spawnMock = vi.mocked(child_process.spawn);
 
-  /** Minimal fake Worker that allows tests to trigger events manually. */
-  class FakeWorker {
-    private listeners: Map<EventName, Listener[]> = new Map();
+  beforeAll(() => {
+    // Save and patch execArgv so hasTsxLoader becomes true.
+    originalExecArgv = process.execArgv;
+    process.execArgv = [
+      ...originalExecArgv,
+      "--import=file:///fake/path/tsx/dist/loader.mjs",
+    ];
+  });
 
-    // Captured constructor arguments — tests can inspect these.
-    static lastWorkerPath: string | URL | undefined;
-    static lastWorkerOptions: Record<string, unknown> | undefined;
-
-    constructor(workerPath: string | URL, options?: Record<string, unknown>) {
-      FakeWorker.lastWorkerPath = workerPath;
-      FakeWorker.lastWorkerOptions = options;
-      // Stash reference so tests can trigger events after construction.
-      FakeWorker._instance = this;
-    }
-
-    static _instance: FakeWorker | undefined;
-
-    on(event: EventName, listener: Listener): this {
-      const existing = this.listeners.get(event) ?? [];
-      existing.push(listener);
-      this.listeners.set(event, existing);
-      return this;
-    }
-
-    emit(event: EventName, ...args: unknown[]): void {
-      const handlers = this.listeners.get(event) ?? [];
-      for (const h of handlers) {
-        h(...args);
-      }
-    }
-  }
+  afterAll(() => {
+    process.execArgv = originalExecArgv;
+  });
 
   beforeEach(() => {
-    FakeWorker._instance = undefined;
-    FakeWorker.lastWorkerPath = undefined;
-    FakeWorker.lastWorkerOptions = undefined;
+    tmpDir = makeTmpDir();
+    dbPath = path.join(tmpDir, "test.db");
+    existsSyncMock.mockClear();
+    spawnMock.mockClear();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    rmDir(tmpDir);
   });
 
-  // NOTE: The following tests exercise the Worker event-handling logic by
-  // directly testing the branches that fire when a FakeWorker emits events.
-  // Because vitest/tsx still reports import.meta.url as '.ts', the
-  // runMigrationsInWorker function will take the dev-mode branch; the tests
-  // below validate the promise-wrapping logic by calling makeWorkerPromise
-  // directly — a helper that mirrors the production promise construction.
+  // -------------------------------------------------------------------------
+  // Worker-file-missing fallback (L1474-1498)
+  // -------------------------------------------------------------------------
 
-  /**
-   * Reproduce the production promise logic from runMigrationsInWorker so we
-   * can unit-test it in isolation (without needing import.meta.url to end
-   * with '.js').
-   */
-  function makeWorkerPromise(worker: FakeWorker): Promise<void> {
-    return new Promise((resolve, reject) => {
-      worker.on("message", (result: unknown) => {
-        const r = result as { success: boolean; error?: string };
-        if (r.success) {
-          resolve();
-        } else {
-          reject(new Error(r.error ?? "Migration worker reported failure"));
-        }
-      });
+  it("falls back to synchronous migrations when the worker file is missing", async () => {
+    // existsSync(workerPath) returns false on the *first* call (the worker
+    // check).  Subsequent calls (none expected here) hit the real impl.
+    existsSyncMock.mockImplementationOnce(() => false);
 
-      worker.on("error", (err: unknown) => {
-        reject(err instanceof Error ? err : new Error(String(err)));
-      });
+    await expect(runMigrationsInWorker(dbPath)).resolves.toBeUndefined();
 
-      worker.on("exit", (code: unknown) => {
-        if (typeof code === "number" && code !== 0) {
-          reject(new Error(`Migration worker exited with non-zero code ${code}`));
-        }
+    // Spawn must NOT have been called when the worker is missing.
+    expect(spawnMock).not.toHaveBeenCalled();
+
+    // DB must actually be migrated (proves we fell back, not skipped).
+    const db = new Database(dbPath);
+    const row = db
+      .prepare("SELECT version_num FROM alembic_version LIMIT 1")
+      .get() as { version_num: string } | undefined;
+    db.close();
+    expect(row?.version_num).toBeTruthy();
+  });
+
+  it("rejects when worker file is missing and the sync fallback also fails", async () => {
+    existsSyncMock.mockImplementationOnce(() => false);
+    const badPath = path.join(tmpDir, "nonexistent", "sub", "bad.db");
+
+    await expect(runMigrationsInWorker(badPath)).rejects.toThrow();
+    expect(spawnMock).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // spawn child.on('error') fallback (L1516-1533)
+  // -------------------------------------------------------------------------
+
+  it("falls back to synchronous migrations when spawn child emits 'error'", async () => {
+    // Worker file appears present so we reach spawn().
+    existsSyncMock.mockImplementationOnce(() => true);
+
+    // Return a fake ChildProcess that immediately emits 'error'.
+    const fakeChild = new EventEmitter() as unknown as ChildProcess;
+    spawnMock.mockImplementationOnce(() => {
+      // Emit asynchronously so the .on() listeners are registered first.
+      setImmediate(() => {
+        (fakeChild as EventEmitter).emit("error", new Error("EACCES"));
       });
+      return fakeChild;
     });
-  }
 
-  it("resolves when the worker posts { success: true }", async () => {
-    const worker = new FakeWorker("/fake/path/migrate-worker.js");
-    const promise = makeWorkerPromise(worker);
+    await expect(runMigrationsInWorker(dbPath)).resolves.toBeUndefined();
 
-    worker.emit("message", { success: true });
+    // Spawn was attempted exactly once before the fallback ran.
+    expect(spawnMock).toHaveBeenCalledTimes(1);
 
-    await expect(promise).resolves.toBeUndefined();
+    // DB must actually be migrated by the fallback.
+    const db = new Database(dbPath);
+    const row = db
+      .prepare("SELECT version_num FROM alembic_version LIMIT 1")
+      .get() as { version_num: string } | undefined;
+    db.close();
+    expect(row?.version_num).toBeTruthy();
   });
 
-  it("rejects when the worker posts { success: false, error: '...' }", async () => {
-    const worker = new FakeWorker("/fake/path/migrate-worker.js");
-    const promise = makeWorkerPromise(worker);
+  it("rejects when spawn 'error' fires and the sync fallback also fails", async () => {
+    existsSyncMock.mockImplementationOnce(() => true);
+    const fakeChild = new EventEmitter() as unknown as ChildProcess;
+    spawnMock.mockImplementationOnce(() => {
+      setImmediate(() => {
+        (fakeChild as EventEmitter).emit("error", new Error("EACCES"));
+      });
+      return fakeChild;
+    });
 
-    worker.emit("message", { success: false, error: "VACUUM failed" });
-
-    await expect(promise).rejects.toThrow("VACUUM failed");
+    const badPath = path.join(tmpDir, "nonexistent", "sub", "bad.db");
+    await expect(runMigrationsInWorker(badPath)).rejects.toThrow();
   });
 
-  it("rejects when the worker posts { success: false } with no error field", async () => {
-    const worker = new FakeWorker("/fake/path/migrate-worker.js");
-    const promise = makeWorkerPromise(worker);
+  // -------------------------------------------------------------------------
+  // spawn child.on('close', code) (L1535-1544)
+  // -------------------------------------------------------------------------
 
-    worker.emit("message", { success: false });
+  it("rejects when the child process exits with a non-zero code", async () => {
+    existsSyncMock.mockImplementationOnce(() => true);
+    const fakeChild = new EventEmitter() as unknown as ChildProcess;
+    spawnMock.mockImplementationOnce(() => {
+      setImmediate(() => {
+        (fakeChild as EventEmitter).emit("close", 1);
+      });
+      return fakeChild;
+    });
 
-    await expect(promise).rejects.toThrow("Migration worker reported failure");
-  });
-
-  it("rejects when the worker emits an 'error' event", async () => {
-    const worker = new FakeWorker("/fake/path/migrate-worker.js");
-    const promise = makeWorkerPromise(worker);
-
-    const boom = new Error("Worker crash");
-    worker.emit("error", boom);
-
-    await expect(promise).rejects.toThrow("Worker crash");
-  });
-
-  it("rejects when the worker exits with a non-zero code", async () => {
-    const worker = new FakeWorker("/fake/path/migrate-worker.js");
-    const promise = makeWorkerPromise(worker);
-
-    worker.emit("exit", 1);
-
-    await expect(promise).rejects.toThrow(
-      "Migration worker exited with non-zero code 1",
+    await expect(runMigrationsInWorker(dbPath)).rejects.toThrow(
+      "Migration process exited with code 1",
     );
   });
 
-  it("does NOT reject when the worker exits with code 0", async () => {
-    const worker = new FakeWorker("/fake/path/migrate-worker.js");
-    const promise = makeWorkerPromise(worker);
+  it("rejects with the actual non-zero exit code in the error message", async () => {
+    existsSyncMock.mockImplementationOnce(() => true);
+    const fakeChild = new EventEmitter() as unknown as ChildProcess;
+    spawnMock.mockImplementationOnce(() => {
+      setImmediate(() => {
+        (fakeChild as EventEmitter).emit("close", 137);
+      });
+      return fakeChild;
+    });
 
-    // Exit 0 must not reject; resolve it first so the test completes.
-    worker.emit("exit", 0);
-    worker.emit("message", { success: true });
-
-    await expect(promise).resolves.toBeUndefined();
+    // 137 = SIGKILL (OOM-killer is the canonical real-world example).
+    await expect(runMigrationsInWorker(dbPath)).rejects.toThrow(
+      "Migration process exited with code 137",
+    );
   });
 
-  it("regression: rejects with the worker error message, not a generic one", async () => {
-    const worker = new FakeWorker("/fake/path/migrate-worker.js");
-    const promise = makeWorkerPromise(worker);
+  it("resolves when the child process exits with code 0", async () => {
+    existsSyncMock.mockImplementationOnce(() => true);
+    const fakeChild = new EventEmitter() as unknown as ChildProcess;
+    spawnMock.mockImplementationOnce(() => {
+      setImmediate(() => {
+        (fakeChild as EventEmitter).emit("close", 0);
+      });
+      return fakeChild;
+    });
 
-    worker.emit("message", { success: false, error: "SQLITE_CANTOPEN: unable to open database file" });
+    await expect(runMigrationsInWorker(dbPath)).resolves.toBeUndefined();
+  });
 
-    await expect(promise).rejects.toThrow(
-      "SQLITE_CANTOPEN: unable to open database file",
+  it("regression: spawn is invoked with execArgv, workerPath and dbPath", async () => {
+    // Regression guard: the spawn argv shape must remain stable so the
+    // worker process inherits the tsx loader and receives the DB path.
+    existsSyncMock.mockImplementationOnce(() => true);
+    const fakeChild = new EventEmitter() as unknown as ChildProcess;
+    spawnMock.mockImplementationOnce(() => {
+      setImmediate(() => {
+        (fakeChild as EventEmitter).emit("close", 0);
+      });
+      return fakeChild;
+    });
+
+    await runMigrationsInWorker(dbPath);
+
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+    const [execPath, args, options] = spawnMock.mock.calls[0];
+    expect(execPath).toBe(process.execPath);
+    // args must end with [..., workerPath, dbPath]
+    expect(Array.isArray(args)).toBe(true);
+    const argv = args as string[];
+    expect(argv[argv.length - 1]).toBe(dbPath);
+    expect(argv[argv.length - 2]).toMatch(/migrate-worker\.(ts|mjs)$/);
+    // execArgv (with our injected tsx loader) is prefixed.
+    expect(argv).toEqual(
+      expect.arrayContaining([
+        "--import=file:///fake/path/tsx/dist/loader.mjs",
+      ]),
     );
+    expect((options as { stdio: string }).stdio).toBe("inherit");
   });
 });
