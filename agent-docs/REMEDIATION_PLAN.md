@@ -1383,7 +1383,7 @@ acarshub-backend/src acarshub-react/src` and wire into CI.
 
 **Effort:** Trivial.
 
-### BUG-SETTINGS-SCROLL — Settings → Advanced auto-scrolls to bottom on open — **LOW**
+### BUG-SETTINGS-SCROLL — Settings → Advanced auto-scrolls to bottom on open — **LOW** — ✅ DONE `42d21fb1`
 
 **File:** `acarshub-react/src/components/SettingsModal.tsx` (Advanced
 section, log-viewer area).
@@ -1622,7 +1622,7 @@ have a safety net.
 | STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties | ✅ `cf8ee727` |
 | NIT-02               | `⚠️` `aria-hidden` fix                                          | ✅ `1c968297` |
 | NIT-03               | Verify `MessageGroup` biome-ignore                              | ✅ `2d4ef6c1` |
-| BUG-SETTINGS-SCROLL  | Settings → Advanced no longer auto-scrolls to bottom            |               |
+| BUG-SETTINGS-SCROLL  | Settings → Advanced no longer auto-scrolls to bottom            | ✅ `42d21fb1` |
 
 ### Phase 4 — Test infrastructure backfill (1-2 weeks)
 
