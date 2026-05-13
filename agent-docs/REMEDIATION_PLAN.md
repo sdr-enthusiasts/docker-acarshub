@@ -1422,7 +1422,7 @@ have a safety net.
 | STYLE-INLINE-STATIC  | Move 8 static inline-style sites to SCSS                        |               |
 | STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties |               |
 | NIT-02               | `⚠️` `aria-hidden` fix                                          | ✅ `1c968297` |
-| NIT-03               | Verify `MessageGroup` biome-ignore                              |               |
+| NIT-03               | Verify `MessageGroup` biome-ignore                              | ✅ `2d4ef6c1` |
 
 ### Phase 4 — Test infrastructure backfill (1-2 weeks)
 
