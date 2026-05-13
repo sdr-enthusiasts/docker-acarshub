@@ -14,17 +14,23 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useToastStore } from "../../store/useToastStore";
+import { logBuffer } from "../../utils/logger";
 import { LogsViewer } from "../LogsViewer";
 
 describe("LogsViewer", () => {
   beforeEach(() => {
     useToastStore.getState().clearAllToasts();
-    // jsdom does not implement scrollIntoView; LogsViewer's auto-scroll
-    // effect would otherwise throw and unmount the tree.
+    // BUG-SETTINGS-SCROLL: LogsViewer used to call scrollIntoView on a
+    // sentinel element, which jsdom does not implement and which had the
+    // side-effect of scrolling every ancestor (including the Settings
+    // modal). The fix sets scrollTop on the viewer's own scroll container
+    // — jsdom supports that natively, so no mock is required. The mock
+    // below is kept as a safety net in case any unrelated callsite still
+    // invokes scrollIntoView during these tests.
     Element.prototype.scrollIntoView = vi.fn();
   });
 
@@ -114,6 +120,108 @@ describe("LogsViewer", () => {
       );
 
       expect(alertSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("auto-scroll scoping (BUG-SETTINGS-SCROLL regression)", () => {
+    // The pre-fix implementation called
+    //   logsEndRef.current.scrollIntoView({ behavior: "smooth" })
+    // which scrolls every scrolling ancestor of the sentinel. Embedded in
+    // the Settings modal, that scrolled the modal itself to its bottom,
+    // hiding the settings controls above the log panel. The fix sets
+    // scrollTop on the LogsViewer's own scroll container so the scroll is
+    // scoped to this component and ancestors are left alone. It also
+    // corrects the effect dep array — previously [autoScroll], so the
+    // effect only fired when the toggle flipped — to also include `logs`
+    // so new entries actually trigger the scroll.
+
+    it("regression: does not call scrollIntoView (which scrolls all ancestors) when new logs arrive", () => {
+      // If the legacy scrollIntoView path returns, this spy records the
+      // call. The fix must therefore never touch scrollIntoView.
+      const spy = vi.spyOn(Element.prototype, "scrollIntoView");
+
+      logBuffer.clear();
+      render(<LogsViewer showStats={false} />);
+
+      act(() => {
+        logBuffer.add({
+          level: "info",
+          message: ["test entry"],
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it("regression: auto-scroll only sets scrollTop on the log viewer's own scroll container", () => {
+      // Mount a wrapping scroll container to simulate the Settings modal.
+      // Assert that adding a new log does NOT alter the wrapper's
+      // scrollTop — only the inner viewer scrolls.
+      logBuffer.clear();
+      const { container } = render(
+        <div data-testid="modal-scroll-wrapper">
+          <LogsViewer showStats={false} />
+        </div>,
+      );
+
+      const wrapper = screen.getByTestId("modal-scroll-wrapper") as HTMLElement;
+      // Force the wrapper into a known scroll state.
+      Object.defineProperty(wrapper, "scrollHeight", {
+        configurable: true,
+        value: 1000,
+      });
+      wrapper.scrollTop = 0;
+
+      const viewer = container.querySelector(
+        ".logs-viewer-display",
+      ) as HTMLElement;
+      expect(viewer).toBeTruthy();
+      // Stub a scrollHeight the auto-scroll effect can read.
+      Object.defineProperty(viewer, "scrollHeight", {
+        configurable: true,
+        value: 500,
+      });
+      viewer.scrollTop = 0;
+
+      act(() => {
+        logBuffer.add({
+          level: "info",
+          message: ["new entry"],
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      // The wrapper (stand-in for the modal) must NOT have been scrolled.
+      expect(wrapper.scrollTop).toBe(0);
+      // The viewer itself should have scrolled to the bottom.
+      expect(viewer.scrollTop).toBe(500);
+    });
+
+    it("regression: new log entries trigger auto-scroll (previously the effect dep was [autoScroll] only)", () => {
+      logBuffer.clear();
+      const { container } = render(<LogsViewer showStats={false} />);
+
+      const viewer = container.querySelector(
+        ".logs-viewer-display",
+      ) as HTMLElement;
+      Object.defineProperty(viewer, "scrollHeight", {
+        configurable: true,
+        value: 250,
+      });
+      viewer.scrollTop = 0;
+
+      act(() => {
+        logBuffer.add({
+          level: "warn",
+          message: ["first"],
+          timestamp: new Date().toISOString(),
+        });
+      });
+
+      // The effect must have re-run on the new log entry and set scrollTop
+      // to scrollHeight. Pre-fix, this stayed at 0.
+      expect(viewer.scrollTop).toBe(250);
     });
   });
 });
