@@ -239,6 +239,31 @@
   line-height: 1.4;
 }
 
+// STYLE-INLINE-STATIC: modifier and layout helpers that replace one-off
+// `style={{ ... }}` props in `SettingsModal.tsx`. Keep these adjacent to the
+// other `.settings-*` rules so future settings edits find them by proximity.
+
+// Full-width input (was `style={{ width: "100%" }}` on the custom tile-URL
+// text input).
+.settings-input--full {
+  width: 100%;
+}
+
+// Fixed-width numeric input (was `style={{ width: "120px" }}` on the
+// ground-altitude-threshold number input).
+.settings-input--fixed-narrow {
+  width: 120px;
+}
+
+// Inline row for a label-adjacent input + unit suffix (was
+// `style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}` on the
+// ground-altitude-threshold wrapper).
+.settings-form-field__inline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 // Custom Slider (for volume, max messages, etc.)
 .settings-slider {
   width: 100%;

@@ -450,7 +450,6 @@ export function MapComponent({
         onLoad={handleLoad}
         onError={handleError}
         mapStyle={mapStyle}
-        style={{ width: "100%", height: "100%" }}
         attributionControl={{}}
         maxZoom={20}
         minZoom={1}
