@@ -48,7 +48,6 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
   const [filter, setFilter] = useState<LogLevelFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
-  const logsEndRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
   const showToast = useToastStore((state) => state.showToast);
 
@@ -58,12 +57,29 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
     return unsubscribe;
   }, []);
 
-  // Auto-scroll to bottom when new logs arrive
+  // Auto-scroll to bottom when new logs arrive.
+  //
+  // BUG-SETTINGS-SCROLL: previously this used
+  //   logsEndRef.current.scrollIntoView({ behavior: "smooth" })
+  // which scrolls *every* scrolling ancestor of the sentinel — including
+  // the Settings modal when LogsViewer is embedded there. That made the
+  // entire modal scroll to its bottom whenever a new log entry arrived,
+  // hiding the settings controls above the log panel. The fix is to
+  // imperatively set scrollTop on the LogsViewer's own scroll container
+  // (viewerRef → .logs-viewer-display) so the scroll is scoped to this
+  // component and ancestors are left alone.
+  //
+  // Also corrects a latent bug: the previous dep array was [autoScroll],
+  // so the effect only fired when the toggle flipped — not when new logs
+  // arrived. Including `logs` makes auto-scroll actually behave like
+  // auto-scroll.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `logs` is intentionally a trigger, not a read dependency — the effect body doesn't reference `logs`, but the dep is included so that arrival of new log entries re-runs the effect (which sets scrollTop on the viewer). Without this, the effect would only fire when the `autoScroll` toggle flips.
   useEffect(() => {
-    if (autoScroll && logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [autoScroll]);
+    if (!autoScroll) return;
+    const el = viewerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [autoScroll, logs]);
 
   // Filter logs by level and search term
   const filteredLogs = logs.filter((log) => {
@@ -254,7 +270,6 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
             </div>
           ))
         )}
-        <div ref={logsEndRef} />
       </div>
     </div>
   );
