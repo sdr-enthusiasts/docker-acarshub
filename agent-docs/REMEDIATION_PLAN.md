@@ -1617,7 +1617,7 @@ have a safety net.
 | ID                   | Description                                                     | Status        |
 | -------------------- | --------------------------------------------------------------- | ------------- |
 | SCSS-COLOR-01        | Fix hardcoded `#ffffff` / `#000`                                | ✅ `74e353ba` |
-| SCSS-TOUCH           | Bump touch targets to ≥44 px                                    |               |
+| SCSS-TOUCH           | Bump touch targets to ≥44 px                                    | ✅ `abbd7123` |
 | STYLE-INLINE-STATIC  | Move 8 static inline-style sites to SCSS                        | ✅ `f9732120` |
 | STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties | ✅ `cf8ee727` |
 | NIT-02               | `⚠️` `aria-hidden` fix                                          | ✅ `1c968297` |
