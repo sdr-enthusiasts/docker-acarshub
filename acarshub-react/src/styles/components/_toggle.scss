@@ -199,6 +199,16 @@
 
 // Mobile responsive adjustments
 @media (max-width: 768px) {
+  // SCSS-TOUCH: track height was 1.75rem (~28px) on mobile — below WCAG 2.1
+  // AA. Wrapper gets a 44px floor so the entire label is a comfortable hit
+  // area; track itself stays smaller for visual proportion (the input is
+  // visually-hidden and covers the wrapper, so the wrapper IS the click target).
+  .toggle-slider {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
   .toggle-slider__track {
     // Larger tap target for mobile
     min-width: 3.5rem;

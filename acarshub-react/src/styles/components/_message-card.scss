@@ -104,6 +104,10 @@
   }
 
   &__mark-read-btn {
+    // SCSS-TOUCH: previously exempted from the 44px rule as a "secondary
+    // in-card action". Per remediation policy that exemption is removed —
+    // 44px floor on mobile via the shared mixin. Desktop keeps the original
+    // compact padding/font for in-card density.
     padding: var(--spacing-xs) var(--spacing-sm);
     background: var(--color-green);
     color: var(--color-base);
@@ -114,6 +118,12 @@
     cursor: pointer;
     transition: all var(--transition-fast);
     white-space: nowrap;
+
+    @include breakpoint-max(md) {
+      min-height: 44px;
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-size: var(--font-size-sm);
+    }
 
     &:hover {
       background: var(--color-teal);
@@ -127,14 +137,6 @@
     &:focus-visible {
       outline: 2px solid var(--color-green);
       outline-offset: 2px;
-    }
-
-    // Mobile: secondary in-card action — intentionally exempt from 44px
-    // primary touch-target rule (same rationale as .adsb-tracking badge).
-    // Padding is kept generous enough for comfortable tapping without
-    // bloating the message card header row.
-    @include breakpoint-max(md) {
-      padding: var(--spacing-xs) var(--spacing-sm);
     }
 
     // Reduced motion

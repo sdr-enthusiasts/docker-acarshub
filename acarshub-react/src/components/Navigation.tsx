@@ -233,43 +233,38 @@ export const Navigation = () => {
               >
                 <summary className="menu_non_link">Menu</summary>
 
-                <NavLink to="/live-messages" onClick={handleMobileNavClick}>
-                  Messages
-                </NavLink>
-                <br />
-                {adsbEnabled && (
-                  <>
+                <div className="small_nav__panel">
+                  <NavLink to="/live-messages" onClick={handleMobileNavClick}>
+                    Messages
+                  </NavLink>
+                  {adsbEnabled && (
                     <NavLink to="/adsb" onClick={handleMobileNavClick}>
                       Map
                     </NavLink>
-                    <br />
-                  </>
-                )}
-                <NavLink to="/search" onClick={handleMobileNavClick}>
-                  Search
-                </NavLink>
-                <br />
-                <NavLink to="/alerts" onClick={handleMobileNavClick}>
-                  Alerts
-                  {unreadAlertCount > 0 && (
-                    <span className="alert-count"> ({unreadAlertCount})</span>
                   )}
-                </NavLink>
-                <br />
-                <NavLink to="/status" onClick={handleMobileNavClick}>
-                  Status
-                  {systemHasError && (
-                    <span className="error-indicator"> ⚠</span>
-                  )}
-                </NavLink>
-                <br />
-                <button
-                  type="button"
-                  onClick={handleSettingsClick}
-                  className="link-button"
-                >
-                  Settings
-                </button>
+                  <NavLink to="/search" onClick={handleMobileNavClick}>
+                    Search
+                  </NavLink>
+                  <NavLink to="/alerts" onClick={handleMobileNavClick}>
+                    Alerts
+                    {unreadAlertCount > 0 && (
+                      <span className="alert-count"> ({unreadAlertCount})</span>
+                    )}
+                  </NavLink>
+                  <NavLink to="/status" onClick={handleMobileNavClick}>
+                    Status
+                    {systemHasError && (
+                      <span className="error-indicator"> ⚠</span>
+                    )}
+                  </NavLink>
+                  <button
+                    type="button"
+                    onClick={handleSettingsClick}
+                    className="link-button"
+                  >
+                    Settings
+                  </button>
+                </div>
               </details>
 
               {/* Filters button (mobile only, Live Messages page only) */}

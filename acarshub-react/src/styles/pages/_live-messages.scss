@@ -119,6 +119,11 @@
       background-color: rgba(var(--color-yellow-rgb), 0.1);
       border-color: var(--color-yellow);
       color: var(--color-yellow);
+      // The warning notice sits directly above the message list, which has
+      // its own top padding. The base `.page__notice` margin-bottom creates
+      // a visible gap that makes the warning feel detached from the list it
+      // refers to. Drop it so the warning butts up against the list.
+      margin-bottom: 0;
     }
 
     .notice__icon {
@@ -458,6 +463,15 @@
     height: 20px;
     cursor: pointer;
     accent-color: var(--color-blue);
+    // SCSS-TOUCH: 44×44 touch target on mobile (matches sister
+    // .station-filter-item__checkbox pattern above). Desktop keeps 20×20.
+    min-width: 44px;
+    min-height: 44px;
+
+    @include breakpoint(md) {
+      min-width: 20px;
+      min-height: 20px;
+    }
   }
 }
 
@@ -491,6 +505,14 @@
   // provided by .message-list__item's padding-bottom instead.
   padding: 0 var(--spacing-lg);
   box-sizing: border-box;
+
+  // On mobile drop horizontal padding too so message cards span the full
+  // viewport width. Combined with `.message-group__content { padding: 0 }`
+  // and `.message-card`'s own padding, this gives cards full-bleed alignment
+  // with the page edges — critical at 320–375px where every pixel counts.
+  @media (max-width: 768px) {
+    padding: 0;
+  }
 }
 
 // Gap between virtual items — replaces the flex gap that the old list used.

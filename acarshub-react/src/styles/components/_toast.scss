@@ -119,9 +119,11 @@
 
 .toast__close {
   @include button-reset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @include flex-center;
+  // SCSS-TOUCH: toast dismiss is mobile-critical accessibility (toasts are
+  // ARIA-live announcements; dismissing them must be reachable by touch).
+  // 28×28 was below WCAG 2.1 AA. Mobile grows to 44, desktop keeps 28 for
+  // density inside the toast tray.
   width: 28px;
   height: 28px;
   border-radius: $radius-md;
@@ -129,6 +131,11 @@
   background-color: transparent;
   transition: background-color $transition-fast;
   cursor: pointer;
+
+  @media (max-width: #{$breakpoint-md - 1px}) {
+    width: 44px;
+    height: 44px;
+  }
 
   &:hover {
     background-color: var(--color-surface1);
