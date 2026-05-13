@@ -19,6 +19,10 @@
 
 .context-menu {
   position: fixed;
+  // Runtime click coordinates set by the component via the
+  // --ctx-menu-x / --ctx-menu-y custom properties (STYLE-INLINE-DYNAMIC).
+  left: var(--ctx-menu-x);
+  top: var(--ctx-menu-y);
   z-index: 10000;
   min-width: 180px;
   background-color: var(--color-surface0);

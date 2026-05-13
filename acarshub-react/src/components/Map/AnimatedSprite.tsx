@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type React from "react";
 import { useEffect, useState } from "react";
 import { getSpriteLoader } from "../../utils/spriteLoader";
 
@@ -104,15 +105,17 @@ export function AnimatedSprite({
         isFollowed ? "aircraft-marker--followed" : ""
       }`}
       aria-label={ariaLabel}
-      style={{
-        backgroundPosition: `-${position.x}px -${position.y}px`,
-        backgroundSize,
-        width: `${position.width}px`,
-        height: `${position.height}px`,
-        transform: `rotate(${rotation}deg)`,
-        transformOrigin: "center center",
-        cursor: cursorStyle,
-      }}
+      style={
+        {
+          "--sprite-x": `-${position.x}px`,
+          "--sprite-y": `-${position.y}px`,
+          "--sprite-bg-size": backgroundSize,
+          "--sprite-width": `${position.width}px`,
+          "--sprite-height": `${position.height}px`,
+          "--sprite-rotation": `${rotation}deg`,
+          "--sprite-cursor": cursorStyle,
+        } as React.CSSProperties
+      }
       onClick={onClick}
       onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}

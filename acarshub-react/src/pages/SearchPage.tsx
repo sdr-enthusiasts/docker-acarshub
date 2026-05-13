@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import type React from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   IconChevronDown,
@@ -975,23 +976,26 @@ export const SearchPage = () => {
         {!isSearching && sortedResults.length > 0 && (
           <div
             ref={virtualResultsRef}
-            className="search-page__results"
-            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+            className="search-page__results virtual-list"
+            style={
+              {
+                "--virtual-list-total-height": `${rowVirtualizer.getTotalSize()}px`,
+              } as React.CSSProperties
+            }
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const message = sortedResults[virtualRow.index];
               return (
                 <div
                   key={message.uid}
+                  className="virtual-list__row"
                   data-index={virtualRow.index}
                   ref={rowVirtualizer.measureElement}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
-                  }}
+                  style={
+                    {
+                      "--virtual-row-y": `${virtualRow.start - rowVirtualizer.options.scrollMargin}px`,
+                    } as React.CSSProperties
+                  }
                 >
                   <div className="search-page__result-card">
                     <MessageCard message={message} />

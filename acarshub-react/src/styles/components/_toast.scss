@@ -170,7 +170,9 @@
   height: 100%;
   background: linear-gradient(90deg, var(--color-danger), var(--color-red));
   width: 100%;
-  animation: toast-progress linear forwards;
+  // Animation duration set by the component via the
+  // --toast-progress-duration custom property (STYLE-INLINE-DYNAMIC).
+  animation: toast-progress var(--toast-progress-duration) linear forwards;
   transform-origin: left;
 
   // Variant progress-bar gradients mirror border / title colors
