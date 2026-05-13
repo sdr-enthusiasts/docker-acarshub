@@ -1665,32 +1665,33 @@ have a safety net.
 These are independent and can run in parallel branches. Each must keep tests
 passing throughout.
 
-| ID                          | Description                                              |
-| --------------------------- | -------------------------------------------------------- |
-| TYPE-03 through TYPE-08     | Misc TS strictness fixes                                 |
-| TYPE-05                     | DB row cast helper                                       |
-| LOG-02                      | Logger namespace standardisation                         |
-| LOG-03                      | Test skip-condition cleanup                              |
-| STATE-02                    | Encapsulate module-level mutable state (one file per PR) |
-| LEAK-02                     | TCP/UDP listener reconnect-timer audit                   |
-| LEAK-04                     | Backup DB partial-init guard                             |
-| ERR-01                      | Standardise `catch (error)` naming                       |
-| ERR-02                      | Wrap fire-and-forget `setImmediate`                      |
-| ERR-03                      | Document `executeTask` no-throw invariant                |
-| GOD-01                      | Split `socket/handlers.ts`                               |
-| GOD-02                      | Split `db/migrate.ts` (alongside next migration)         |
-| GOD-03                      | Split `db/queries/messages.ts`                           |
-| GOD-04                      | Split `services/index.ts`                                |
-| GOD-05                      | Split `SettingsModal.tsx` per-tab                        |
-| GOD-06                      | Split `utils/aircraftIcons.ts` data/logic                |
-| GOD-07                      | Split `useAppStore.ts`                                   |
-| GOD-08                      | DRY `AircraftMarkers.tsx` tooltip code                   |
-| GOD-09                      | (Deferred) `services/rrd-migration.ts`                   |
-| EFFECT-01 through EFFECT-04 | Extract custom hooks from page components                |
-| SCSS-MOBILE                 | Mobile-first conversion (one component per PR)           |
-| NIT-01                      | Move magic numbers into `config.ts`                      |
-| NIT-04                      | Audit dead/unused exports                                |
-| NIT-05                      | Add `madge --circular` CI check                          |
+| ID                          | Description                                                                                                                                                                                                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TYPE-03 through TYPE-08     | Misc TS strictness fixes                                                                                                                                                                                                                                                                  |
+| TYPE-05                     | DB row cast helper                                                                                                                                                                                                                                                                        |
+| LOG-02                      | Logger namespace standardisation                                                                                                                                                                                                                                                          |
+| LOG-03                      | Test skip-condition cleanup                                                                                                                                                                                                                                                               |
+| STATE-02                    | Encapsulate module-level mutable state (one file per PR)                                                                                                                                                                                                                                  |
+| LEAK-02                     | TCP/UDP listener reconnect-timer audit                                                                                                                                                                                                                                                    |
+| LEAK-04                     | Backup DB partial-init guard                                                                                                                                                                                                                                                              |
+| ERR-01                      | Standardise `catch (error)` naming                                                                                                                                                                                                                                                        |
+| ERR-02                      | Wrap fire-and-forget `setImmediate`                                                                                                                                                                                                                                                       |
+| ERR-03                      | Document `executeTask` no-throw invariant                                                                                                                                                                                                                                                 |
+| GOD-01                      | Split `socket/handlers.ts`                                                                                                                                                                                                                                                                |
+| GOD-02                      | Split `db/migrate.ts` (alongside next migration)                                                                                                                                                                                                                                          |
+| GOD-03                      | Split `db/queries/messages.ts`                                                                                                                                                                                                                                                            |
+| GOD-04                      | Split `services/index.ts`                                                                                                                                                                                                                                                                 |
+| GOD-05                      | Split `SettingsModal.tsx` per-tab                                                                                                                                                                                                                                                         |
+| GOD-06                      | Split `utils/aircraftIcons.ts` data/logic                                                                                                                                                                                                                                                 |
+| GOD-07                      | Split `useAppStore.ts`                                                                                                                                                                                                                                                                    |
+| GOD-08                      | DRY `AircraftMarkers.tsx` tooltip code                                                                                                                                                                                                                                                    |
+| GOD-09                      | (Deferred) `services/rrd-migration.ts`                                                                                                                                                                                                                                                    |
+| EFFECT-01 through EFFECT-04 | Extract custom hooks from page components                                                                                                                                                                                                                                                 |
+| SCSS-MOBILE                 | Mobile-first conversion (one component per PR)                                                                                                                                                                                                                                            |
+| NIT-01                      | Move magic numbers into `config.ts`                                                                                                                                                                                                                                                       |
+| NIT-04                      | Audit dead/unused exports                                                                                                                                                                                                                                                                 |
+| NIT-05                      | Add `madge --circular` CI check                                                                                                                                                                                                                                                           |
+| NIT-06                      | Remove unreachable `_loadData` catch branch in `acarshub-react/src/utils/spriteLoader.ts` (flagged during Phase 4 TEST-GAP-FE work — branch is logically unreachable given surrounding control flow; removing it is a small refactor that needs a sweep alongside NIT-04 dead-code audit) |
 
 ### Phase 8 — User audibles (out-of-audit features)
 
@@ -1698,11 +1699,12 @@ Scheduled after the architecture refactors so the refactored module
 boundaries (split `SettingsModal`, split `AircraftMarkers` tooltip code,
 extracted hooks) are in place before new feature surface lands on them.
 
-| ID               | Description                                                                                 |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| FEAT-MARKER-SIZE | User-configurable aircraft marker size on the map                                           |
-| PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction                                       |
-| FEAT-RANGE-RINGS | Dynamic range-ring sizing on the map — investigate clipping buffer and/or dynamic 4th+ ring |
+| ID               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FEAT-MARKER-SIZE | User-configurable aircraft marker size on the map                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| FEAT-RANGE-RINGS | Dynamic range-ring sizing on the map — investigate clipping buffer and/or dynamic 4th+ ring                                                                                                                                                                                                                                                                                                                                                                             |
+| FE-MODAL-A11Y    | `acarshub-react/src/components/Modal.tsx` accessibility fixes (flagged during Phase 4 TEST-GAP-FE work): (1) backdrop `<div>` has `onKeyDown` but no `tabIndex`, making the keyboard handler unreachable; (2) no focus trap — Tab can escape the modal into the underlying page, a WCAG 2.1 AA violation. Both need a dedicated PR with design review of the keyboard/focus model; not in Phase 4 scope because they require behaviour changes, not just test coverage. |
 
 ### Phase 9 — Cleanup
 
