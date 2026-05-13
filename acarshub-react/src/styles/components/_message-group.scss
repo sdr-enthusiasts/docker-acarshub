@@ -45,75 +45,134 @@
     box-shadow: 0 0 0 1px rgba(var(--color-red-rgb), 0.2);
   }
 
+  // Banner-style header.
+  //
+  // The header chips (callsign, alert-count, ADSB type, message counter)
+  // form a single visual band along the top of the group card.  The card
+  // has `overflow: hidden` + outer `border-radius: lg`, so chips whose
+  // square corners reach the card edge get clipped to the card's curve —
+  // the same trick used by `.message-type` on the inner card.
+  //
+  // Shape contract:
+  //   - `.aircraft-id`  : rounded TL (always leftmost — always rendered)
+  //   - `.counter-text` : rounded TR (always rightmost when rendered)
+  //   - all other chips : fully rectangular; they get clipped to the card's
+  //                       curved corner when they happen to be at an edge
+  //
+  // This is intentional: a chip should only carry a "rounded outer corner"
+  // when its position in the banner is *guaranteed* by the design. Letting
+  // a chip dynamically gain a corner radius based on render order would
+  // mean (for example) `.adsb-tracking` looks visually distinct between
+  // single-message and multi-message groups, which is jarring when
+  // scrolling a mixed list.
+  //
+  // The header drops its padding to 0 so chips bleed into the card edges.
+  // Hairline gap between chips visually separates the colour bands without
+  // needing borders.
   &__header {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: space-between;
-    padding: var(--spacing-sm);
+    padding: 0;
     background: var(--color-surface0);
     border-bottom: 2px solid var(--color-surface2);
+    gap: 1px;
   }
 
   &__aircraft {
     display: flex;
+    align-items: stretch;
+    gap: 1px;
+    // Allow the banner chips to fill the header height naturally.
+    min-height: 100%;
+  }
+
+  // Shared chip styling for every banner-band chip.  Keeps padding, font
+  // size, and alignment consistent so the three/four chips read as a single
+  // band of equal-height tiles.
+  //
+  // Mobile bumps padding + min-height so the interactive `.adsb-tracking`
+  // chip meets the 44px WCAG floor; the non-interactive chips inherit the
+  // same min-height so the banner band stays visually uniform.
+  %message-group-chip {
+    display: inline-flex;
     align-items: center;
-    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    @media (max-width: 768px) {
+      min-height: 44px;
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-size: var(--font-size-sm);
+    }
   }
 
   .aircraft-id {
-    font-weight: 700;
-    font-size: var(--font-size-md);
-    color: var(--color-text);
-    font-family: var(--font-mono);
+    @extend %message-group-chip;
+    // Anchored to the top-left card corner. `.aircraft-id` always renders,
+    // so it always owns the TL rounded corner — this is unconditional and
+    // independent of which other chips are present.
+    border-top-left-radius: var(--border-radius-lg);
+    background-color: var(--color-sapphire);
+    color: var(--color-base);
+    // Extra left padding so the callsign sits inboard of the rounded card
+    // corner rather than crowding against it. The rounded TL corner eats
+    // visual padding, so we add an `--spacing-sm` bump on top of the chip's
+    // base `--spacing-sm` horizontal padding.
+    padding-left: var(--spacing-md);
+    // Use the default sans-serif font (inherited) to match the ACARS row
+    // beneath (.message-type / .message-station). Monospace here drew the
+    // eye to the callsign as if it were raw data rather than a label, and
+    // visually disconnected the header band from the rest of the card.
+    // Bump font size slightly to maintain legibility against the
+    // uppercase + chip styling.
+    font-size: var(--font-size-sm);
   }
 
   .alert-count {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--spacing-xs) var(--spacing-sm);
+    @extend %message-group-chip;
     background-color: var(--color-red);
     color: var(--color-crust);
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    border-radius: var(--border-radius-full);
-    white-space: nowrap;
+    // No explicit border-radius — corner rounding is applied generically by
+    // the `__header > :last-child > :last-child` rule when this chip is the
+    // rightmost in the banner (e.g. ADSB absent + no counter).
   }
 
   .adsb-tracking {
-    display: inline-flex;
-    align-items: center;
-    padding: var(--spacing-xs) var(--spacing-sm);
+    @extend %message-group-chip;
     // Default colour (ADS-B / unknown) — overridden per source type below
     background-color: var(--color-teal);
     color: var(--color-crust);
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    border-radius: var(--border-radius-full);
-    white-space: nowrap;
+    // No explicit border-radius — corner rounding is applied generically by
+    // the `__header > :last-child > :last-child` rule when this chip is
+    // rightmost (single-message group with ADSB present).
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
 
     &:hover {
       background-color: var(--color-sky);
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      // No translateY — chip is anchored to the banner band and lifting it
+      // would break the unified-band illusion.
     }
 
     &:active {
-      transform: translateY(0);
+      filter: brightness(0.95);
     }
 
     &:focus-visible {
       outline: 2px solid var(--color-teal);
-      outline-offset: 2px;
+      outline-offset: -2px;
     }
 
-    // Mobile: keep same visual size as desktop
-    // (Secondary action, doesn't need 44px minimum like primary buttons)
-    @media (max-width: 768px) {
-      padding: var(--spacing-xs) var(--spacing-sm);
-    }
+    // SCSS-TOUCH note: 44px mobile floor + padding bump is inherited from the
+    // `%message-group-chip` placeholder above. No separate mobile override
+    // needed here — keeping it in one place prevents drift between chips.
 
     // Reduced motion
     @media (prefers-reduced-motion: reduce) {
@@ -230,12 +289,62 @@
   }
 
   &__counter {
-    font-size: var(--font-size-sm);
-    color: var(--color-subtext1);
+    // Counter wrapper is a layout slot; the chip styling lives on
+    // `.counter-text` (hoisted out of this block — see below for the
+    // specificity rationale). Wrapper is flex so the chip can stretch to
+    // match the banner band height.
+    display: flex;
+    align-items: stretch;
 
-    .counter-text {
-      font-weight: 500;
+    // Ultra-narrow viewports (≤420px): the banner band runs out of room when
+    // all four chips render simultaneously (callsign + alert-count + adsb +
+    // counter), and the counter chip gets clipped against the card edge —
+    // visible around the 375–405px range with alerts present. Hide the
+    // counter entirely here; the same Message N/M info is still conveyed by
+    // the tab strip below (`.message-group__tabs`), so this is redundancy
+    // elimination rather than information loss. The TR corner radius
+    // automatically migrates to the next-rightmost chip via the generic
+    // `__header > :last-child > :last-child` rule.
+    @media (max-width: 420px) {
+      display: none;
     }
+  }
+
+  // NOTE: `.counter-text` is intentionally hoisted out of `&__counter` and
+  // placed as a sibling of `.aircraft-id` / `.alert-count` / `.adsb-tracking`.
+  //
+  // Reason: `@extend %message-group-chip` generates a comma-separated
+  // selector group that includes every extender. When `.counter-text` was
+  // nested inside `&__counter`, the placeholder compiled to
+  //   `.message-group .message-group__counter .counter-text` (0,3,0)
+  // while the override block compiled to
+  //   `.message-group__counter .counter-text` (0,2,0)
+  // — so every property the override tried to change (padding-right,
+  // text-transform, font-size) was silently beaten by the placeholder's
+  // own declarations. Keeping `.counter-text` at the same nesting depth as
+  // the other chips equalises specificity and lets the overrides win.
+  .counter-text {
+    @extend %message-group-chip;
+    // Anchored to the top-right card corner. `.counter-text` is the only
+    // chip allowed to own a rounded TR — middle chips like `.adsb-tracking`
+    // or `.alert-count` would look visually inconsistent if they sometimes
+    // gained a rounded corner based on render order (e.g. only when no
+    // counter renders).
+    border-top-right-radius: var(--border-radius-lg);
+    background-color: var(--color-sapphire);
+    color: var(--color-base);
+    // Mirror the left-side padding bump on `.aircraft-id`: the rounded TR
+    // corner eats visual padding, so add `--spacing-sm` on top of the
+    // chip's base horizontal padding.
+    padding-right: var(--spacing-md);
+    // Counter text is `Message N/M` — uppercase distorts the slash and
+    // adds no value (numerics are caseless). Override the placeholder.
+    text-transform: none;
+    // Use the default sans-serif (inherited) to match `.aircraft-id` on
+    // the opposite end of the band and `.message-type` / `.message-station`
+    // on the ACARS row below — keeps the banner visually unified with the
+    // rest of the card chrome.
+    font-size: var(--font-size-sm);
   }
 
   &__tabs {
@@ -251,6 +360,15 @@
 
   &__content {
     padding: var(--spacing-sm);
+
+    // On mobile the message-group card already sits inside a zero-padding
+    // message list (see `.message-list` mobile override), so any internal
+    // content padding compounds with the inner `.message-card` padding and
+    // wastes horizontal space.  Drop it on mobile and let the message card
+    // own its own padding.
+    @media (max-width: 768px) {
+      padding: 0;
+    }
   }
 }
 
@@ -259,6 +377,9 @@
 // ============================================================================
 
 .tab-nav {
+  // SCSS-TOUCH: tab strip prev/next buttons. Mobile-critical — appears on
+  // Live Messages, Alerts, and Aircraft Messages modal. Mobile gets 44 floor;
+  // desktop keeps current 36 for density.
   background: none;
   border: 1px solid var(--color-surface2);
   color: var(--color-text);
@@ -269,8 +390,7 @@
   font-weight: 700;
   line-height: 1;
   transition: all 0.2s ease;
-  min-width: 36px;
-  min-height: 36px;
+  @include touch-target(44px, 36px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -304,6 +424,7 @@
 }
 
 .tab {
+  // SCSS-TOUCH: 44 mobile / 36 desktop (matches .tab-nav above).
   background: none;
   border: 1px solid var(--color-surface2);
   color: var(--color-text);
@@ -315,8 +436,7 @@
   line-height: 1.2;
   transition: all 0.2s ease;
   white-space: nowrap;
-  min-width: 36px;
-  min-height: 36px;
+  @include touch-target(44px, 36px);
   display: flex;
   align-items: center;
   justify-content: center;

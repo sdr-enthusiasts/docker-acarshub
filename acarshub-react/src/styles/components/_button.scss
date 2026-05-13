@@ -42,6 +42,11 @@
   user-select: none;
   white-space: nowrap;
 
+  // SCSS-TOUCH: 44px floor on mobile (WCAG 2.1 AA, AGENTS.md). Desktop relaxes
+  // to 36px — primary buttons at base font + spacing-sm/lg padding already
+  // produce ~36px from content alone, so this is mostly a guarantee, not a bump.
+  @include touch-target(44px, 36px);
+
   @include focus-visible;
 
   &:disabled {
@@ -223,9 +228,19 @@
  */
 
 .btn--sm {
+  // SCSS-TOUCH hybrid: keep compact appearance on desktop (current padding/font),
+  // grow padding + font on mobile so the visible affordance matches the 44px hit
+  // area. Without the mobile bump, .btn--sm renders at ~26px tall — well below
+  // the WCAG 2.1 AA / AGENTS.md 44px mandate.
   padding: $spacing-xs $spacing-md;
   font-size: $font-size-sm;
   gap: $spacing-xs;
+
+  @media (max-width: #{$breakpoint-md - 1px}) {
+    padding: $spacing-sm $spacing-md;
+    font-size: $font-size-base;
+    min-height: 44px;
+  }
 }
 
 .btn--lg {
@@ -266,14 +281,26 @@
  */
 
 .btn--icon {
+  // SCSS-TOUCH: desktop keeps 40px (existing density), mobile grows to 44px to
+  // meet WCAG 2.1 AA. Same pattern applied to sm/lg variants below.
   padding: $spacing-sm;
   width: 40px;
   height: 40px;
+
+  @media (max-width: #{$breakpoint-md - 1px}) {
+    width: 44px;
+    height: 44px;
+  }
 
   &.btn--sm {
     width: 32px;
     height: 32px;
     padding: $spacing-xs;
+
+    @media (max-width: #{$breakpoint-md - 1px}) {
+      width: 44px;
+      height: 44px;
+    }
   }
 
   &.btn--lg {

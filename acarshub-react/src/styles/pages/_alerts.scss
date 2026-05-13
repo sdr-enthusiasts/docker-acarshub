@@ -381,10 +381,16 @@
     }
 
     // Mobile: appear between title (order 0) and stats (order 2) so it
-    // sits on the same row as the title. Secondary header action — exempt
-    // from the 44px primary touch-target rule.
+    // sits on the same row as the title.
+    //
+    // SCSS-TOUCH: previously exempted from the 44px rule as a "secondary
+    // header action". Per remediation policy that exemption is removed —
+    // 44px floor on mobile. Desktop keeps compact padding/font for header density.
     @include breakpoint-max(md) {
       order: 1;
+      min-height: 44px;
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-size: var(--font-size-base);
     }
 
     &:hover {

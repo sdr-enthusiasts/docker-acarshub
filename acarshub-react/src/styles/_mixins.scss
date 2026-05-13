@@ -288,6 +288,31 @@
   }
 }
 
+// Touch-target sizing (WCAG 2.1 AA / AGENTS.md mandate: 44×44px minimum)
+//
+// Usage:
+//   @include touch-target;              // 44px minimum at all viewports
+//   @include touch-target(44px, 36px);  // 44px mobile, 36px desktop (≥768px)
+//   @include touch-target(44px, auto);  // 44px mobile, unconstrained on desktop
+//
+// Mobile-first per AGENTS.md: mobile floor is always set, desktop is an
+// explicit per-selector decision. Passing `auto` removes the desktop floor
+// entirely (letting padding/font determine size).
+//
+// This codifies the existing house pattern already used by .alerts-page__page-button,
+// .context-menu__item, .tab-switcher__tab, .map-control-button, etc.
+@mixin touch-target($mobile: 44px, $desktop: null) {
+  min-width: $mobile;
+  min-height: $mobile;
+
+  @if $desktop != null {
+    @media (min-width: $breakpoint-md) {
+      min-width: $desktop;
+      min-height: $desktop;
+    }
+  }
+}
+
 // Truncate text with ellipsis
 @mixin truncate {
   overflow: hidden;

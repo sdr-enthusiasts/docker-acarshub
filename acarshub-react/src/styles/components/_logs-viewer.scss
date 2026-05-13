@@ -50,6 +50,8 @@
 
 .logs-viewer-select,
 .logs-viewer-input {
+  // SCSS-TOUCH: form controls inside the Settings → Advanced log viewer.
+  // Desktop renders ~29px from compact padding; mobile gets a 44px floor.
   padding: var(--spacing-xs) var(--spacing-sm);
   background: var(--color-surface0);
   border: 1px solid var(--color-overlay0);
@@ -58,6 +60,11 @@
   font-family: inherit;
   font-size: 0.875rem;
   min-width: 150px;
+
+  @media (max-width: #{$breakpoint-md - 1px}) {
+    min-height: 44px;
+    font-size: 1rem; // also fixes iOS form-control zoom-on-focus (<16px triggers it)
+  }
 
   &:focus {
     outline: 2px solid var(--color-blue);
