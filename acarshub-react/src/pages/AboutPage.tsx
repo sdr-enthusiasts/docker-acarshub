@@ -290,7 +290,7 @@ export const AboutPage = () => {
           <img
             src={safariImage}
             alt="Safari Auto-Play Configuration"
-            style={{ maxWidth: "100%", height: "auto", marginTop: "1rem" }}
+            className="about-page__inline-figure"
           />
         </Card>
 
@@ -337,7 +337,7 @@ export const AboutPage = () => {
               <strong>GitHub Version:</strong> {version.github_version}
             </p>
             {version.is_outdated && (
-              <p style={{ color: "var(--color-warning)", fontWeight: 600 }}>
+              <p className="about-page__update-notice">
                 <span aria-hidden="true">⚠️</span> A newer version is available
                 on GitHub
               </p>
