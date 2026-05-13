@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import type React from "react";
 import {
   useCallback,
   useEffect,
@@ -578,7 +579,11 @@ export const AlertsPage = () => {
         <div
           ref={scrollContainerRef}
           className="alerts-page__virtual-list"
-          style={{ height: `${listHeight}px` }}
+          style={
+            {
+              "--virtual-list-height": `${listHeight}px`,
+            } as React.CSSProperties
+          }
         >
           {/* ----------------------------------------------------------------
               LIVE MODE
@@ -640,11 +645,12 @@ export const AlertsPage = () => {
           {/* Live virtual list */}
           {viewMode === "live" && liveHasGroups && (
             <div
-              style={{
-                height: `${liveVirtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
+              className="virtual-list"
+              style={
+                {
+                  "--virtual-list-total-height": `${liveVirtualizer.getTotalSize()}px`,
+                } as React.CSSProperties
+              }
             >
               {liveVirtualizer.getVirtualItems().map((virtualRow) => {
                 const group = alertGroupsArray[virtualRow.index];
@@ -659,15 +665,14 @@ export const AlertsPage = () => {
                 return (
                   <div
                     key={key}
+                    className="virtual-list__row"
                     data-index={virtualRow.index}
                     ref={liveVirtualizer.measureElement}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
+                    style={
+                      {
+                        "--virtual-row-y": `${virtualRow.start}px`,
+                      } as React.CSSProperties
+                    }
                   >
                     <div className="alerts-page__item">
                       <MessageGroup
@@ -709,11 +714,12 @@ export const AlertsPage = () => {
           {/* Historical virtual list */}
           {viewMode === "historical" && !isSearching && histHasResults && (
             <div
-              style={{
-                height: `${histVirtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
+              className="virtual-list"
+              style={
+                {
+                  "--virtual-list-total-height": `${histVirtualizer.getTotalSize()}px`,
+                } as React.CSSProperties
+              }
             >
               {histVirtualizer.getVirtualItems().map((virtualRow) => {
                 const message = historicalResults[virtualRow.index];
@@ -721,15 +727,14 @@ export const AlertsPage = () => {
                 return (
                   <div
                     key={message.uid}
+                    className="virtual-list__row"
                     data-index={virtualRow.index}
                     ref={histVirtualizer.measureElement}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
+                    style={
+                      {
+                        "--virtual-row-y": `${virtualRow.start}px`,
+                      } as React.CSSProperties
+                    }
                   >
                     <div className="alerts-page__item">
                       <div className="alerts-page__result-card">

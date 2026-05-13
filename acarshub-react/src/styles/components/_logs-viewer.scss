@@ -166,6 +166,10 @@
   border-radius: var(--border-radius-md);
   padding: var(--spacing-sm);
 
+  // Runtime-measured max-height set by the component via the
+  // --logs-viewer-max-height custom property (STYLE-INLINE-DYNAMIC).
+  max-height: var(--logs-viewer-max-height);
+
   @include scrollbar-thin;
 }
 

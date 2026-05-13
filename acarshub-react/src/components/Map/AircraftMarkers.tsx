@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Marker, useMap } from "react-map-gl/maplibre";
 import { useAppStore } from "../../store/useAppStore";
@@ -708,29 +709,30 @@ export function AircraftMarkers({
   return (
     <>
       {visibleMarkers.map((markerData) => {
+        const isHovered =
+          localHoveredAircraft?.hex === markerData.hex ||
+          hoveredAircraftHex === markerData.hex;
+        const markerZ = isHovered ? 10000 : 10;
         return (
           <Marker
             key={markerData.hex}
             longitude={markerData.lon}
             latitude={markerData.lat}
             anchor="center"
-            style={{
-              zIndex:
-                localHoveredAircraft?.hex === markerData.hex ||
-                hoveredAircraftHex === markerData.hex
-                  ? 10000
-                  : 10,
-            }}
+            // <Marker> from react-map-gl/maplibre has no className prop —
+            // its only styling API is the `style` prop, which the library
+            // applies to its internal map-anchored wrapper element. This is
+            // a library-API exception to the AGENTS.md inline-style rule
+            // (STYLE-INLINE-DYNAMIC): the value still flows through a CSS
+            // custom property and the visual z-stacking is consumed in
+            // _aircraft-markers.scss.
+            style={
+              { "--marker-z": markerZ, zIndex: markerZ } as React.CSSProperties
+            }
           >
             <div
-              style={{
-                position: "relative",
-                zIndex:
-                  localHoveredAircraft?.hex === markerData.hex ||
-                  hoveredAircraftHex === markerData.hex
-                    ? 10000
-                    : 10,
-              }}
+              className="aircraft-marker__container"
+              style={{ "--marker-z": markerZ } as React.CSSProperties}
             >
               {useSprites && markerData.spritePosition ? (
                 // Sprite rendering - use AnimatedSprite for multi-frame, static button otherwise
@@ -797,17 +799,20 @@ export function AircraftMarkers({
                         : ""
                     }`}
                     aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
-                    style={{
-                      backgroundPosition: `-${markerData.spritePosition.x}px -${markerData.spritePosition.y}px`,
-                      backgroundSize: markerData.spritePosition.backgroundSize,
-                      width: `${markerData.spritePosition.width}px`,
-                      height: `${markerData.spritePosition.height}px`,
-                      transform: `rotate(${markerData.rotation}deg)`,
-                      transformOrigin: "center center",
-                      cursor: markerData.aircraft.hasMessages
-                        ? "pointer"
-                        : "default",
-                    }}
+                    style={
+                      {
+                        "--sprite-x": `-${markerData.spritePosition.x}px`,
+                        "--sprite-y": `-${markerData.spritePosition.y}px`,
+                        "--sprite-bg-size":
+                          markerData.spritePosition.backgroundSize,
+                        "--sprite-width": `${markerData.spritePosition.width}px`,
+                        "--sprite-height": `${markerData.spritePosition.height}px`,
+                        "--sprite-rotation": `${markerData.rotation}deg`,
+                        "--sprite-cursor": markerData.aircraft.hasMessages
+                          ? "pointer"
+                          : "default",
+                      } as React.CSSProperties
+                    }
                     onClick={() => handleMarkerClick(markerData.aircraft)}
                     onContextMenu={(e) =>
                       handleMarkerContextMenu(e, markerData.aircraft)
@@ -875,15 +880,16 @@ export function AircraftMarkers({
                       : ""
                   }`}
                   aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
-                  style={{
-                    width: `${markerData.width}px`,
-                    height: `${markerData.height}px`,
-                    transform: `rotate(${markerData.rotation}deg)`,
-                    transformOrigin: "center center",
-                    cursor: markerData.aircraft.hasMessages
-                      ? "pointer"
-                      : "default",
-                  }}
+                  style={
+                    {
+                      "--marker-width": `${markerData.width}px`,
+                      "--marker-height": `${markerData.height}px`,
+                      "--marker-rotation": `${markerData.rotation}deg`,
+                      "--marker-cursor": markerData.aircraft.hasMessages
+                        ? "pointer"
+                        : "default",
+                    } as React.CSSProperties
+                  }
                   onClick={() => handleMarkerClick(markerData.aircraft)}
                   onContextMenu={(e) =>
                     handleMarkerContextMenu(e, markerData.aircraft)
@@ -946,21 +952,17 @@ export function AircraftMarkers({
               {localHoveredAircraft &&
                 localHoveredAircraft.hex === markerData.hex && (
                   <div
-                    className={`aircraft-tooltip ${localHoveredAircraft.showBelow ? "aircraft-tooltip--below" : "aircraft-tooltip--above"}`}
-                    style={{
-                      pointerEvents: "none",
-                      left: localHoveredAircraft.alignLeft
-                        ? "0"
+                    className={`aircraft-tooltip ${
+                      localHoveredAircraft.showBelow
+                        ? "aircraft-tooltip--below"
+                        : "aircraft-tooltip--above"
+                    } ${
+                      localHoveredAircraft.alignLeft
+                        ? "aircraft-tooltip--align-left"
                         : localHoveredAircraft.alignRight
-                          ? "auto"
-                          : "50%",
-                      right: localHoveredAircraft.alignRight ? "0" : "auto",
-                      transform:
-                        localHoveredAircraft.alignLeft ||
-                        localHoveredAircraft.alignRight
-                          ? "translateX(0) rotate(0deg)"
-                          : "translateX(-50%) rotate(0deg)",
-                    }}
+                          ? "aircraft-tooltip--align-right"
+                          : ""
+                    }`}
                   >
                     <div className="aircraft-tooltip__content">
                       <div className="aircraft-tooltip__header">

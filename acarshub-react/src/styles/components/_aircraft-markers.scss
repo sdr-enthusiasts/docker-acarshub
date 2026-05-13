@@ -51,7 +51,26 @@
   }
 }
 
+// Marker container — wraps each <Marker> child. Hosts the runtime z-index
+// via the --marker-z custom property so that hovered aircraft stack above
+// their neighbours. Driven from AircraftMarkers.tsx
+// (STYLE-INLINE-DYNAMIC).
+.aircraft-marker__container {
+  position: relative;
+  z-index: var(--marker-z, 10);
+}
+
 .aircraft-marker {
+  // Runtime sizing/rotation/cursor driven from AircraftMarkers.tsx via
+  // CSS custom properties — see STYLE-INLINE-DYNAMIC. Static fallbacks
+  // keep rendering sane if a marker mounts before the inline vars are
+  // applied.
+  width: var(--marker-width, 32px);
+  height: var(--marker-height, 32px);
+  transform: rotate(var(--marker-rotation, 0deg));
+  transform-origin: center center;
+  cursor: var(--marker-cursor, pointer);
+
   // Button reset styles
   background: none;
   border: none;
@@ -215,6 +234,41 @@
       drop-shadow(0 0 10px var(--color-blue))
       drop-shadow(0 0 4px var(--color-blue));
     transform: scale(1.15);
+  }
+}
+
+// CSS-sprite-based aircraft marker (multi-frame animation).
+//
+// Rendered by AnimatedSprite.tsx and by the sprite branch of
+// AircraftMarkers.tsx. The runtime-varying fields (sprite atlas
+// position, dimensions, rotation, cursor) are supplied via the
+// --sprite-* custom properties — see STYLE-INLINE-DYNAMIC.
+.aircraft-sprite {
+  // Button reset
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  outline: none;
+
+  background-repeat: no-repeat;
+  background-position: var(--sprite-x) var(--sprite-y);
+  background-size: var(--sprite-bg-size);
+  width: var(--sprite-width);
+  height: var(--sprite-height);
+  transform: rotate(var(--sprite-rotation));
+  transform-origin: center center;
+  cursor: var(--sprite-cursor);
+
+  // Disable transitions to prevent rotation glitches during hover.
+  transition: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 

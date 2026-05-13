@@ -160,6 +160,10 @@
     border-radius: 2px;
     flex-shrink: 0;
     border: 1px solid var(--color-overlay0);
+    // Overlay swatch fill set by the component via the --overlay-color
+    // custom property (STYLE-INLINE-DYNAMIC). Sourced from the overlay
+    // configuration JSON — arbitrary user data, not a theme token.
+    background-color: var(--overlay-color);
   }
 
   &__name {

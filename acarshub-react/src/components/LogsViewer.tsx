@@ -218,7 +218,11 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
       <div
         ref={viewerRef}
         className="logs-viewer-display"
-        style={{ maxHeight: `${maxHeight}px` }}
+        style={
+          {
+            "--logs-viewer-max-height": `${maxHeight}px`,
+          } as React.CSSProperties
+        }
         // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable log region requires tabIndex for WCAG 2.1 SC 2.1.1 — keyboard users must be able to scroll without a pointer device
         tabIndex={0}
         role="log"
