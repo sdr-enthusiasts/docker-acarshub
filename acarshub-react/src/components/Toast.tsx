@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import type { ToastVariant } from "../store/useToastStore";
 import { IconXmark } from "./icons";
@@ -156,7 +157,11 @@ export const Toast = ({
         <div className="toast__progress">
           <div
             className="toast__progress-bar"
-            style={{ animationDuration: `${duration}ms` }}
+            style={
+              {
+                "--toast-progress-duration": `${duration}ms`,
+              } as React.CSSProperties
+            }
           />
         </div>
       )}

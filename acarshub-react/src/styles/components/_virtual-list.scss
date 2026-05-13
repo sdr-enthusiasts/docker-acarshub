@@ -1,0 +1,49 @@
+// Copyright (C) 2022-2026 Frederick Clausen II
+// This file is part of acarshub <https://github.com/sdr-enthusiasts/docker-acarshub>.
+//
+// acarshub is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// acarshub is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
+
+// Virtualised list scaffolding shared by LiveMessagesPage, AlertsPage,
+// and SearchPage. The structure rendered by @tanstack/react-virtual is:
+//
+//   <div class="<scroll-container>">                  // scrollport;
+//                                                     // height is per-page
+//                                                     // (--virtual-list-height
+//                                                     // or page-specific)
+//     <div class="virtual-list">                      // sized to the sum of
+//                                                     // all measured row
+//                                                     // heights so the
+//                                                     // scrollbar is correct
+//       <div class="virtual-list__row">…</div>        // absolutely positioned
+//       <div class="virtual-list__row">…</div>        // by translateY
+//     </div>
+//   </div>
+//
+// All three values that change per render — total list height and per-row
+// Y offset — flow in through CSS custom properties set by the React
+// components. Static positioning lives here (STYLE-INLINE-DYNAMIC).
+
+.virtual-list {
+  position: relative;
+  width: 100%;
+  height: var(--virtual-list-total-height);
+}
+
+.virtual-list__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: translateY(var(--virtual-row-y));
+}

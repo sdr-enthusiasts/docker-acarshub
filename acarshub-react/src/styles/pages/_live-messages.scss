@@ -477,10 +477,11 @@
 
 .message-list {
   // Full height of the flex parent — the virtualizer scroll container.
-  // Explicit height is set as an inline style by the component after measuring
-  // the available viewport space. This fallback ensures something renders on
-  // the first paint frame before the measurement effect runs.
-  height: 100%;
+  // Runtime-measured viewport height set by the component via the
+  // --virtual-list-height custom property (STYLE-INLINE-DYNAMIC).
+  // The 100% fallback ensures something renders on the first paint
+  // frame before the ResizeObserver measurement effect runs.
+  height: var(--virtual-list-height, 100%);
   overflow-y: auto;
   overflow-x: hidden;
   // Horizontal padding keeps cards away from the viewport edges.

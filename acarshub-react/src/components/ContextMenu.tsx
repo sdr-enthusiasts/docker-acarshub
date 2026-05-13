@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import "../styles/components/_context-menu.scss";
 
@@ -176,7 +177,12 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
     <div
       ref={menuRef}
       className="context-menu"
-      style={{ left: `${posX}px`, top: `${posY}px` }}
+      style={
+        {
+          "--ctx-menu-x": `${posX}px`,
+          "--ctx-menu-y": `${posY}px`,
+        } as React.CSSProperties
+      }
       role="menu"
       tabIndex={-1}
       aria-label="Context menu"

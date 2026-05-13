@@ -402,10 +402,10 @@
     font-weight: 600;
   }
 
-  // Results container — position:relative hosts the absolutely-positioned
-  // virtual items. Height is set as an inline style by the virtualizer
-  // (rowVirtualizer.getTotalSize()px). Individual items are translated via
-  // transform: translateY(...) so no flex/gap layout is needed here.
+  // Results container — also carries the shared .virtual-list class which
+  // supplies position/width/height. Individual items are translated via the
+  // shared .virtual-list__row rule, driven by the --virtual-row-y custom
+  // property set per-row by the component (STYLE-INLINE-DYNAMIC).
   &__results {
     position: relative;
     width: 100%;

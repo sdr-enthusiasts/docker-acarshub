@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GEOJSON_OVERLAYS } from "../../config/geojsonOverlays";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -189,7 +190,11 @@ export function GeoJSONOverlayButton() {
                       />
                       <span
                         className="overlay-item__color"
-                        style={{ backgroundColor: overlay.color }}
+                        style={
+                          {
+                            "--overlay-color": overlay.color,
+                          } as React.CSSProperties
+                        }
                         aria-hidden="true"
                       />
                       <span className="overlay-item__name">{overlay.name}</span>

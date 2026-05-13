@@ -15,6 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import type React from "react";
 import {
   useCallback,
   useEffect,
@@ -753,16 +754,21 @@ export const LiveMessagesPage = () => {
           <div
             className="message-list"
             ref={scrollContainerRef}
-            style={{ height: `${listHeight}px` }}
+            style={
+              {
+                "--virtual-list-height": `${listHeight}px`,
+              } as React.CSSProperties
+            }
           >
             {/* Virtual container — its height equals the sum of all (estimated +
                 measured) item heights. Items are absolutely positioned inside. */}
             <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
+              className="virtual-list"
+              style={
+                {
+                  "--virtual-list-total-height": `${rowVirtualizer.getTotalSize()}px`,
+                } as React.CSSProperties
+              }
             >
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const group = filteredMessageGroups[virtualRow.index];
@@ -779,15 +785,14 @@ export const LiveMessagesPage = () => {
                 return (
                   <div
                     key={key}
+                    className="virtual-list__row"
                     data-index={virtualRow.index}
                     ref={rowVirtualizer.measureElement}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
+                    style={
+                      {
+                        "--virtual-row-y": `${virtualRow.start}px`,
+                      } as React.CSSProperties
+                    }
                   >
                     <div className="message-list__item">
                       <MessageGroupComponent
