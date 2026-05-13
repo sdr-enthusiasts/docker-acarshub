@@ -39,7 +39,8 @@ read top-to-bottom and used as a working checklist.
 12. [Documentation drift](#12-documentation-drift)
 13. [Repository hygiene](#13-repository-hygiene)
 14. [Miscellaneous nits](#14-miscellaneous-nits)
-15. [Suggested execution order](#15-suggested-execution-order)
+15. [User audibles (out-of-audit additions)](#15-user-audibles-out-of-audit-additions)
+16. [Suggested execution order](#16-suggested-execution-order)
 
 ---
 
@@ -369,7 +370,7 @@ copy-success and copy-failure paths.
 
 ## 4. Inline styles and CSS custom properties
 
-### STYLE-INLINE-STATIC — Static inline styles must move to SCSS — **HIGH**
+### STYLE-INLINE-STATIC — Static inline styles must move to SCSS — **HIGH** — ✅ DONE (`f9732120`)
 
 **Files & lines:**
 
@@ -1384,7 +1385,118 @@ acarshub-backend/src acarshub-react/src` and wire into CI.
 
 ---
 
-## 15. Suggested execution order
+## 15. User audibles (out-of-audit additions)
+
+The senior-engineer audit covered correctness, security, design-language
+compliance, testing, and architecture. The items below were called as audibles
+by the user after the audit closed — they are product/UX features and
+performance improvements rather than remediation of pre-existing violations,
+but they are tracked here so the same workflow (atomic PRs, regression tests,
+plan-updates) applies.
+
+These IDs are deliberately scheduled in their own phase (Phase 8) so they
+neither delay the correctness-focused phases nor get absorbed into them.
+
+### FEAT-MARKER-SIZE — User-configurable aircraft marker size — **FEATURE**
+
+**Motivation.** Map readability varies by display density and user preference:
+desktop users with high-DPI screens want larger markers for at-a-glance
+identification; users tracking high-traffic areas (e.g. near major hubs) want
+smaller markers to reduce visual overlap. Currently marker size is hardcoded.
+
+**Scope.**
+
+1. Add a new setting under Settings → Map → Marker Appearance:
+   `markerSize: "small" | "medium" | "large"` (or a numeric scale 0.5–1.5).
+   Default: current behaviour (medium / 1.0).
+2. Persist via `useSettingsStore` alongside the other map settings.
+3. Wire through to `AircraftMarkers.tsx` — the marker image dimensions
+   currently live in `_aircraft-markers.scss` and (post STYLE-INLINE-STATIC)
+   on the `.aircraft-marker img` rule. Pass the scale via a CSS custom
+   property on the map container (e.g. `--aircraft-marker-scale`) and let
+   SCSS multiply through `transform: scale(...)` or apply to width/height.
+4. Affects hit-testing — verify clickability scales with visual size and
+   meets the ≥44 px touch-target floor at the smallest setting on mobile
+   (SCSS-TOUCH overlap — coordinate).
+5. UI surface: radio buttons or slider in the existing Map settings tab of
+   `SettingsModal.tsx`.
+
+**Tests required.**
+
+- Settings store: persists/restores the new value.
+- `SettingsModal` integration: selecting a size updates the store.
+- `AircraftMarkers` snapshot/computed-style: scale prop / CSS var reaches
+  the marker element.
+- E2E (Playwright): change size in settings, verify markers visibly resize
+  on the live map.
+
+**Effort:** Medium. Net-new feature, straightforward but touches store,
+modal UI, map rendering, SCSS, and tests.
+
+### PERF-BUNDLE — Bundle analysis & code-splitting for faster cold loads — **FEATURE / PERFORMANCE**
+
+**Motivation.** The current production build emits:
+
+```text
+dist/assets/map-D3U2OQtb.js                          1,050.01 kB │ gzip: 280.38 kB
+dist/assets/charts-Cjp6rztx.js                         253.60 kB │ gzip:  83.18 kB
+dist/assets/index-BBQWSWnZ.js                          216.71 kB │ gzip:  63.17 kB
+dist/assets/react-BL8qq4oS.js                          178.34 kB │ gzip:  56.34 kB
+dist/assets/LiveMapPage-D0JSutxw.js                    166.38 kB │ gzip:  57.09 kB
+dist/assets/socketio-DGJ2U8cq.js                        41.16 kB │ gzip:  12.85 kB
+```
+
+Vite logs a chunk-size warning on the 1 MB `map` chunk
+(maplibre-gl + plugins) and an `INEFFECTIVE_DYNAMIC_IMPORT` warning for
+`services/socket.ts` (statically imported elsewhere, defeating the dynamic
+import from `SettingsModal.tsx`). First-load payload for users landing on a
+non-map route (Live Messages, Search, Stats) currently includes more than
+they need.
+
+**Phase A — Audit (deliverable: a written analysis, not code yet).**
+
+1. Generate a bundle visualisation with `rollup-plugin-visualizer` (already
+   referenced in AGENTS.md performance section: `npm run analyze`).
+2. Inventory each chunk: what modules dominate, which are route-specific,
+   which are shared.
+3. Identify candidates for dynamic import (route-level + heavy-but-rare
+   features like the map provider configurator).
+4. Quantify expected cold-load wins (gzipped bytes saved per entry path:
+   `/` (live messages), `/map`, `/search`, `/stats`, `/about`, `/alerts`).
+5. List code-splitting risks: shared state, suspense boundaries needed,
+   loading UX, SSR/CSR mismatch (n/a here — CSR only).
+
+**Phase B — Implementation (only after Phase A is reviewed).**
+
+1. Convert each viable page to `React.lazy` + `<Suspense>` with a
+   theme-aware loading skeleton (DESIGN_LANGUAGE.md compliant).
+2. Resolve the `socket.ts` static/dynamic import conflict: either keep it
+   fully static and drop the lazy import, or audit all static importers
+   and convert them (likely keep static — socket service is shared).
+3. Reorganise vendor chunking via `build.rolldownOptions.output.codeSplitting`
+   (or `manualChunks` if we stay on vite-rollup): separate maplibre,
+   charts (chart.js/recharts/whatever is in `charts-*.js`), react, and
+   socket.io into their own chunks so cache invalidation is granular.
+4. Add a `chunkSizeWarningLimit` only after legitimate wins are exhausted,
+   not to silence the warning.
+5. Verify with Lighthouse — AGENTS.md targets are documented in the
+   Performance Standards section (`just lighthouse`).
+
+**Tests required.**
+
+- Build smoke: assert critical chunks are below documented thresholds (a
+  CI step that parses `dist/assets/*.js` sizes and fails on regression).
+- Existing component/page tests must still pass under lazy-loading (they
+  may need `<Suspense>` wrappers in the test setup).
+- E2E: cold-load flows for each route still render without console errors
+  and below a documented FCP/LCP budget.
+
+**Effort:** Phase A: 1-2 days. Phase B: 3-5 days (one route per PR, plus
+the vendor-split commit).
+
+---
+
+## 16. Suggested execution order
 
 This sequence keeps each PR small, testable, and independently reviewable. It
 front-loads correctness/security and test infrastructure so later refactors
@@ -1419,7 +1531,7 @@ have a safety net.
 | -------------------- | --------------------------------------------------------------- | ------------- |
 | SCSS-COLOR-01        | Fix hardcoded `#ffffff` / `#000`                                | ✅ `74e353ba` |
 | SCSS-TOUCH           | Bump touch targets to ≥44 px                                    |               |
-| STYLE-INLINE-STATIC  | Move 8 static inline-style sites to SCSS                        |               |
+| STYLE-INLINE-STATIC  | Move 8 static inline-style sites to SCSS                        | ✅ `f9732120` |
 | STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties |               |
 | NIT-02               | `⚠️` `aria-hidden` fix                                          | ✅ `1c968297` |
 | NIT-03               | Verify `MessageGroup` biome-ignore                              | ✅ `2d4ef6c1` |
@@ -1492,7 +1604,18 @@ passing throughout.
 | NIT-04                      | Audit dead/unused exports                                |
 | NIT-05                      | Add `madge --circular` CI check                          |
 
-### Phase 8 — Cleanup
+### Phase 8 — User audibles (out-of-audit features)
+
+Scheduled after the architecture refactors so the refactored module
+boundaries (split `SettingsModal`, split `AircraftMarkers` tooltip code,
+extracted hooks) are in place before new feature surface lands on them.
+
+| ID               | Description                                           |
+| ---------------- | ----------------------------------------------------- |
+| FEAT-MARKER-SIZE | User-configurable aircraft marker size on the map     |
+| PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction |
+
+### Phase 9 — Cleanup
 
 | ID                   | Description                                                           |
 | -------------------- | --------------------------------------------------------------------- |
@@ -1512,9 +1635,13 @@ passing throughout.
 | 5. Documentation              | 3-5 days                   |
 | 6. Continuing test backfill   | 1-2 weeks                  |
 | 7. Architecture refactors     | 2-4 weeks (parallelisable) |
-| 8. Cleanup                    | <1 day                     |
+| 8. User audibles              | 1-2 weeks                  |
+| 9. Cleanup                    | <1 day                     |
 
-**Grand total:** approximately 6-10 engineer-weeks, with Phases 1-2 (1-2 weeks)
-producing the highest correctness/security ROI and Phases 3-5 (1.5-2 weeks)
-restoring AGENTS.md compliance. The remaining phases are sustained
-maintenance/refactor work that can be scheduled around feature delivery.
+**Grand total:** approximately 7-12 engineer-weeks. Phases 1-2 (1-2 weeks)
+produce the highest correctness/security ROI; Phases 3-5 (1.5-2 weeks)
+restore AGENTS.md compliance; Phases 6-7 are sustained maintenance/refactor
+work that can be scheduled around feature delivery. Phase 8 is net-new
+feature surface (out-of-audit audibles) and is intentionally placed after
+the refactors so the marker-rendering and bundle-splitting work lands on
+the cleaned-up module boundaries from Phase 7.
