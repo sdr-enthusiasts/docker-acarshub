@@ -708,6 +708,13 @@
 
   .message-group {
     page-break-inside: avoid;
+    // SCSS-COLOR-01: print is an explicit theme-independent context — output
+    // lands on white paper regardless of the user's Mocha/Latte preference, so
+    // `#000` gives the strongest, most predictable contrast. Catppuccin
+    // variables resolve to the *active screen theme* at print time
+    // (e.g. mocha-text is light grey, base is near-black or near-white) and
+    // would produce unreadable borders in one theme or the other. The
+    // hardcoded value is intentional and documented here per AGENTS.md.
     border: 1px solid #000;
     margin-bottom: 1rem;
   }

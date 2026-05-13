@@ -156,9 +156,9 @@
     background-color: transparent;
     transition: all 0.2s ease;
 
-    // Checked state - show white dot
+    // Checked state - show theme-aware dot
     .radio-option__input:checked ~ .radio-option__label & {
-      background-color: #ffffff;
+      background-color: var(--color-radio-thumb);
     }
 
     // Disabled checked state
