@@ -70,6 +70,14 @@
   --color-card-header: #{$mocha-mantle};
   --color-card-body: #{$mocha-base};
 
+  // Form-control thumb colors (toggle slider, radio dot)
+  // SCSS-COLOR-01: the previous hardcoded #ffffff worked in Mocha but failed
+  // in Latte (white thumb on cream-coloured surface1 track ≈ invisible).
+  // Using --color-text gives the desired inversion: light thumb against
+  // dark Mocha tracks, dark thumb against light Latte tracks.
+  --color-toggle-thumb: #{$mocha-text};
+  --color-radio-thumb: #{$mocha-text};
+
   // Catppuccin color shortcuts
   --color-rosewater: #{$mocha-rosewater};
   --color-flamingo: #{$mocha-flamingo};
@@ -147,6 +155,13 @@
   // Card-specific colors
   --color-card-header: #{$latte-mantle};
   --color-card-body: #{$latte-base};
+
+  // Form-control thumb colors (toggle slider, radio dot)
+  // See SCSS-COLOR-01 note in theme-mocha. In Latte, --color-text is the dark
+  // text color, which gives a dark thumb against light surface1 (unchecked)
+  // and against latte-blue (checked) — both contrasts meet WCAG AA.
+  --color-toggle-thumb: #{$latte-text};
+  --color-radio-thumb: #{$latte-text};
 
   // Catppuccin color shortcuts
   --color-rosewater: #{$latte-rosewater};
