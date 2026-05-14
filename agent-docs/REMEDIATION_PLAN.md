@@ -1184,18 +1184,29 @@ Frontend section (lines 50-141) is accurate and can be left alone. Add a
 
 **Effort:** Medium.
 
-### DOC-FEAT — `agent-docs/FEATURES.md` partially stale — **MEDIUM**
+### DOC-FEAT — `agent-docs/FEATURES.md` partially stale — **MEDIUM** — ✅ DONE
 
-**Stale points:**
+**Resolution.** Two stale passages rewritten:
 
-- Lines 16-21: "Server-Side Decoding (libacars)" — backend just stores
-  already-decoded text; no libacars binding in `acarshub-backend/package.json`.
-- Line 532: "Non-blocking I/O (Flask-SocketIO with gevent)" — Fastify + Node
-  event loop.
-
-**Remediation.** Update both passages. Cross-reference the actual ingestion
-pipeline (`services/{tcp,udp,zmq}-listener.ts` → `services/message-queue.ts` →
-`formatters/enrichment.ts`).
+- **Lines 16-21 ("Server-Side Decoding (libacars)")** — the original
+  text implied the Node.js backend itself decodes CPDLC/frequency
+  data with libacars. It does not. The backend has no libacars
+  binding (`grep -r libacars acarshub-backend/src` only matches
+  schema/test fixtures and the `libacars` _field name_). The actual
+  flow is: the upstream decoder daemons (acarsdec, vdlm2dec,
+  dumpvdl2, dumphfdl, etc.) link libacars and emit ARINC622 / SPDU /
+  freq_data / CPDLC JSON; the backend's `formatters/` (see
+  `formatters/index.ts:594-768`, `369-371`, `974-976`,
+  `517-518`) extract those substructures from inbound JSON and
+  re-serialise them into the message's `libacars` field; the React
+  frontend's `parseAndFormatLibacars` (in `MessageCard.tsx:485`)
+  parses and renders them. The new section heading is "Server-Side
+  Decoded Data (libacars, upstream)" and the bullets accurately
+  describe each leg with a cross-reference to
+  `agent-docs/DECODER_CONNECTIONS.md` for the ingestion pipeline.
+- **Line 532 ("Non-blocking I/O (Flask-SocketIO with gevent)")** —
+  reworded to "Node.js event loop on Fastify + Socket.IO 4.x" to
+  match the actual runtime.
 
 **Effort:** Low.
 
@@ -1738,7 +1749,7 @@ have a safety net.
 | ---------------------------- | ----------------------------------------------------------------------- |
 | DOC-FLASK                    | Re-investigate Flask-SocketIO namespace requirement — DONE (TYPE-01/02) |
 | DOC-ARCH                     | Rewrite ARCHITECTURE.md backend sections                                |
-| DOC-FEAT                     | Update FEATURES.md (libacars, Flask references)                         |
+| DOC-FEAT                     | Update FEATURES.md (libacars, Flask references) — DONE                  |
 | DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                   |
 | DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README — DONE         |
 | DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index — DONE                                 |
