@@ -1227,33 +1227,34 @@ anyway.
 
 **Effort:** Low.
 
-### DOC-AGENTS — `AGENTS.md` references Playwright as flake-managed — **LOW**
+### DOC-AGENTS — `AGENTS.md` references Playwright as flake-managed — **LOW** — ✅ DONE
 
-**File:** `AGENTS.md:198`.
+**File:** `AGENTS.md:198-206` (Nix Flakes section).
 
-**Finding.** Claims Playwright is provisioned via flake; it isn't (npm-managed
-in `acarshub-react/package.json` and `Dockerfile.e2e`).
-
-**Remediation.** Update the Nix Flakes section to clarify that Playwright is
-npm-managed, and that the flake provides the system tools (Node, biome, just,
-etc.) that wrap it.
+**Resolution.** Rewrote the section to accurately reflect what `flake.nix`
+actually provides. The old list claimed "Node.js, npm, TypeScript / Python,
+PDM / Biome, Playwright / Pre-commit hooks" — three of those were wrong:
+Playwright is npm-managed (in `acarshub-react/package.json` and run from
+`Dockerfile.e2e`), and Python/PDM were dropped when the Python backend was
+retired. The new list enumerates the actual `flake.nix` contents
+(`nodejs`, `typescript`, `biome`, `just`, `rrdtool`, `sqlite`, `cmake`,
+`pkg-config`, `docker` + plugins, `qemu`) and adds an explicit note about
+Playwright and Python being out-of-flake.
 
 **Effort:** Trivial.
 
-### DOC-AGENTS-LIST — `AGENTS.md` documentation index is incomplete — **LOW**
+### DOC-AGENTS-LIST — `AGENTS.md` documentation index is incomplete — **LOW** — ✅ DONE
 
-**File:** `AGENTS.md:18-24`.
+**File:** `AGENTS.md:14-28` (Documentation Structure section).
 
-**Finding.** Lists 7 docs in `agent-docs/`, but five more exist:
-
-- `agent-docs/DECODER_CONNECTIONS.md`
-- `agent-docs/MEMORY_OPTIMIZATION.md`
-- `agent-docs/MESSAGE_RING_BUFFER.md`
-- `agent-docs/DB_OPTIMIZATION.md`
-- `agent-docs/DESKTOP_AND_NATIVE_INSTALL_PLAN.md`
-
-**Remediation.** Either link them in AGENTS.md or fold their unique content
-into the listed docs.
+**Resolution.** Added the four missing `agent-docs/` entries to the index
+with one-line descriptions: `DECODER_CONNECTIONS.md`, `DB_OPTIMIZATION.md`,
+`MEMORY_OPTIMIZATION.md`, `MESSAGE_RING_BUFFER.md`. The fifth file
+referenced in the original audit (`DESKTOP_AND_NATIVE_INSTALL_PLAN.md`)
+does not exist on disk — that finding was stale and is dropped without
+action. `REMEDIATION_PLAN.md` (this document) is deliberately not listed:
+it is scheduled for deletion in Phase 9 per the AGENTS.md "no summary
+docs" rule.
 
 **Effort:** Trivial.
 
@@ -1715,7 +1716,7 @@ have a safety net.
 | DOC-FEAT                     | Update FEATURES.md (libacars, Flask references)                         |
 | DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                   |
 | DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README                |
-| DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index                                        |
+| DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index — DONE                                 |
 | REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                              |
 | REPO-03                      | Decide on `.stylelintrc.json` — DONE (deleted, unenforced)              |
 | REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)         |

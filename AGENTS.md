@@ -22,6 +22,10 @@ ACARS Hub is a web application for receiving, decoding, and displaying ACARS (Ai
 - **agent-docs/FEATURES.md** - Feature documentation (decoders, search, alerts, map)
 - **agent-docs/TESTING.md** - Test strategy, patterns, and infrastructure
 - **agent-docs/V4.2.md** - v4.2 aircraft session architecture and implementation plan
+- **agent-docs/DECODER_CONNECTIONS.md** - Authoritative reference for decoder ingress (TCP/UDP/ZMQ, listener wiring)
+- **agent-docs/DB_OPTIMIZATION.md** - Database size optimization (dead-index removal, UUID→integer FK migration)
+- **agent-docs/MEMORY_OPTIMIZATION.md** - Backend memory reduction via time-series compaction
+- **agent-docs/MESSAGE_RING_BUFFER.md** - On-connect warm-state ring buffer (replaces per-connect DB query)
 
 ## Critical Rules
 
@@ -200,10 +204,15 @@ console.error("Failed to decode", err);
 
 All system-level tools managed via `flake.nix`:
 
-- Node.js, npm, TypeScript
-- Python, PDM
-- Biome, Playwright
-- Pre-commit hooks
+- Node.js, TypeScript, Biome
+- `just` task runner
+- `rrdtool`, `sqlite`, `cmake`, `pkg-config`
+- Docker CLI + buildx + compose, QEMU (for cross-arch builds)
+- Pre-commit hooks (via `git-hooks.nix`)
+
+Playwright is **not** flake-managed — it is installed via npm in
+`acarshub-react/package.json` and run from `Dockerfile.e2e`. Python and
+PDM are no longer in the flake (the Python backend was retired).
 
 **Adding Tools**:
 
