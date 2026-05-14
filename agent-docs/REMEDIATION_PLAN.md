@@ -1005,30 +1005,64 @@ Status (Phase 6 TEST-GAP-FE Map):
   `AnimatedSprite` (manual RAF + `Date.now` drivers for frame cycling),
   `MapControls` (backend-gated range-rings/HeyWhatsThat; ACARS/Unread
   mutual exclusion; all store-setter wiring).
-- Bundle 3 PENDING (7 Leaflet-dependent components): needs reusable
-  react-leaflet test harness.
+- Bundle 3 DONE (merge `25b313b1`, 73 tests): all 7 react-map-gl
+  integrations. Used inline `vi.mock("react-map-gl/maplibre")` with
+  `vi.hoisted()` capture buffers (rejected separate harness — Vitest
+  hoisting + cross-file coupling made it uglier than per-file inlining).
+  - `StationMarker` (8): privacy gating on `decoders.adsb.range_rings`;
+    user settings (`stationLat`/`stationLon`) override backend when
+    non-(0,0); both (0,0) renders nothing.
+  - `OpenAIPOverlay` (6): TMS via adsbexchange proxy; max-zoom 12;
+    300ms opacity fade.
+  - `NexradOverlay` (9): Iowa Mesonet WMS EPSG:3857, 256x256, 5-min
+    refresh via `vi.useFakeTimers`; `renderTimestampOnly` prop.
+  - `HeyWhatsThatOverlay` (10): Catppuccin mocha vs latte palettes
+    (`#a6e3a1` vs `#40a02b`); requires `decoders.adsb.heywhatsthat_url`;
+    `resolvePathOrUrl` stubbed.
+  - `RainViewerOverlay` (9): fetches `RainViewer` API tile path; empty
+    `past` array and fetch failures render nothing.
+  - `RangeRings` (13): 64-point Polygon (65 closed coords) × 3 rings
+    - 4 cardinal labels = 12 features; nice-form bases (1/2/5×10^n);
+      falls back to `settings.map.rangeRings` when no map ref.
+  - `AircraftMarkers` (18): viewport culling (incl. antimeridian
+    crossing, west>east), 10% buffer; settings filters (showOnlyAcars,
+    showOnlyUnread, dbFlags additive); skips aircraft missing lat/lon;
+    `onViewportBoundsChange` raw-bounds on move + null on unmount;
+    marker click opens modal only when `hasMessages`; right-click opens
+    context menu. Uses `externalAircraft` prop to bypass the internal
+    ADS-B→ACARS pairing pipeline (covered separately by
+    `aircraftPairing.test.ts`).
 
-Gotcha captured: user-event v14 stomps `navigator.clipboard` at
-`setup()`; install clipboard mock AFTER `userEvent.setup()` (same as
-`LogsViewer.test.tsx`).
+Gotchas captured:
 
-Cumulative Map subsystem coverage: 8 of 15 covered, 127 tests.
+- user-event v14 stomps `navigator.clipboard` at `setup()`; install
+  clipboard mock AFTER `userEvent.setup()` (same as `LogsViewer.test.tsx`).
+- For fake-timer tests with `useEffect`: assert captured-array
+  `length >= 1` (not `=== 1`) since effects re-render and Source/Layer
+  props are re-captured per render.
+- For timestamp-comparison tests: pin `vi.setSystemTime()` BEFORE first
+  render so the initial value is deterministic.
+- `react-map-gl/maplibre` `<Marker>` exposes no `className` prop — only
+  `style`; AGENTS.md inline-style rule has a library-API exception here
+  (already documented inline in `AircraftMarkers.tsx`).
+
+Cumulative Map subsystem coverage: 15 of 15 covered, 200 tests.
 
 - `Map/AircraftContextMenu.tsx` — covered (bundle 2)
-- `Map/AircraftMarkers.tsx` — pending (bundle 3, Leaflet)
+- `Map/AircraftMarkers.tsx` — covered (bundle 3)
 - `Map/AircraftMessagesModal.tsx` — covered (bundle 2)
 - `Map/AnimatedSprite.tsx` — covered (bundle 2)
 - `Map/GeoJSONOverlayButton.tsx` — covered (bundle 1)
-- `Map/HeyWhatsThatOverlay.tsx` — pending (bundle 3, Leaflet)
+- `Map/HeyWhatsThatOverlay.tsx` — covered (bundle 3)
 - `Map/MapContextMenu.tsx` — covered (bundle 1)
 - `Map/MapControlButton.tsx` — covered (bundle 1)
 - `Map/MapControls.tsx` — covered (bundle 2)
 - `Map/MapLegend.tsx` — covered (bundle 1)
-- `Map/NexradOverlay.tsx` — pending (bundle 3, Leaflet)
-- `Map/OpenAIPOverlay.tsx` — pending (bundle 3, Leaflet)
-- `Map/RainViewerOverlay.tsx` — pending (bundle 3, Leaflet)
-- `Map/RangeRings.tsx` — pending (bundle 3, Leaflet)
-- `Map/StationMarker.tsx` — pending (bundle 3, Leaflet)
+- `Map/NexradOverlay.tsx` — covered (bundle 3)
+- `Map/OpenAIPOverlay.tsx` — covered (bundle 3)
+- `Map/RainViewerOverlay.tsx` — covered (bundle 3)
+- `Map/RangeRings.tsx` — covered (bundle 3)
+- `Map/StationMarker.tsx` — covered (bundle 3)
 
 **Charts (3 of 6 untested):**
 
