@@ -70,7 +70,7 @@ import {
   zeroFillBuckets,
 } from "../utils/timeseries.js";
 
-const logger = createLogger("timeseries-cache");
+const logger = createLogger("services:timeseries-cache");
 
 // ---------------------------------------------------------------------------
 // Types

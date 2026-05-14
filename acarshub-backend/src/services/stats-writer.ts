@@ -19,7 +19,7 @@ import { timeseriesStats } from "../db/schema.js";
 import { createLogger } from "../utils/logger.js";
 import { getMessageQueue } from "./message-queue.js";
 
-const logger = createLogger("stats-writer");
+const logger = createLogger("services:stats-writer");
 
 /**
  * Stats Writer Service

@@ -40,7 +40,7 @@ import type { ValidatedEvent, ValidatedPayload } from "./schemas.js";
 import { SocketSchemas } from "./schemas.js";
 import type { TypedSocket } from "./types.js";
 
-const logger = createLogger("socket-validation");
+const logger = createLogger("socket:validation");
 
 /**
  * Wrap `handler` with zod validation against the schema registered for

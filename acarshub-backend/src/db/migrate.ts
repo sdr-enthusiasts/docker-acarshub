@@ -45,7 +45,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate as drizzleMigrate } from "drizzle-orm/better-sqlite3/migrator";
 import { createLogger } from "../utils/logger.js";
 
-const logger = createLogger("migrations");
+const logger = createLogger("db:migrate");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
 const LATEST_REVISION = "803398f85958";
 

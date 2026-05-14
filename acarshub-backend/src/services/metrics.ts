@@ -97,7 +97,7 @@ import {
 import { createLogger } from "../utils/logger.js";
 import { getLatestTimeseriesData } from "./rrd-migration.js";
 
-const logger = createLogger("metrics");
+const logger = createLogger("services:metrics");
 
 // ---------------------------------------------------------------------------
 // Registry singleton

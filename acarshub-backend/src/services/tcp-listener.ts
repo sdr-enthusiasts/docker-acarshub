@@ -25,7 +25,7 @@ import type {
   MessageType,
 } from "./listener-types.js";
 
-const logger = createLogger("tcp-listener");
+const logger = createLogger("services:tcp-listener");
 
 // Re-exported so existing callers that import `MessageType` from
 // `./tcp-listener.js` continue to work.  Canonical home is

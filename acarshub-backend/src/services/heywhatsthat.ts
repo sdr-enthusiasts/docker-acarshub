@@ -50,7 +50,7 @@ import {
 } from "../config.js";
 import { createLogger } from "../utils/logger.js";
 
-const logger = createLogger("heywhatsthat");
+const logger = createLogger("services:heywhatsthat");
 
 // ---------------------------------------------------------------------------
 // Constants

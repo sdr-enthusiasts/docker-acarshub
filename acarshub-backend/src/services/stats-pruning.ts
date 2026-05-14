@@ -20,7 +20,7 @@ import { timeseriesStats } from "../db/schema.js";
 import { createLogger } from "../utils/logger.js";
 import type { Scheduler } from "./scheduler.js";
 
-const logger = createLogger("stats-pruning");
+const logger = createLogger("services:stats-pruning");
 
 /**
  * Tracks the one-shot setTimeout used to align the first prune to 3:00 AM.

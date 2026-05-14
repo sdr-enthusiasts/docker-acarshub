@@ -69,7 +69,7 @@ import { parentPort, workerData } from "node:worker_threads";
 import { createLogger } from "../utils/logger.js";
 import { runMigrations } from "./migrate.js";
 
-const logger = createLogger("migrate-worker");
+const logger = createLogger("db:migrate-worker");
 
 // ---------------------------------------------------------------------------
 // Debug simulation delay

@@ -55,7 +55,7 @@ import { grabMostRecent, searchAlerts } from "../db/index.js";
 import { enrichMessage } from "../formatters/enrichment.js";
 import { createLogger } from "../utils/logger.js";
 
-const logger = createLogger("message-ring-buffer");
+const logger = createLogger("services:message-ring-buffer");
 
 // ---------------------------------------------------------------------------
 // Defaults

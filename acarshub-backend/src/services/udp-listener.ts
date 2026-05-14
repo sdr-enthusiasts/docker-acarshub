@@ -25,7 +25,7 @@ import type {
   MessageType,
 } from "./listener-types.js";
 
-const logger = createLogger("udp-listener");
+const logger = createLogger("services:udp-listener");
 
 /**
  * UDP Listener for decoder feeds.

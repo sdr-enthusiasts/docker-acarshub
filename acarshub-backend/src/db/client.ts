@@ -20,7 +20,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { createLogger } from "../utils/logger.js";
 import * as schema from "./schema.js";
 
-const logger = createLogger("database");
+const logger = createLogger("db:client");
 
 // Environment configuration
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";

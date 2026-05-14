@@ -234,6 +234,21 @@ console.error("Failed to decode", err);
 - `debug` - Detailed debugging, state transitions
 - `trace` - Very verbose, high-frequency events
 
+**Namespace convention** (backend):
+
+Logger namespaces are **colon-namespaced** as `<area>:<module>`. The area
+matches the source directory; the module matches the file's role.
+
+- ✅ `services:adsb-poller`, `db:migrate`, `socket:handlers`,
+  `formatters:enrichment`, `server:startup-state`
+- ❌ `adsb-poller` (no area), `socket-validation` (kebab instead of colon),
+  `database` (single token for a `db/` file)
+
+Single-token namespaces are reserved for true top-level / aggregator modules:
+`app` (root logger default), `config` (top-level config), `server`
+(server entrypoint), `services` (services aggregator),
+`formatters` (formatters aggregator).
+
 ## Development Environment
 
 ### Nix Flakes

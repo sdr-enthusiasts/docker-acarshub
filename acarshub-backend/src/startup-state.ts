@@ -40,7 +40,7 @@
 import type { TypedSocket } from "./socket/types.js";
 import { createLogger } from "./utils/logger.js";
 
-const logger = createLogger("startup-state");
+const logger = createLogger("server:startup-state");
 
 // ---------------------------------------------------------------------------
 // Module-level state (singleton — one server process, one migration at a time)

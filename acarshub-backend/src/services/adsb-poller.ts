@@ -18,7 +18,7 @@ import { EventEmitter } from "node:events";
 import type { ADSBSourceType } from "@acarshub/types";
 import { createLogger } from "../utils/logger.js";
 
-const logger = createLogger("adsb-poller");
+const logger = createLogger("services:adsb-poller");
 
 /**
  * Minimal aircraft data structure (optimized from ~52 fields to 18 essential fields)

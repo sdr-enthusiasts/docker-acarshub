@@ -17,7 +17,7 @@
 import { EventEmitter } from "node:events";
 import { createLogger } from "../utils/logger.js";
 
-const logger = createLogger("scheduler");
+const logger = createLogger("services:scheduler");
 
 export type ScheduleUnit = "seconds" | "minutes" | "hours";
 

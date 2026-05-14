@@ -19,7 +19,7 @@ import type { MessageRateData } from "@acarshub/types";
 import { createLogger } from "../utils/logger.js";
 import type { MessageType } from "./tcp-listener.js";
 
-const logger = createLogger("message-queue");
+const logger = createLogger("services:message-queue");
 
 export interface QueuedMessage {
   type: MessageType;

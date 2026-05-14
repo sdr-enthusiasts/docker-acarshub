@@ -24,7 +24,7 @@ import type {
   MessageType,
 } from "./listener-types.js";
 
-const logger = createLogger("zmq-listener");
+const logger = createLogger("services:zmq-listener");
 
 /**
  * ZMQ Subscriber listener for decoder feeds.
