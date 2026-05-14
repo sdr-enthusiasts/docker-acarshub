@@ -188,6 +188,11 @@ describe("HeyWhatsThatOverlay", () => {
 
       // line-color is a MapLibre match expression — first element "match",
       // second element ["get", "ring_index"], then index/color pairs.
+      // Regression (TYPE-03): the paint object is typed against MapLibre's
+      // LineLayerSpecification — if `lineColorExpression` ever drifts back
+      // to `any`, this assertion still passes at runtime but `tsc --noEmit`
+      // (run in `just ci`) fails on assignment.  The shape check below is
+      // the runtime half of the contract.
       const colorExpr = paint["line-color"] as unknown[];
       expect(colorExpr[0]).toBe("match");
       expect(colorExpr[1]).toEqual(["get", "ring_index"]);
