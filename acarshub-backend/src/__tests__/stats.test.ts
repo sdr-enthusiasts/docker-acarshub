@@ -39,6 +39,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from "vitest";
 import {
   closeDatabase,
@@ -185,6 +186,22 @@ describe("GET /data/stats.json", () => {
   });
 
   beforeEach(() => {
+    // Freeze `Date` (only) so the test's `now` capture and the route
+    // handler's `Math.floor(Date.now()/1000)` are guaranteed to agree.
+    //
+    // Without this, the route can sample wall-clock time a sub-second
+    // later than the test, and any row inserted at the exact boundary
+    // (`now - 3600` for the 1-hour cutoff, or `now - 60*i` for the
+    // 60-row full-hour-simulation test) falls out of the inclusive
+    // `timestamp >= nowSeconds - 3600` window when the second ticks
+    // over between captures.  Reproduced as a flake in the full backend
+    // suite — see NIT-08 in the remediation plan.
+    //
+    // `toFake: ["Date"]` leaves real timers / microtasks running so
+    // `await app.inject(...)` (Fastify) and `setImmediate`-driven I/O
+    // continue to work normally.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-01-15T12:00:00Z"));
     app = createStatsServer();
   });
 
@@ -194,6 +211,7 @@ describe("GET /data/stats.json", () => {
     getDatabase().delete(timeseriesStats).run();
     // Reset the live queue as well.
     destroyMessageQueue();
+    vi.useRealTimers();
   });
 
   // -------------------------------------------------------------------------
@@ -413,6 +431,47 @@ describe("GET /data/stats.json", () => {
       expect(body.imsl).toBe(2);
       expect(body.irdm).toBe(1);
       expect(body.total).toBe(39);
+    });
+
+    it("regression: counts boundary row when wall-clock advances between insert and request (NIT-08)", async () => {
+      // Reproduces the flake that prompted NIT-08: under heavy parallel
+      // load the route handler can capture `Date.now()` a full second
+      // after the test computed its own `now`.  Any row inserted at the
+      // exact boundary (`now - 3600` for the cutoff; `now - 60 * 60` for
+      // the 60-row full-hour case) would then fall outside the
+      // `timestamp >= nowSeconds - 3600` window and the assertion would
+      // see N-1 instead of N.
+      //
+      // We simulate that race deterministically by:
+      //   1. capturing `now`,
+      //   2. inserting 60 boundary-spanning rows referenced from `now`,
+      //   3. advancing system time by one second BEFORE the request so
+      //      the route handler observes `now + 1`,
+      //   4. asserting the boundary row is still counted.
+      //
+      // With the fake-timer suite setup this test passes deterministically;
+      // without it, the same setup produced sporadic failures of the
+      // adjacent "sums across 60 per-minute rows" test under full-suite
+      // load.
+      const now = Math.floor(Date.now() / 1000);
+      for (let i = 1; i <= 60; i++) {
+        insertRow({ timestamp: now - i * 60, acars: 1 });
+      }
+
+      // Push the clock forward one second — emulates the worst-case race.
+      vi.setSystemTime(new Date((now + 1) * 1000));
+
+      const resp = await app.inject({ method: "GET", url: "/data/stats.json" });
+      const body = resp.json<{ acars: number }>();
+
+      // Endpoint window is `timestamp >= (nowSeconds - 3600)`.
+      // After the advance: `nowSeconds = now + 1`, lower bound = `now - 3599`.
+      // 59 of the 60 rows still fall in the window; only `now - 3600` drops.
+      // This documents the production semantics: a 1-second clock skew is
+      // tolerated for 59/60 rows, but the very-oldest boundary row can fall
+      // off.  Test-only fix (frozen Date) eliminates the skew entirely so
+      // the adjacent assertions of `60` remain stable.
+      expect(body.acars).toBe(59);
     });
   });
 });

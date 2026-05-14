@@ -52,6 +52,42 @@ it("regression: session matching does not create duplicate sessions for same hex
 
 See `agent-docs/TESTING.md` for patterns, structure, and backend vs frontend test conventions.
 
+### 🚨 NO PUNTING ON TEST FLAKES
+
+**A flaky test is a broken test. Fix it before moving on.**
+
+CI failures caused by flakes we already knew about are unacceptable —
+every red CI run that turns out to be "oh, that one's just flaky" erodes
+trust in the suite and trains everyone to ignore real failures. If you
+observe a sporadic test failure during any work — `just ci` retry,
+`npm test` loop, parallel-suite stress, anything — the flake becomes a
+**hard blocker** with the following rules:
+
+- ✅ Finish the current sub-task (don't abandon a half-done refactor).
+- ✅ The **very next** unit of work after that sub-task is the flake fix.
+  No new features, no new refactors, no jumping to the next plan item
+  until the flake is either fixed or proven to be environmental noise
+  outside the test code (and even then: documented + tracked).
+- ✅ Root-cause it. Symptomatic patches (test retries, longer timeouts,
+  `it.skip` with a TODO) are not acceptable. Identify the actual race
+  / shared-state / boundary issue and fix it.
+- ✅ Add a **deterministic regression test** that reproduces the race
+  reliably without depending on parallel scheduling. The "the flaky
+  test itself counts as the regression test" excuse does not — flakes
+  by definition pass sometimes, so they can't gate the fix.
+- ✅ Stress-test the fix: minimum 10 consecutive full-suite runs clean
+  before declaring victory. More if the original repro rate was lower
+  than 1-in-5.
+- 🚫 **Never** push a known flake to `main` or any long-lived branch.
+  If a flake surfaces in the middle of long-lived work (e.g. a
+  remediation branch), it gets its own commit ahead of further
+  feature/refactor work.
+
+If you find more than one flake during a single sub-task, queue them
+all up — finish the sub-task, then drain the flake queue in order of
+reproduction frequency (most-frequent first) before resuming planned
+work.
+
 ### 🚫 NO SUMMARIES
 
 **Never create summary documents.** Only reference documentation. If you need to document something, create a standards document (like DESIGN_LANGUAGE.md).
