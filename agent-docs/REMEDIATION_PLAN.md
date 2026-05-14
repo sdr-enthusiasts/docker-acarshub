@@ -1291,7 +1291,46 @@ docs" rule.
 
 **Effort:** Trivial.
 
-### DOC-DEV-DOCS — `dev-docs/` is the largest source of drift — **HIGH**
+### DOC-DEV-DOCS — `dev-docs/` is the largest source of drift — **HIGH** — **DONE**
+
+**Resolved on `remediation` via merge of branch `phase-5/doc-dev-docs`
+(commit `1eb9d02f`).** Per-file audit by the explore agent found the
+directory's drift was even broader than the original plan listed:
+12 of 15 files were either pre-migration scratchpads, completed-migration
+trackers (violating the AGENTS.md no-summary rule), or pure duplicates
+of canonical docs. The 3 keepers were promoted to their proper homes
+and the directory was retired entirely.
+
+**Deleted (12):** `API_PARITY.md`, `BACKEND_SETUP_DECISIONS.md`,
+`CODING_STANDARDS.md`, `DEVELOPMENT.md`, `ENV_VARS_AUDIT.md`,
+`NODEJS_MIGRATION_PLAN.md`, `PYTHON_DEPENDENCIES.md`, `README.md`,
+`SETUP.md`, `TESTING_AUDIT.md`, `TESTING_GUIDE.md`,
+`V4_DATABASE_SUMMARY.md`. Migration-era artefacts were deleted outright
+rather than archived under `dev-docs/historical/` (per user direction)
+since git history preserves them and the `historical/` directory would
+itself violate the no-summary-docs rule.
+
+**Promoted to `agent-docs/`:** `TIMESERIES_STRATEGY.md` (Mar 17,
+accurate description of current SQLite time-series design with
+historical RRD context); `TYPESCRIPT_CHECKING.md` (current
+`tsc --build` + project-references reference).
+
+**Promoted to repo root (GitHub convention):** `CONTRIBUTING.md`,
+rewritten to drop `pdm install`, the Flask-WTF CSRF item, the
+"Python/Flask" backend scope label, and stale links to deleted docs
+(`TESTING_GUIDE.md`, `CODING_STANDARDS.md`, `TROUBLESHOOTING.md`).
+
+**Side-effects cleaned up in the same commit:**
+`DEV-QUICK-START.md:251-263` More Documentation section rewritten to
+drop the dev-docs/ listing and add the promoted destinations;
+`acarshub-backend/README.md:10` stale `dev-docs/historical/` line
+removed; `acarshub-backend/src/socket/__tests__/integration.test.ts:1005-1006`
+code comment referencing deleted `API_PARITY.md` rewritten without the
+reference. Final state: `dev-docs/` directory no longer exists.
+
+---
+
+#### Original audit (DOC-DEV-DOCS)
 
 **Files to delete:**
 
@@ -1772,7 +1811,7 @@ have a safety net.
 | DOC-FLASK                    | Re-investigate Flask-SocketIO namespace requirement — DONE (TYPE-01/02) |
 | DOC-ARCH                     | Rewrite ARCHITECTURE.md backend sections — DONE                         |
 | DOC-FEAT                     | Update FEATURES.md (libacars, Flask references) — DONE                  |
-| DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                   |
+| DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files — DONE                            |
 | DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README — DONE         |
 | DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index — DONE                                 |
 | REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                              |
