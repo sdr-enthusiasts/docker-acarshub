@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Development watch script for ACARS Hub
-# This script watches for changes in the TypeScript frontend and automatically
-# rebuilds and copies the assets to the Flask static directory
+# This script starts the Vite dev server for the React frontend with HMR.
+# The Node.js backend (acarshub-backend) is run separately via `just server`.
 
 set -e
 
