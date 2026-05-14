@@ -4,7 +4,7 @@
 
 ### Option 1: Nix Flakes (Recommended)
 
-All development tools managed automatically:
+All system-level tools managed automatically:
 
 ```bash
 # With direnv (automatic)
@@ -14,38 +14,40 @@ direnv allow
 nix develop
 ```
 
-This provides:
+The flake provides:
 
-- Node.js, npm, TypeScript
-- Python 3.13, PDM
-- Biome, Playwright
+- Node.js, TypeScript, Biome
+- `just` task runner
+- `rrdtool`, `sqlite`, `cmake`, `pkg-config`
+- Docker CLI + buildx + compose, QEMU (for cross-arch builds)
 - Pre-commit hooks
-- All test runners
+
+Playwright is **not** flake-managed — it is installed via `npm` from
+`acarshub-react/package.json` and run from `Dockerfile.e2e`. See
+`AGENTS.md` for the full rationale.
 
 ### Option 2: Manual Installation
 
-- **Python 3.9+** with PDM
-- **Node.js 18+** with npm
+- **Node.js 20+** with npm 10+
 - **Just** (command runner)
-- **SQLite**
+- **SQLite** 3.x
+- **Docker** (for E2E tests and container builds)
 
 ---
 
 ## 🔧 One-Time Setup
 
 ```bash
-# 1. Install dependencies
-pdm install
-cd acarshub-react && npm install && cd ..
+# 1. Install dependencies (monorepo: acarshub-types + react + backend)
+npm install
 
 # 2. Configure environment variables
 cp .env.example .env
-# Edit .env with your settings (database path, ADSB config, etc.)
-# Set LOCAL_TEST=true for development mode
+# Edit .env with your settings (database path, decoder hosts, ADSB config, etc.)
 nano .env
 
-# 3. Initialize test database (optional)
-just db-init test.db
+# 3. Seed a test database with fixture data (optional)
+just seed-test-db
 ```
 
 ---
@@ -54,41 +56,40 @@ just db-init test.db
 
 **Run these in separate terminal windows:**
 
-### Terminal 1: Frontend Watch + Auto-Copy
+### Terminal 1: Frontend Dev Server
 
 ```bash
+just web
+# or directly:
 ./dev-watch.sh
 ```
 
-Automatically:
+This runs Vite's dev server with HMR (hot module replacement). The
+frontend talks to the backend over Socket.IO at the URL configured in
+your `.env`.
 
-- ✅ Rebuilds React app on file changes
-- ✅ Copies assets to Flask static directory
-- ✅ Enables source maps for debugging
-
-### Terminal 2: Flask Backend
+### Terminal 2: Backend Dev Server
 
 ```bash
-pdm run dev
+just server
+# or directly:
+cd acarshub-backend && npm run dev
 ```
 
-Automatically:
+This runs `tsx watch src/server.ts`, which reloads the Node.js +
+Fastify + Socket.IO backend on TypeScript source changes.
 
-- ✅ Reloads on Python file changes
-- ✅ Serves with no-cache headers
-- ✅ Auto-reloads templates
-
-**Then open:** <http://localhost:8080>
+**Then open:** the URL printed by the Vite dev server (typically
+<http://localhost:5173>).
 
 ---
 
 ## 📝 What This Does
 
-- **Frontend changes**: Auto-rebuild + auto-copy to Flask
-- **Backend changes**: Auto-reload Flask server
-- **No caching**: Fresh assets on every refresh
-- **Templates**: Auto-reload on changes
-- **Environment**: Auto-loads `.env` file
+- **Frontend changes**: Vite HMR — modules swap without full reload
+- **Backend changes**: `tsx watch` restarts the Node.js process
+- **Real-time link**: Socket.IO `/main` namespace between frontend and backend
+- **Database**: SQLite (path from `.env`); migrations applied automatically on backend start
 
 ---
 
@@ -97,126 +98,96 @@ Automatically:
 ### Development
 
 ```bash
-# Start frontend watch + auto-copy
-./dev-watch.sh
+# Start frontend dev server (Vite)
+just web
 
-# Start backend server
-pdm run dev
-# OR
-./run-dev.sh
-
-# Frontend build (production)
-pdm run build-frontend
-
-# Frontend build (development)
-pdm run build-frontend-dev
+# Start backend dev server (tsx watch)
+just server
 ```
 
 ### Testing
 
 ```bash
-# Run all unit/integration tests
+# Run all frontend unit/integration tests
 just test
 
-# Watch mode (auto-rerun on changes)
+# Frontend watch mode (auto-rerun on changes)
 just test-watch
 
-# Interactive UI mode
+# Frontend interactive UI mode
 just test-ui
 
-# Coverage report
+# Frontend coverage report
 just test-coverage
 
-# E2E tests (requires dev server running)
-just test-e2e
+# Backend tests
+just test-backend
+just test-backend-watch
+just test-backend-coverage
 
-# Accessibility tests
-just test-a11y
+# E2E tests (Playwright, dockerised)
+just test-e2e-docker
 
-# Performance analysis
+# Performance analysis (Lighthouse)
 just lighthouse
 ```
 
 ### Quality Checks
 
 ```bash
-# Quick check (tests + pre-commit hooks)
+# Quick check (frontend tests + pre-commit hooks)
 just check
 
-# Full CI check (TypeScript + Biome + tests + pre-commit)
+# Full CI check (types build + TypeScript + frontend build + tests + pre-commit)
 just ci
 
 # Pre-commit (before committing)
 just add          # git add -A
-just commit       # Runs ci + commits with GPG signature
+just commit       # Runs ci-e2e + commits
 ```
 
 ### Database
 
 ```bash
-# Create fresh database with migrations
-just db-init test.db
+# Seed a test database with fixture data
+just seed-test-db
 
-# Apply migrations to existing database
-just db-migrate test.db
+# Apply migrations to the database pointed at by your .env
+cd acarshub-backend && npm run migrate
+
+# Generate a new Drizzle migration from schema changes
+cd acarshub-backend && npm run migrate:generate
 ```
 
 ### Dependency Updates
 
 ```bash
-# Update Node.js dependencies (interactive)
+# Interactive Node.js dependency update (uses npm-chck)
 just update
 
-# Install Node.js dependencies
+# Reinstall after a manual package.json change
 just bump
-
-# Update Python dependencies
-just update-py
-
-# Install Python dependencies
-just bump-py
-
-# Update all dependencies (Node + Python)
-just update-all
 ```
-
-**Note:** `just update-py` automatically syncs `pyproject.toml` and `requirements.txt`, including git-based dependencies.
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Assets not updating?
+### Frontend assets not updating?
 
 1. **Hard refresh**: `Ctrl+Shift+R` (or `Cmd+Shift+R` on Mac)
 2. **DevTools**: Network → "Disable cache"
-3. **Verify copy**: `ls -la rootfs/webapp/static/js/`
-4. **Check .env**: Ensure `LOCAL_TEST=true` is set
+3. **Restart Vite**: stop `just web` and rerun
 
-### Watch script not working?
+### Backend not reloading?
 
-```bash
-# Install inotify-tools (Linux)
-sudo apt-get install inotify-tools
-
-# macOS
-brew install fswatch
-
-# Or use manual watch mode
-cd acarshub-react && npm run watch
-# Then manually run ./copy_test_assets.sh after builds
-```
-
-### Flask not reloading?
-
-- Check `LOCAL_TEST=true` in `.env`
-- Check terminal for Python errors
-- Restart: `Ctrl+C` and `pdm run dev` again
+- Check the `just server` terminal for TypeScript errors
+- Restart: `Ctrl+C` and `just server` again
 
 ### Port already in use?
 
 ```bash
-# Find process using port 8080
+# Find process using a port (e.g. 8080)
 lsof -i :8080
 
 # Kill if needed
@@ -226,10 +197,10 @@ kill -9 <PID>
 ### Nix environment issues?
 
 ```bash
-# Rebuild flake
+# Update the flake lock
 nix flake update
 
-# Re-enter environment
+# Re-enter the shell
 exit
 nix develop
 
@@ -242,60 +213,58 @@ direnv reload
 ## 📂 File Locations
 
 - **Frontend source**: `acarshub-react/src/`
-- **Built assets**: `acarshub-react/dist/`
-- **Flask static**: `rootfs/webapp/static/`
-- **Flask templates**: `rootfs/webapp/templates/`
-- **Backend code**: `rootfs/webapp/`
+- **Frontend build output**: `acarshub-react/dist/`
+- **Backend source**: `acarshub-backend/src/`
+- **Backend build output**: `acarshub-backend/dist/`
+- **Shared types**: `acarshub-types/src/`
+- **Database migrations**: `acarshub-backend/src/db/migrations/`
 - **Environment config**: `.env` (copy from `.env.example`)
-- **Database migrations**: `rootfs/webapp/alembic/versions/`
+- **Container data volume**: `rootfs/webapp/data/` (created at runtime)
 
 ---
 
 ## ⚡ Pro Tips
 
 1. **Keep DevTools open** with "Disable cache" enabled
-2. **Watch Flask terminal** for backend logs and errors
-3. **Use browser console** for frontend debugging
-4. **Source maps enabled** in dev mode for debugging TypeScript
+2. **Watch the backend terminal** for Pino structured logs
+3. **Use the browser console** for frontend debugging
+4. **Source maps enabled** in dev mode for stepping through TypeScript
 5. **Run `just ci`** before committing to catch issues early
-6. **Use `just test-watch`** while developing for instant feedback
+6. **Use `just test-watch`** while developing for instant test feedback
 
 ---
 
 ## 🌐 Server Addresses
 
-### Development Mode (`LOCAL_TEST=true`)
+### Development Mode
 
-- **URL**: <http://localhost:8080>
-- **Port**: 8080 (auto-configured)
+- **Frontend (Vite dev server)**: <http://localhost:5173> (default)
+- **Backend (Fastify)**: configured by `PORT` in `.env` (default 8080)
 
 ### Production Mode (Docker)
 
 - **URL**: <http://localhost> (or configured host)
-- **Port**: 80 (nginx proxy to 8888)
+- **Port**: 80 (nginx proxy in front of the Node.js backend)
 
 ---
 
 ## 📚 More Documentation
 
-- **[AGENTS.md](AGENTS.md)** - AI agent coding standards and rules
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Complete development guide
-- **[dev-docs/](dev-docs/)** - Developer documentation
-  - **CONTRIBUTING.md** - How to contribute
-  - **SETUP.md** - Detailed environment setup
-  - **CODING_STANDARDS.md** - Code quality requirements
-  - **TESTING_GUIDE.md** - Testing patterns and strategies
-  - **TROUBLESHOOTING.md** - Common issues and solutions
-- **[agent-docs/](agent-docs/)** - Architecture and design
-  - **ARCHITECTURE.md** - System design and data flow
-  - **DESIGN_LANGUAGE.md** - UI/UX patterns and components
-  - **FEATURES.md** - Feature documentation
-  - **TESTING.md** - Testing infrastructure and standards
+- **[AGENTS.md](AGENTS.md)** — AI agent coding standards and rules
+- **[dev-docs/](dev-docs/)** — Developer documentation
+  - **CONTRIBUTING.md** — How to contribute
+  - **SETUP.md** — Detailed environment setup
+  - **CODING_STANDARDS.md** — Code quality requirements
+  - **TESTING_GUIDE.md** — Testing patterns and strategies
+- **[agent-docs/](agent-docs/)** — Architecture and design
+  - **ARCHITECTURE.md** — System design and data flow
+  - **DESIGN_LANGUAGE.md** — UI/UX patterns and components
+  - **FEATURES.md** — Feature documentation
+  - **TESTING.md** — Testing infrastructure and standards
 
 ---
 
 ## ❓ Questions?
 
-- Check [TROUBLESHOOTING.md](dev-docs/TROUBLESHOOTING.md)
 - Check [GitHub Issues](https://github.com/sdr-enthusiasts/docker-acarshub/issues)
 - Join Discord (link in README.md)

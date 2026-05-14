@@ -1290,21 +1290,46 @@ context):
 
 **Effort:** Medium.
 
-### DOC-ROOT — Repo-root docs drift — **MEDIUM**
+### DOC-ROOT — Repo-root docs drift — **MEDIUM** — ✅ DONE
 
-- `DEV-QUICK-START.md` — lines 14, 23, 31 claim Nix dev shell provides "Python
-  3.13, PDM" (false); line 53 references `just db-init test.db` (recipe doesn't
-  exist); lines 66, 69, 87-88, 193, 210, 246-250 reference Flask static dir,
-  Flask backend terminal, `alembic/versions/`. **Remediation:** rewrite or
-  delete.
-- `dev-watch.sh:5` — comment says "rebuilds and copies the assets to the Flask
-  static directory" but the script just runs `npm run dev`. **Remediation:**
-  fix the comment.
-- `acarshub-backend/README.md:3, 13, 130, 133, 203` — written in future tense
-  ("This package will contain..."). Migration is complete. **Remediation:**
-  rewrite in present tense.
-- `acarshub-types/README.md:139` — historical "Python → Node.js backend
-  migration" reference. Acceptable but worth noting; clarify as historical.
+**Resolution.** All four files rewritten/fixed to reflect the
+post-migration reality (Node.js + Fastify + Socket.IO backend; Vite
+dev server; Drizzle migrations; no Python/PDM/Flask/Alembic).
+
+- **`DEV-QUICK-START.md`** — full rewrite. Removed every Python/PDM,
+  Flask, Alembic, `pdm run dev`, `pdm run build-frontend*`,
+  `requirements.txt`, `rootfs/webapp/static`, `rootfs/webapp/templates`,
+  `rootfs/webapp/alembic/versions`, `just db-init`, `just db-migrate`,
+  `just test-a11y`, `just update-py`, `just bump-py`, `just update-all`,
+  and `dev-docs/TROUBLESHOOTING.md` reference. Replaced with the actual
+  current workflow: `npm install` at repo root, `just web` (Vite dev
+  server) + `just server` (`tsx watch src/server.ts`), `just seed-test-db`,
+  `npm run migrate --workspace=acarshub-backend`, and the actual just
+  recipes that exist (`just web`, `server`, `update`, `bump`, `test*`,
+  `test-backend*`, `lighthouse`, `analyze`, `check`, `ci`, `add`,
+  `commit`, `seed-*`). Nix Flakes section now matches `flake.nix`
+  reality (the same fix as DOC-AGENTS).
+- **`dev-watch.sh`** — fixed the misleading header comment. It no
+  longer claims to "rebuild and copy assets to the Flask static
+  directory"; the new comment accurately describes it as the Vite dev
+  server entry point with HMR, with a pointer to `just server` for the
+  backend.
+- **`acarshub-backend/README.md`** — full rewrite in present tense.
+  Removed the "🚧 Under Development", "Phase 0 placeholder", and
+  "TODO: Week N" markers. Removed the `dev-docs/NODEJS_MIGRATION_PLAN.md`
+  pointer (that doc is queued for `historical/` in DOC-DEV-DOCS) and
+  replaced it with pointers to the actually-current `agent-docs/`.
+  Architecture tree matches the real `src/` layout
+  (`server.ts`, `config.ts`, `startup-state.ts`, `db/`, `socket/`,
+  `services/`, `formatters/`, `utils/`, `__tests__/`) rather than the
+  Week-N aspirational layout. Logging snippet updated to use
+  `createLogger("module-name")` (the actual helper) rather than the
+  stale top-level `logger` import. Node.js version bumped to 22+ to
+  match the bundle build target.
+- **`acarshub-types/README.md`** — section title changed to "Migration
+  Notes (historical)" with a note that the migration is complete and
+  legacy type aliases are retained for backward compatibility with
+  stored database records.
 
 **Effort:** Low.
 
@@ -1715,7 +1740,7 @@ have a safety net.
 | DOC-ARCH                     | Rewrite ARCHITECTURE.md backend sections                                |
 | DOC-FEAT                     | Update FEATURES.md (libacars, Flask references)                         |
 | DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                   |
-| DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README                |
+| DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README — DONE         |
 | DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index — DONE                                 |
 | REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                              |
 | REPO-03                      | Decide on `.stylelintrc.json` — DONE (deleted, unenforced)              |

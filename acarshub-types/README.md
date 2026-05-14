@@ -134,11 +134,16 @@ npm run lint
 4. **Backward Compatibility** - Legacy type aliases maintained during migration
 5. **Documentation** - All interfaces include JSDoc comments
 
-## Migration Notes
+## Migration Notes (historical)
 
-During the Python → Node.js backend migration, this package was created by extracting types from `acarshub-react/src/types/index.ts`. Legacy type aliases (e.g., `Plane` → `MessageGroup`) are maintained for backward compatibility.
+This package was created during the now-complete Python → Node.js
+backend migration by extracting types from
+`acarshub-react/src/types/index.ts`. Legacy type aliases (e.g.
+`Plane` → `MessageGroup`) are retained for backward compatibility with
+older clients and stored database records.
 
-Frontend-specific types (React components, UI state, settings) remain in the frontend package.
+Frontend-specific types (React components, UI state, settings) remain
+in the frontend package.
 
 ## License
 

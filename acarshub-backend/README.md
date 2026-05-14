@@ -1,69 +1,59 @@
 # @acarshub/backend
 
-ACARS Hub Node.js backend server - replacing the Python Flask backend with TypeScript.
+ACARS Hub Node.js backend server — replaces the retired Python Flask
+backend with a TypeScript implementation on Fastify + Socket.IO.
 
 ## Status
 
-🚧 **Under Development** - This is a placeholder package created during Phase 0 of the migration.
-
-See `dev-docs/NODEJS_MIGRATION_PLAN.md` for the complete migration timeline.
+✅ **Production** — the Node.js backend is the supported and shipped
+implementation. The Python Flask backend is retired. Historical
+migration notes live in `dev-docs/historical/` (see `dev-docs/`).
 
 ## Overview
 
-This package will contain the Node.js/TypeScript backend server that replaces the existing Python Flask backend. It will provide:
+This package contains the Node.js + TypeScript backend that:
 
-- **Socket.IO Server** - Real-time communication with the React frontend
-- **Database Layer** - SQLite with Drizzle ORM
-- **TCP Listeners** - ACARS, VDLM, HFDL, IMSL, IRDM decoders
-- **ADS-B Integration** - HTTP polling of readsb/dump1090
-- **Message Processing** - Formatting, alert matching, storage
-- **Metrics** - Prometheus metrics endpoint
+- **Socket.IO server** — real-time communication with the React frontend over the `/main` namespace
+- **Database layer** — SQLite via Drizzle ORM, schema and migrations in `src/db/`
+- **Decoder ingress** — TCP / UDP / ZMQ listeners for ACARS, VDLM, HFDL, IMSL, IRDM (see `agent-docs/DECODER_CONNECTIONS.md`)
+- **ADS-B integration** — HTTP polling of readsb/dump1090 `aircraft.json`
+- **Message processing** — formatting, label decoding, alert matching, enrichment, storage
+- **Metrics** — Prometheus metrics endpoint
 
 ## Architecture
 
 ```text
 acarshub-backend/
 ├── src/
-│   ├── server.ts              # Main entry point (PLACEHOLDER)
-│   ├── config.ts              # Environment configuration (TODO: Week 1)
-│   ├── db/                    # Database layer (TODO: Week 1)
+│   ├── server.ts              # Fastify + Socket.IO entry point
+│   ├── config.ts              # Zod-validated environment configuration
+│   ├── startup-state.ts       # Shared startup state container
+│   ├── db/                    # Database layer
 │   │   ├── client.ts          # Drizzle database client
 │   │   ├── schema.ts          # All table schemas
-│   │   ├── migrations/        # Drizzle migrations
+│   │   ├── migrate.ts         # Migration runner entry point
+│   │   ├── migrations/        # Drizzle migrations (.sql)
 │   │   └── queries/           # Query functions
-│   ├── sockets/               # Socket.IO handlers (TODO: Week 2)
-│   │   ├── main.ts            # /main namespace
-│   │   ├── search.ts          # Database search
-│   │   ├── alerts.ts          # Alert management
-│   │   └── timeseries.ts      # RRD replacement
-│   ├── listeners/             # TCP socket listeners (TODO: Week 3)
-│   │   ├── acars.ts
-│   │   ├── vdlm.ts
-│   │   ├── hfdl.ts
-│   │   ├── imsl.ts
-│   │   ├── irdm.ts
-│   │   └── adsb.ts            # HTTP poller
-│   ├── formatters/            # Message formatting (TODO: Week 4)
-│   │   ├── acars.ts
-│   │   ├── vdlm2.ts
-│   │   ├── hfdl.ts
-│   │   ├── imsl.ts
-│   │   └── irdm.ts
-│   ├── workers/               # Background workers (TODO: Week 3)
-│   │   ├── message-relay.ts   # Queue processor
-│   │   ├── database.ts        # Database writer
-│   │   └── alert-regen.ts
-│   ├── scheduler.ts           # Cron jobs (TODO: Week 3)
-│   ├── metrics.ts             # Prometheus metrics (TODO: Week 4)
-│   └── logger.ts              # Pino logger setup (TODO: Week 1)
-├── scripts/                   # Migration scripts (TODO: Week 5)
-├── __tests__/                 # Tests (TODO: Week 5-6)
+│   ├── socket/                # Socket.IO handlers (/main namespace)
+│   ├── services/              # Listeners, pollers, queues, schedulers
+│   ├── formatters/            # Message formatting & enrichment per decoder
+│   ├── utils/                 # Logger (Pino) and shared helpers
+│   └── __tests__/             # Vitest unit/integration tests
+├── scripts/                   # Operational scripts
 └── package.json
 ```
 
+Individual subsystems are documented under `agent-docs/`:
+
+- `agent-docs/ARCHITECTURE.md` — overall system design
+- `agent-docs/DECODER_CONNECTIONS.md` — decoder ingress (authoritative)
+- `agent-docs/MESSAGE_RING_BUFFER.md` — on-connect warm-state buffer
+- `agent-docs/MEMORY_OPTIMIZATION.md` — time-series compaction
+- `agent-docs/DB_OPTIMIZATION.md` — database size optimisation
+
 ## Technology Stack
 
-- **Runtime**: Node.js 20+
+- **Runtime**: Node.js 22+
 - **Language**: TypeScript (strict mode)
 - **Framework**: Fastify (HTTP server)
 - **Real-time**: Socket.IO 4.x
@@ -71,156 +61,142 @@ acarshub-backend/
 - **Logging**: Pino
 - **Validation**: Zod
 - **Testing**: Vitest
-- **Linting**: Biome
+- **Linting / formatting**: Biome
 
 ## Type Safety
 
-This backend uses shared types from `@acarshub/types` to ensure type safety and API contract alignment with the frontend:
+This backend uses shared types from `@acarshub/types` to keep the
+Socket.IO API contract aligned with the frontend:
 
 ```typescript
 import type { SocketEvents, AcarsMsg, SystemStatus } from "@acarshub/types";
 
 // Socket.IO events are fully typed
-io.on("connection", (socket) => {
-  socket.emit("system_status", statusData); // Type-checked!
+io.of("/main").on("connection", (socket) => {
+  socket.emit("system_status", statusData); // Type-checked
 });
 ```
 
-The types are NOT duplicated - they are THE SAME source files used by the frontend.
+The types are not duplicated — they are the same source files used by
+the frontend.
 
 ## Development
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - npm 10+
 
 ### Installation
 
 ```bash
-# At repository root
+# At repository root (monorepo: acarshub-types + react + backend)
 npm install
 ```
 
-This installs all workspace dependencies including the shared types package.
-
-### Running (TODO)
+### Running
 
 ```bash
-npm run dev --workspace=acarshub-backend
+# From the repo root
+just server
+
+# Or directly
+cd acarshub-backend && npm run dev
 ```
+
+`npm run dev` runs `tsx watch src/server.ts`, which restarts the
+process on TypeScript source changes.
 
 ### Building
 
 ```bash
 npm run build --workspace=acarshub-backend
+# or the bundled single-file build used by the container image:
+npm run build:bundle --workspace=acarshub-backend
 ```
 
-### Testing (TODO)
+### Testing
 
 ```bash
-npm run test --workspace=acarshub-backend
+# From the repo root
+just test-backend
+just test-backend-watch
+just test-backend-coverage
+
+# Or directly
+npm test --workspace=acarshub-backend
 ```
 
-## Migration Timeline
+### Migrations
 
-### Week 1: Database Layer ✅ Types Setup Complete
+```bash
+# Apply migrations to the database pointed at by $DATABASE_PATH
+npm run migrate --workspace=acarshub-backend
 
-- [x] Phase 0: Monorepo setup and shared types
-- [ ] Drizzle ORM schema (matching existing Alembic migrations)
-- [ ] Database client and connection pool
-- [ ] Query functions (messages, alerts, timeseries)
-- [ ] Migration from Alembic to Drizzle
-
-### Week 2: Socket.IO Server
-
-- [ ] Fastify + Socket.IO integration
-- [ ] `/main` namespace handler
-- [ ] Event handlers (query_search, update_alerts, etc.)
-- [ ] Type-safe event emission
-- [ ] Connection management
-
-### Week 3: Background Services
-
-- [ ] TCP socket listeners (ACARS, VDLM, HFDL, IMSL, IRDM)
-- [ ] ADS-B HTTP poller
-- [ ] Message queue/relay worker
-- [ ] Database writer worker
-- [ ] Alert regeneration scheduler
-
-### Week 4: Message Formatters & Metrics
-
-- [ ] Message formatters (one per decoder type)
-- [ ] Label decoding
-- [ ] Alert matching
-- [ ] Prometheus metrics endpoint
-- [ ] RRD → SQLite timeseries migration
-
-### Week 5-6: Testing & Deployment
-
-- [ ] Unit tests (90%+ coverage for utilities)
-- [ ] Integration tests (Socket.IO, database)
-- [ ] Parity tests (compare with Python output)
-- [ ] Docker multi-stage build
-- [ ] Alpha/Beta/RC deployment phases
+# Generate a new migration from schema changes
+npm run migrate:generate --workspace=acarshub-backend
+```
 
 ## API Contract
 
-The Socket.IO API is defined by `SocketEvents` and `SocketEmitEvents` in `@acarshub/types/socket`.
+The Socket.IO API is defined by `SocketEvents` and `SocketEmitEvents`
+in `@acarshub/types/socket`.
 
-**Events Emitted by Backend** (Server → Client):
+**Events emitted by backend** (Server → Client) include:
 
-- `acars_msg` - New ACARS message
-- `adsb_aircraft` - ADS-B aircraft positions
-- `system_status` - System health
-- `database_search_results` - Search results
-- And 13 more...
+- `acars_msg` — new ACARS message
+- `adsb_aircraft` — ADS-B aircraft positions
+- `system_status` — system health
+- `database_search_results` — search results
 
-**Events Handled by Backend** (Client → Server):
+**Events handled by backend** (Client → Server) include:
 
-- `query_search` - Database search
-- `update_alerts` - Update alert terms
-- `request_status` - Request system status
-- And 4 more...
+- `query_search` — database search
+- `update_alerts` — update alert terms
+- `request_status` — request system status
 
-See `acarshub-types/src/socket.ts` for the complete API contract.
+See `acarshub-types/src/socket.ts` for the complete contract.
 
-## Configuration (TODO)
+## Configuration
 
-Environment variables (validated with Zod):
+Environment variables (validated with Zod via `src/config.ts`):
 
-- `PORT` - HTTP server port (default: 8080)
-- `HOST` - Bind address (default: 0.0.0.0)
-- `DATABASE_PATH` - SQLite database path
-- `ACARS_HOST` / `ACARS_PORT` - ACARS decoder connection
-- `VDLM_HOST` / `VDLM_PORT` - VDLM decoder connection
-- `HFDL_HOST` / `HFDL_PORT` - HFDL decoder connection
-- `ADSB_URL` - ADS-B aircraft.json URL
-- And more...
+- `PORT` — HTTP server port (default: 8080)
+- `HOST` — bind address (default: 0.0.0.0)
+- `DATABASE_PATH` — SQLite database path
+- `ACARS_HOST` / `ACARS_PORT` — ACARS decoder connection
+- `VDLM_HOST` / `VDLM_PORT` — VDLM decoder connection
+- `HFDL_HOST` / `HFDL_PORT` — HFDL decoder connection
+- `ADSB_URL` — ADS-B `aircraft.json` URL
+- …and more (see `src/config.ts` for the authoritative list)
 
 ## Database
 
-SQLite database with Drizzle ORM. Schema matches existing Alembic migrations:
+SQLite with Drizzle ORM. Schema in `src/db/schema.ts`, migrations in
+`src/db/migrations/`. Major tables:
 
-- `messages` - All ACARS messages
-- `messages_fts` - Full-text search index
-- `alert_terms` - User-defined alert keywords
-- `alert_matches` - Messages matching alerts
-- `signal_*` tables - Signal strength stats (per decoder)
-- `freqs_*` tables - Frequency usage stats (per decoder)
+- `messages` — all ACARS messages
+- `messages_fts` — full-text search index
+- `alert_terms` — user-defined alert keywords
+- `alert_matches` — messages matching alerts
+- `signal_*` — signal strength stats (per decoder)
+- `freqs_*` — frequency usage stats (per decoder)
+- `aircraft_sessions` — v4.2 aircraft session aggregation (see `agent-docs/V4.2.md`)
 
 ## Logging
 
-Pino structured logging with configurable levels:
+Pino structured logging with configurable levels via the `createLogger`
+helper in `src/utils/logger.ts`:
 
 ```typescript
-import { logger } from "./logger.js";
+import { createLogger } from "./utils/logger.js";
+const logger = createLogger("module-name");
 
 logger.info({ socketId: socket.id }, "Client connected");
 logger.error({ uid, error: err.message }, "Failed to process message");
 ```
 
-## Metrics (TODO)
+## Metrics
 
 Prometheus metrics endpoint at `/metrics`:
 
