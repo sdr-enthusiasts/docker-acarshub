@@ -1330,7 +1330,7 @@ below; all are properly ignored. No code change required.
 - `acarshub.rrd.back` — ignored by `*.rrd.back` (line 153)
 - `messages.db`, `test.db`, `test_back.db`, `messages_large.db` — ignored by `*.db` (line 156)
 
-### REPO-02 — Dead lint configs at repo root — **LOW**
+### REPO-02 — Dead lint configs at repo root — **LOW** — ✅ DONE
 
 **Files:**
 
@@ -1338,8 +1338,11 @@ below; all are properly ignored. No code change required.
 - `.eslintignore` — sole entry references a path that doesn't exist
   (`rootfs/webapp/static/js/other/*`)
 
-**Remediation.** Delete both. Biome config in `biome.json` is the source of
-truth.
+**Resolution.** Both files deleted. `.dockerignore` entry for `.eslintignore`
+also removed. Biome config in `biome.json` is the source of truth. Two
+inline `eslint-disable-next-line` comments in source (`useSocketIO.ts`,
+`zmq-listener.ts`) are inert under Biome and left in place — they document
+historical intent without affecting current lint behaviour.
 
 **Effort:** Trivial.
 
@@ -1707,7 +1710,7 @@ have a safety net.
 | DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                             |
 | DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README                          |
 | DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index                                                  |
-| REPO-02                      | Delete `.eslintrc`, `.eslintignore`                                               |
+| REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                                        |
 | REPO-03                      | Decide on `.stylelintrc.json`                                                     |
 | REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)                   |
 | REPO-05                      | `.dictionary.txt` orphan check — DONE (wired into pre-commit codespell)           |
