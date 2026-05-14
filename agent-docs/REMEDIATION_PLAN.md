@@ -1154,7 +1154,29 @@ regressions caught at unit-test speed.
 
 ## 12. Documentation drift
 
-### DOC-ARCH — `agent-docs/ARCHITECTURE.md` describes a deleted Python stack — **HIGH**
+### DOC-ARCH — `agent-docs/ARCHITECTURE.md` describes a deleted Python stack — **HIGH** — **DONE**
+
+**Resolved on `remediation` via merge `2a7ed6b1` (branch `phase-5/doc-arch`,
+commit `9e3fdb1c`).** Full rewrite of `agent-docs/ARCHITECTURE.md` against
+the actual Node.js/Fastify/Socket.IO/Drizzle/better-sqlite3 stack:
+system diagram updated (nginx port 80 → Fastify port 8888); backend
+section rewritten with real dependencies and directory tree; database
+schema matches `src/db/schema.ts` (FTS5 noted as migration-defined, not
+Drizzle-modelled); data-flow steps reference real module paths
+(`services/{tcp,udp,zmq}-listener.ts`, `formatters/index.ts`, etc.);
+HTTP endpoints enumerated; deployment section reflects s6-overlay
+services (`nginx`, `webapp`, `01-acarshub`) running the esbuild
+`server.bundle.mjs` artefact under the SDR Enthusiasts baseimage; UDP
+ports corrected to 5550-5558 (matching `Dockerfile` `EXPOSE` lines);
+env-var name corrected to `<TYPE>_CONNECTIONS` (matching `config.ts`);
+Socket.IO namespace-emit rule folded in from DOC-FLASK with pointer to
+`AGENTS.md:342-349`. Cross-references added to `DECODER_CONNECTIONS`,
+`DB_OPTIMIZATION`, `MEMORY_OPTIMIZATION`, `MESSAGE_RING_BUFFER`,
+`V4.2`, `TESTING`, and this plan.
+
+---
+
+#### Original audit (DOC-ARCH)
 
 **File:** `agent-docs/ARCHITECTURE.md`.
 
@@ -1748,7 +1770,7 @@ have a safety net.
 | ID                           | Description                                                             |
 | ---------------------------- | ----------------------------------------------------------------------- |
 | DOC-FLASK                    | Re-investigate Flask-SocketIO namespace requirement — DONE (TYPE-01/02) |
-| DOC-ARCH                     | Rewrite ARCHITECTURE.md backend sections                                |
+| DOC-ARCH                     | Rewrite ARCHITECTURE.md backend sections — DONE                         |
 | DOC-FEAT                     | Update FEATURES.md (libacars, Flask references) — DONE                  |
 | DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                   |
 | DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README — DONE         |
