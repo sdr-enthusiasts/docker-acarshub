@@ -1359,17 +1359,14 @@ _aspirational_ config that nothing runs.
 
 **Effort:** Trivial (decision); Low (if wiring up).
 
-### REPO-04 — Large `geo.json` at repo root — **LOW**
+### REPO-04 — Large `geo.json` at repo root — **LOW** — ✅ CLOSED (no-op)
 
 **Files:** `geo.json` (101 KB), `geo.json.meta.json`.
 
-**Finding.** Possibly stale fixture from the Python era; verify if any
-backend/frontend code reads it.
-
-**Remediation.** If unused, delete. If used, move to a clearly-named directory
-(`test-fixtures/` or `acars_data/`).
-
-**Effort:** Trivial after a `grep -r geo.json` to confirm usage.
+**Resolution.** Both files are listed in `.gitignore` (lines 183-184) and
+are local-only artifacts downloaded by the local dev server when running
+the development workflow. They appear at repo root by design — the dev
+server expects them there — and are never committed. No action required.
 
 ### REPO-05 — `.dictionary.txt` orphan check — **LOW**
 
@@ -1713,7 +1710,8 @@ have a safety net.
 | DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index                                                  |
 | REPO-02                      | Delete `.eslintrc`, `.eslintignore`                                               |
 | REPO-03                      | Decide on `.stylelintrc.json`                                                     |
-| REPO-04, REPO-05             | `geo.json`, `.dictionary.txt` orphan check                                        |
+| REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)                   |
+| REPO-05                      | `.dictionary.txt` orphan check                                                    |
 
 ### Phase 6 — Continuing test backfill (1-2 weeks)
 
