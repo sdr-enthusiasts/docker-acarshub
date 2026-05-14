@@ -1346,21 +1346,22 @@ historical intent without affecting current lint behaviour.
 
 **Effort:** Trivial.
 
-### REPO-03 — `.stylelintrc.json` is unenforced — **LOW**
+### REPO-03 — `.stylelintrc.json` is unenforced — **LOW** — ✅ DONE
 
 **File:** `.stylelintrc.json` (106 lines).
 
-**Finding.** Not invoked by `justfile`, `package.json`, or `.pre-commit-config.yaml`.
-Biome does not lint SCSS, so if SCSS linting is desired, this file is the
-_aspirational_ config that nothing runs.
+**Resolution.** File deleted. Confirmed not referenced by `justfile`,
+`package.json`, `.pre-commit-config.yaml`, or any CI workflow — stylelint
+was never installed or invoked anywhere in the repo. SCSS standards remain
+enforced via design-language review (AGENTS.md / DESIGN_LANGUAGE.md) and
+the existing Biome + Prettier pre-commit pipeline on TS/JS sources.
 
-**Remediation.** Decide:
+If SCSS linting becomes a priority later, the right entry point is a fresh
+config tied to whatever rule set the team agrees on at that time — the
+106-line config that was sitting in the repo was unowned and untested
+against the current SCSS surface.
 
-1. **Wire it up**: add `npx stylelint "acarshub-react/src/**/*.scss"` to
-   `just ci` and pre-commit, install stylelint via npm.
-2. **Delete it**: if SCSS linting is not a priority, remove the file.
-
-**Effort:** Trivial (decision); Low (if wiring up).
+**Effort:** Trivial.
 
 ### REPO-04 — Large `geo.json` at repo root — **LOW** — ✅ CLOSED (no-op)
 
@@ -1711,7 +1712,7 @@ have a safety net.
 | DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README                          |
 | DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index                                                  |
 | REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                                        |
-| REPO-03                      | Decide on `.stylelintrc.json`                                                     |
+| REPO-03                      | Decide on `.stylelintrc.json` — DONE (deleted, unenforced)                        |
 | REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)                   |
 | REPO-05                      | `.dictionary.txt` orphan check — DONE (wired into pre-commit codespell)           |
 
