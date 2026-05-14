@@ -44,6 +44,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate as drizzleMigrate } from "drizzle-orm/better-sqlite3/migrator";
 import { createLogger } from "../utils/logger.js";
+import { assertRow, assertRowOrUndefined } from "./helpers.js";
 
 const logger = createLogger("db:migrate");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
@@ -102,8 +103,13 @@ function hasAnyTables(db: Database.Database): boolean {
     .prepare(
       "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
     )
-    .get() as { count: number };
-  return result.count > 0;
+    .get();
+  const row = assertRow<{ count: number }>(
+    result,
+    ["count"],
+    "hasExistingTables",
+  );
+  return row.count > 0;
 }
 
 /**
@@ -444,11 +450,16 @@ const FTS_SENTINEL_COLUMN = "message_type";
  * the sentinel column name, indicating the full 31-column schema is in place.
  */
 function isFtsSchemaCorrect(db: Database.Database): boolean {
-  const row = db
+  const raw = db
     .prepare(
       "SELECT sql FROM sqlite_master WHERE type='table' AND name='messages_fts'",
     )
-    .get() as { sql: string } | undefined;
+    .get();
+  const row = assertRowOrUndefined<{ sql: string }>(
+    raw,
+    ["sql"],
+    "isFtsSchemaCorrect",
+  );
 
   if (!row) return false;
   return row.sql.includes(FTS_SENTINEL_COLUMN);
@@ -466,11 +477,16 @@ function areFtsTriggersCorrect(db: Database.Database): boolean {
   ] as const;
 
   for (const name of triggerNames) {
-    const row = db
+    const raw = db
       .prepare(
         "SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?",
       )
-      .get(name) as { sql: string } | undefined;
+      .get(name);
+    const row = assertRowOrUndefined<{ sql: string }>(
+      raw,
+      ["sql"],
+      `areFtsTriggersCorrect[${name}]`,
+    );
 
     if (!row) return false;
     if (!row.sql.includes(FTS_SENTINEL_COLUMN)) return false;
@@ -652,9 +668,14 @@ function migration04_createFTS(db: Database.Database): void {
 function migration05_convertIcaoToHex(db: Database.Database): void {
   logger.warn("Applying migration 5: convert_icao_to_hex");
 
-  const sample = db
+  const rawSample = db
     .prepare("SELECT icao FROM messages WHERE icao != '' LIMIT 1")
-    .get() as { icao: string } | undefined;
+    .get();
+  const sample = assertRowOrUndefined<{ icao: string }>(
+    rawSample,
+    ["icao"],
+    "migration05_convertIcaoToHex.sample",
+  );
 
   if (!sample || /^[0-9a-f]+$/i.test(sample.icao)) {
     logger.warn("ICAO values already converted to hex, skipping");
@@ -945,18 +966,20 @@ function migration11_deduplicateTimeseriesAndAddRegistry(
     // Step 1: Deduplicate timeseries_stats
     // -------------------------------------------------------------------------
     // Count duplicates first so we can log what was cleaned up.
-    const totalRows = (
-      db
-        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
-        .get() as { n: number }
+    const totalRows = assertRow<{ n: number }>(
+      db.prepare("SELECT COUNT(*) AS n FROM timeseries_stats").get(),
+      ["n"],
+      "migration_dedup.totalRows",
     ).n;
 
-    const distinctSlots = (
+    const distinctSlots = assertRow<{ n: number }>(
       db
         .prepare(
           "SELECT COUNT(*) AS n FROM (SELECT 1 FROM timeseries_stats GROUP BY timestamp, resolution)",
         )
-        .get() as { n: number }
+        .get(),
+      ["n"],
+      "migration_dedup.distinctSlots",
     ).n;
 
     const duplicateCount = totalRows - distinctSlots;
@@ -1056,12 +1079,14 @@ function migration12_dropResolutionPromoteTimestampPk(
     // -----------------------------------------------------------------------
     // Step 1: Diagnose — log anything unexpected before we touch data
     // -----------------------------------------------------------------------
-    const nonOneMin = (
+    const nonOneMin = assertRow<{ n: number }>(
       db
         .prepare(
           "SELECT COUNT(*) AS n FROM timeseries_stats WHERE resolution != '1min'",
         )
-        .get() as { n: number }
+        .get(),
+      ["n"],
+      "migration12.nonOneMin",
     ).n;
 
     if (nonOneMin > 0) {
@@ -1072,10 +1097,10 @@ function migration12_dropResolutionPromoteTimestampPk(
       );
     }
 
-    const totalRows = (
-      db
-        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats")
-        .get() as { n: number }
+    const totalRows = assertRow<{ n: number }>(
+      db.prepare("SELECT COUNT(*) AS n FROM timeseries_stats").get(),
+      ["n"],
+      "migration12.totalRows",
     ).n;
     logger.warn("timeseries_stats row count before migration 12", {
       totalRows,
@@ -1123,10 +1148,10 @@ function migration12_dropResolutionPromoteTimestampPk(
         id
     `);
 
-    const copiedRows = (
-      db
-        .prepare("SELECT COUNT(*) AS n FROM timeseries_stats_new")
-        .get() as { n: number }
+    const copiedRows = assertRow<{ n: number }>(
+      db.prepare("SELECT COUNT(*) AS n FROM timeseries_stats_new").get(),
+      ["n"],
+      "migration12.copiedRows",
     ).n;
     logger.warn("Rows copied to new timeseries_stats", { copiedRows });
 

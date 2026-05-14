@@ -16,6 +16,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as configModule from "../../config.js";
 import * as clientModule from "../client.js";
 import {
+  assertRow,
+  assertRowOrUndefined,
   findAirlineCodeFromIata,
   findAirlineCodeFromIcao,
   getErrors,
@@ -418,6 +420,94 @@ describe("Database Helper Functions", () => {
         empty_total: 0,
         empty_errors: 0,
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // assertRow / assertRowOrUndefined (TYPE-05)
+  // -------------------------------------------------------------------------
+  describe("assertRow (TYPE-05)", () => {
+    it("returns the row typed when all keys are present", () => {
+      const result = assertRow<{ a: number; b: string }>(
+        { a: 1, b: "x" },
+        ["a", "b"],
+      );
+      expect(result.a).toBe(1);
+      expect(result.b).toBe("x");
+    });
+
+    it("includes the context label in the error message", () => {
+      expect(() =>
+        assertRow<{ a: number }>(undefined, ["a"], "test-context"),
+      ).toThrowError(/test-context/);
+    });
+
+    it("throws when row is undefined", () => {
+      expect(() => assertRow<{ a: number }>(undefined, ["a"])).toThrowError(
+        /expected an object row, got undefined/,
+      );
+    });
+
+    it("throws when row is null", () => {
+      expect(() => assertRow<{ a: number }>(null, ["a"])).toThrowError(
+        /got null/,
+      );
+    });
+
+    it("throws when row is a primitive", () => {
+      expect(() => assertRow<{ a: number }>(42, ["a"])).toThrowError(
+        /got number/,
+      );
+    });
+
+    it("throws when row is an array (not a plain object)", () => {
+      expect(() => assertRow<{ a: number }>([1, 2, 3], ["a"])).toThrowError(
+        /expected an object row/,
+      );
+    });
+
+    it("throws listing every missing key", () => {
+      expect(() =>
+        assertRow<{ a: number; b: number; c: number }>({ a: 1 }, [
+          "a",
+          "b",
+          "c",
+        ]),
+      ).toThrowError(/missing required keys: b, c/);
+    });
+
+    it("regression: catches a silent schema-rename undefined access (TYPE-05)", () => {
+      // Simulates the pre-TYPE-05 footgun: code expects `count`, the DB
+      // returns `cnt` after a column rename, and the pre-fix bare cast
+      // would silently propagate `undefined` to `row.count`.  With
+      // assertRow the failure is loud and immediate.
+      const renamedRow = { cnt: 7 };
+      expect(() =>
+        assertRow<{ count: number }>(renamedRow, ["count"], "schemaDrift"),
+      ).toThrowError(/missing required keys: count/);
+    });
+  });
+
+  describe("assertRowOrUndefined (TYPE-05)", () => {
+    it("returns undefined when row is undefined", () => {
+      expect(
+        assertRowOrUndefined<{ a: number }>(undefined, ["a"]),
+      ).toBeUndefined();
+    });
+
+    it("returns undefined when row is null", () => {
+      expect(assertRowOrUndefined<{ a: number }>(null, ["a"])).toBeUndefined();
+    });
+
+    it("validates shape when row is present", () => {
+      const result = assertRowOrUndefined<{ a: number }>({ a: 5 }, ["a"]);
+      expect(result?.a).toBe(5);
+    });
+
+    it("still throws on wrong shape when row is present", () => {
+      expect(() =>
+        assertRowOrUndefined<{ a: number }>({ b: 1 }, ["a"], "partial"),
+      ).toThrowError(/missing required keys: a/);
     });
   });
 });
