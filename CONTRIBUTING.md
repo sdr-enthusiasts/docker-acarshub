@@ -46,15 +46,17 @@ Thank you for contributing to ACARS Hub! This guide will help you understand our
    direnv allow
 
    # Install dependencies
-   pdm install
-   cd acarshub-react && npm install && cd ..
+   just install
    ```
+
+   `just install` runs `npm install` in `acarshub-backend/`, `acarshub-react/`, and `acarshub-types/`.
 
 4. **Configure environment**:
 
    ```bash
    cp .env.example .env
-   nano .env  # Set LOCAL_TEST=true
+   # Edit .env as needed; see acarshub-backend/src/config.ts for
+   # the authoritative list of supported environment variables.
    ```
 
 5. **Add upstream remote**:
@@ -66,10 +68,10 @@ Thank you for contributing to ACARS Hub! This guide will help you understand our
 ### Before You Start Coding
 
 1. **Read the documentation**:
-   - [AGENTS.md](../AGENTS.md) - Coding standards and quality rules
-   - [DESIGN_LANGUAGE.md](../agent-docs/DESIGN_LANGUAGE.md) - UI/UX patterns
-   - [ARCHITECTURE.md](../agent-docs/ARCHITECTURE.md) - System design
-   - [TESTING_GUIDE.md](TESTING_GUIDE.md) - Testing requirements
+   - [AGENTS.md](AGENTS.md) - Coding standards and quality rules
+   - [DESIGN_LANGUAGE.md](agent-docs/DESIGN_LANGUAGE.md) - UI/UX patterns
+   - [ARCHITECTURE.md](agent-docs/ARCHITECTURE.md) - System design
+   - [TESTING.md](agent-docs/TESTING.md) - Testing requirements and patterns
 
 2. **Understand the issue**:
    - Read the issue description carefully
@@ -132,7 +134,7 @@ just check
 - ✅ WCAG 2.1 AA accessibility
 - ✅ Catppuccin theming
 
-See [CODING_STANDARDS.md](CODING_STANDARDS.md) for details.
+See [AGENTS.md](AGENTS.md) for the canonical coding standards.
 
 ### 3. Write Tests
 
@@ -156,7 +158,7 @@ just test-coverage
 open acarshub-react/coverage/index.html
 ```
 
-See [TESTING_GUIDE.md](TESTING_GUIDE.md) for test patterns.
+See [agent-docs/TESTING.md](agent-docs/TESTING.md) for test patterns.
 
 ### 4. Commit Your Changes
 
@@ -223,7 +225,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/) with some
 ### Scopes (Optional)
 
 - `frontend` - React/TypeScript changes
-- `backend` - Python/Flask changes
+- `backend` - Node.js/Fastify/Socket.IO changes
 - `map` - Map-related features
 - `search` - Search functionality
 - `alerts` - Alert system
@@ -484,8 +486,8 @@ This verifies:
 - [ ] No hardcoded secrets or API keys
 - [ ] Input validation on user data
 - [ ] XSS protection (sanitize HTML)
-- [ ] CSRF protection (use Flask-WTF for forms)
-- [ ] SQL injection protection (use parameterized queries)
+- [ ] Inbound Socket.IO payloads validated via Zod schemas (see `acarshub-backend/src/socket/schemas.ts`)
+- [ ] SQL injection protection (use Drizzle parameterised queries)
 
 ---
 
@@ -509,11 +511,12 @@ This verifies:
 
 ### Documentation Files
 
-- **User documentation**: Update README.md
-- **Developer documentation**: Update dev-docs/
-- **Architecture decisions**: Update agent-docs/ARCHITECTURE.md
-- **API documentation**: Inline JSDoc/docstrings
-- **Changelog**: Update for breaking changes
+- **User documentation**: Update `README.md`
+- **Architecture decisions**: Update `agent-docs/ARCHITECTURE.md`
+- **Feature documentation**: Update `agent-docs/FEATURES.md`
+- **Coding standards**: Update `AGENTS.md`
+- **API documentation**: Inline JSDoc/TSDoc
+- **Changelog**: Update `CHANGELOG.md` for user-visible changes
 
 ### Markdown Standards
 
@@ -536,10 +539,10 @@ pre-commit run --all-files
 
 ### Resources
 
-- **[DEV-QUICK-START.md](../DEV-QUICK-START.md)** - Quick start guide
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues
-- **[TESTING_GUIDE.md](TESTING_GUIDE.md)** - How to write tests
-- **[AGENTS.md](../AGENTS.md)** - Coding standards
+- **[DEV-QUICK-START.md](DEV-QUICK-START.md)** - Quick start guide
+- **[AGENTS.md](AGENTS.md)** - Coding standards and workflow
+- **[agent-docs/TESTING.md](agent-docs/TESTING.md)** - How to write tests
+- **[agent-docs/ARCHITECTURE.md](agent-docs/ARCHITECTURE.md)** - System design
 
 ### Support Channels
 
@@ -551,8 +554,8 @@ pre-commit run --all-files
 ### Tips for Getting Unstuck
 
 1. Read the error message carefully
-2. Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-3. Search existing issues and PRs
+2. Search existing issues and PRs
+3. Check the in-app log viewer (Settings → Advanced → Log Viewer; set level to Debug or Trace)
 4. Ask in Discord with context
 5. Create a minimal reproduction example
 
@@ -578,4 +581,4 @@ Welcome! Here are some good first issues:
 
 ## Thank You
 
-Every contribution, no matter how small, makes ACARS Hub better. Thank you for being part of the community! 🚀
+Every contribution, no matter how small, makes ACARS Hub better. Thank you for being part of the community!

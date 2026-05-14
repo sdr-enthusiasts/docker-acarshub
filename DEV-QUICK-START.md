@@ -251,16 +251,14 @@ direnv reload
 ## 📚 More Documentation
 
 - **[AGENTS.md](AGENTS.md)** — AI agent coding standards and rules
-- **[dev-docs/](dev-docs/)** — Developer documentation
-  - **CONTRIBUTING.md** — How to contribute
-  - **SETUP.md** — Detailed environment setup
-  - **CODING_STANDARDS.md** — Code quality requirements
-  - **TESTING_GUIDE.md** — Testing patterns and strategies
-- **[agent-docs/](agent-docs/)** — Architecture and design
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — How to contribute (workflow, commits, PRs, review)
+- **[agent-docs/](agent-docs/)** — Architecture, design, and standards
   - **ARCHITECTURE.md** — System design and data flow
   - **DESIGN_LANGUAGE.md** — UI/UX patterns and components
   - **FEATURES.md** — Feature documentation
   - **TESTING.md** — Testing infrastructure and standards
+  - **TYPESCRIPT_CHECKING.md** — TypeScript project-references setup
+  - **TIMESERIES_STRATEGY.md** — Stats time-series storage design
 
 ---
 

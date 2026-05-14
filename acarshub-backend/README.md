@@ -6,8 +6,7 @@ backend with a TypeScript implementation on Fastify + Socket.IO.
 ## Status
 
 ✅ **Production** — the Node.js backend is the supported and shipped
-implementation. The Python Flask backend is retired. Historical
-migration notes live in `dev-docs/historical/` (see `dev-docs/`).
+implementation. The Python Flask backend is retired.
 
 ## Overview
 
