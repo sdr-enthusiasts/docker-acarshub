@@ -1368,14 +1368,13 @@ are local-only artifacts downloaded by the local dev server when running
 the development workflow. They appear at repo root by design — the dev
 server expects them there — and are never committed. No action required.
 
-### REPO-05 — `.dictionary.txt` orphan check — **LOW**
+### REPO-05 — `.dictionary.txt` orphan check — **LOW** — ✅ CLOSED (no-op)
 
 **File:** `.dictionary.txt` (single line).
 
-**Finding.** Presumably for `cspell`. Verify it's wired into pre-commit; if not,
-either wire up or delete.
-
-**Effort:** Trivial.
+**Resolution.** Actively wired into pre-commit as the `codespell` ignore-words
+list (`.pre-commit-config.yaml`: `codespell --ignore-words=.dictionary.txt`).
+Deletion would break the codespell hook. No action required.
 
 ---
 
@@ -1711,7 +1710,7 @@ have a safety net.
 | REPO-02                      | Delete `.eslintrc`, `.eslintignore`                                               |
 | REPO-03                      | Decide on `.stylelintrc.json`                                                     |
 | REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)                   |
-| REPO-05                      | `.dictionary.txt` orphan check                                                    |
+| REPO-05                      | `.dictionary.txt` orphan check — DONE (wired into pre-commit codespell)           |
 
 ### Phase 6 — Continuing test backfill (1-2 weeks)
 
