@@ -1199,26 +1199,31 @@ pipeline (`services/{tcp,udp,zmq}-listener.ts` → `services/message-queue.ts` �
 
 **Effort:** Low.
 
-### DOC-FLASK — Re-investigate the "Flask-SocketIO 3rd-arg quirk" — **MEDIUM** ✅ resolved with TYPE-01/02
+### DOC-FLASK — Re-investigate the "Flask-SocketIO 3rd-arg quirk" — **MEDIUM** — ✅ DONE (resolved with TYPE-01/02)
 
-**Files:** `AGENTS.md:342-349`, `agent-docs/ARCHITECTURE.md:217-222`,
-`dev-docs/CODING_STANDARDS.md:684-687`.
+**Files:** `AGENTS.md:342-349` (resolved), `agent-docs/ARCHITECTURE.md:217-222`
+(stale — folded into DOC-ARCH), `dev-docs/CODING_STANDARDS.md:684-687`
+(stale — folded into DOC-DEV-DOCS).
 
-**Finding.** The Node `socket.io` server does not have the bug this rule was
-written to work around. The rule is either:
+**Resolution.** Closed during Phase 2 as part of TYPE-01/02 (commit
+`5e9b2b76`). The investigation determined option (2) from the original
+finding: the trailing `, "/main"` namespace argument on every `socket.emit`
+call was a historical workaround for a Flask-SocketIO Python-client
+behaviour that became dead-but-harmless code once the backend was ported
+to Node `socket.io` v4. The Node server binds namespace handlers via
+`io.of("/main")` at construction time, so the per-emit argument was
+silently dropped as an unused handler parameter.
 
-1. Still required because the Node server has been configured to use namespaces
-   strictly (test it), or
-2. Stale — a historical workaround that is now warming CPU on every emit.
+TYPE-01/02 removed all 13 dead `, "/main"` arguments along with the
+associated `as any` cast cluster, and rewrote the `AGENTS.md` rule to
+document the actual constraint: emits do **not** pass a namespace
+argument, because the namespace is bound at construction.
 
-**Remediation.**
-
-1. Write a small standalone test that connects with and without `/main` and
-   verifies which behaviour the current backend requires.
-2. If (1): keep the requirement, but rename the section ("Required namespace")
-   and remove all "Flask-SocketIO" terminology.
-3. If (2): remove the requirement, simplify the typed `emitToServer` from
-   TYPE-01 (no namespace argument needed), and update the docs.
+The two remaining doc references in `agent-docs/ARCHITECTURE.md` and
+`dev-docs/CODING_STANDARDS.md` are covered by DOC-ARCH and DOC-DEV-DOCS
+respectively — they are tracked there rather than re-fixed in isolation
+because both surrounding documents need broader rewrites in Phase 5
+anyway.
 
 **Effort:** Low.
 
@@ -1703,18 +1708,18 @@ have a safety net.
 
 ### Phase 5 — Documentation (3-5 days)
 
-| ID                           | Description                                                                       |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| DOC-FLASK                    | Re-investigate Flask-SocketIO namespace requirement (✅ resolved with TYPE-01/02) |
-| DOC-ARCH                     | Rewrite ARCHITECTURE.md backend sections                                          |
-| DOC-FEAT                     | Update FEATURES.md (libacars, Flask references)                                   |
-| DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                             |
-| DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README                          |
-| DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index                                                  |
-| REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                                        |
-| REPO-03                      | Decide on `.stylelintrc.json` — DONE (deleted, unenforced)                        |
-| REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)                   |
-| REPO-05                      | `.dictionary.txt` orphan check — DONE (wired into pre-commit codespell)           |
+| ID                           | Description                                                             |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| DOC-FLASK                    | Re-investigate Flask-SocketIO namespace requirement — DONE (TYPE-01/02) |
+| DOC-ARCH                     | Rewrite ARCHITECTURE.md backend sections                                |
+| DOC-FEAT                     | Update FEATURES.md (libacars, Flask references)                         |
+| DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                   |
+| DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README                |
+| DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index                                        |
+| REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                              |
+| REPO-03                      | Decide on `.stylelintrc.json` — DONE (deleted, unenforced)              |
+| REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)         |
+| REPO-05                      | `.dictionary.txt` orphan check — DONE (wired into pre-commit codespell) |
 
 ### Phase 6 — Continuing test backfill (1-2 weeks)
 
