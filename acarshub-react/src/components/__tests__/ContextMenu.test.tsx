@@ -192,7 +192,8 @@ describe("ContextMenu", () => {
       );
       const button =
         container.querySelector<HTMLButtonElement>('[role="menuitem"]');
-      fireEvent.click(button!);
+      expect(button).not.toBeNull();
+      fireEvent.click(button as HTMLButtonElement);
 
       expect(onClick).toHaveBeenCalledTimes(1);
       expect(onClose).toHaveBeenCalledTimes(1);
@@ -213,7 +214,8 @@ describe("ContextMenu", () => {
       );
       const button =
         container.querySelector<HTMLButtonElement>('[role="menuitem"]');
-      fireEvent.click(button!);
+      expect(button).not.toBeNull();
+      fireEvent.click(button as HTMLButtonElement);
 
       expect(onClick).not.toHaveBeenCalled();
       expect(onClose).not.toHaveBeenCalled();
