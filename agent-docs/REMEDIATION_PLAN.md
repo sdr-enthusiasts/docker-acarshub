@@ -1330,7 +1330,7 @@ below; all are properly ignored. No code change required.
 - `acarshub.rrd.back` — ignored by `*.rrd.back` (line 153)
 - `messages.db`, `test.db`, `test_back.db`, `messages_large.db` — ignored by `*.db` (line 156)
 
-### REPO-02 — Dead lint configs at repo root — **LOW**
+### REPO-02 — Dead lint configs at repo root — **LOW** — ✅ DONE
 
 **Files:**
 
@@ -1338,47 +1338,47 @@ below; all are properly ignored. No code change required.
 - `.eslintignore` — sole entry references a path that doesn't exist
   (`rootfs/webapp/static/js/other/*`)
 
-**Remediation.** Delete both. Biome config in `biome.json` is the source of
-truth.
+**Resolution.** Both files deleted. `.dockerignore` entry for `.eslintignore`
+also removed. Biome config in `biome.json` is the source of truth. Two
+inline `eslint-disable-next-line` comments in source (`useSocketIO.ts`,
+`zmq-listener.ts`) are inert under Biome and left in place — they document
+historical intent without affecting current lint behaviour.
 
 **Effort:** Trivial.
 
-### REPO-03 — `.stylelintrc.json` is unenforced — **LOW**
+### REPO-03 — `.stylelintrc.json` is unenforced — **LOW** — ✅ DONE
 
 **File:** `.stylelintrc.json` (106 lines).
 
-**Finding.** Not invoked by `justfile`, `package.json`, or `.pre-commit-config.yaml`.
-Biome does not lint SCSS, so if SCSS linting is desired, this file is the
-_aspirational_ config that nothing runs.
+**Resolution.** File deleted. Confirmed not referenced by `justfile`,
+`package.json`, `.pre-commit-config.yaml`, or any CI workflow — stylelint
+was never installed or invoked anywhere in the repo. SCSS standards remain
+enforced via design-language review (AGENTS.md / DESIGN_LANGUAGE.md) and
+the existing Biome + Prettier pre-commit pipeline on TS/JS sources.
 
-**Remediation.** Decide:
+If SCSS linting becomes a priority later, the right entry point is a fresh
+config tied to whatever rule set the team agrees on at that time — the
+106-line config that was sitting in the repo was unowned and untested
+against the current SCSS surface.
 
-1. **Wire it up**: add `npx stylelint "acarshub-react/src/**/*.scss"` to
-   `just ci` and pre-commit, install stylelint via npm.
-2. **Delete it**: if SCSS linting is not a priority, remove the file.
+**Effort:** Trivial.
 
-**Effort:** Trivial (decision); Low (if wiring up).
-
-### REPO-04 — Large `geo.json` at repo root — **LOW**
+### REPO-04 — Large `geo.json` at repo root — **LOW** — ✅ CLOSED (no-op)
 
 **Files:** `geo.json` (101 KB), `geo.json.meta.json`.
 
-**Finding.** Possibly stale fixture from the Python era; verify if any
-backend/frontend code reads it.
+**Resolution.** Both files are listed in `.gitignore` (lines 183-184) and
+are local-only artifacts downloaded by the local dev server when running
+the development workflow. They appear at repo root by design — the dev
+server expects them there — and are never committed. No action required.
 
-**Remediation.** If unused, delete. If used, move to a clearly-named directory
-(`test-fixtures/` or `acars_data/`).
-
-**Effort:** Trivial after a `grep -r geo.json` to confirm usage.
-
-### REPO-05 — `.dictionary.txt` orphan check — **LOW**
+### REPO-05 — `.dictionary.txt` orphan check — **LOW** — ✅ CLOSED (no-op)
 
 **File:** `.dictionary.txt` (single line).
 
-**Finding.** Presumably for `cspell`. Verify it's wired into pre-commit; if not,
-either wire up or delete.
-
-**Effort:** Trivial.
+**Resolution.** Actively wired into pre-commit as the `codespell` ignore-words
+list (`.pre-commit-config.yaml`: `codespell --ignore-words=.dictionary.txt`).
+Deletion would break the codespell hook. No action required.
 
 ---
 
@@ -1711,9 +1711,10 @@ have a safety net.
 | DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files                                             |
 | DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README                          |
 | DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index                                                  |
-| REPO-02                      | Delete `.eslintrc`, `.eslintignore`                                               |
-| REPO-03                      | Decide on `.stylelintrc.json`                                                     |
-| REPO-04, REPO-05             | `geo.json`, `.dictionary.txt` orphan check                                        |
+| REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                                        |
+| REPO-03                      | Decide on `.stylelintrc.json` — DONE (deleted, unenforced)                        |
+| REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)                   |
+| REPO-05                      | `.dictionary.txt` orphan check — DONE (wired into pre-commit codespell)           |
 
 ### Phase 6 — Continuing test backfill (1-2 weeks)
 
