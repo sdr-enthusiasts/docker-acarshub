@@ -22,8 +22,8 @@ import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
-} from "./decoder-listener.js";
-import type { MessageType } from "./tcp-listener.js";
+  MessageType,
+} from "./listener-types.js";
 
 const logger = createLogger("udp-listener");
 

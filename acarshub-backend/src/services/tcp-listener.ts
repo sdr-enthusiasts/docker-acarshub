@@ -22,11 +22,16 @@ import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
-} from "./decoder-listener.js";
+  MessageType,
+} from "./listener-types.js";
 
 const logger = createLogger("tcp-listener");
 
-export type MessageType = "ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM";
+// Re-exported so existing callers that import `MessageType` from
+// `./tcp-listener.js` continue to work.  Canonical home is
+// `./listener-types.ts` — importing from there breaks the cycle between
+// the factory and the concrete listener classes.
+export type { MessageType };
 
 export interface TcpListenerConfig {
   type: MessageType;

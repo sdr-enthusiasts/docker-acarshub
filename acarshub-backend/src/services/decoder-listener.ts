@@ -14,54 +14,32 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type { EventEmitter } from "node:events";
-import type { ConnectionDescriptor, ListenType } from "../config.js";
-import type { MessageType } from "./tcp-listener.js";
+import type { ConnectionDescriptor } from "../config.js";
+import type {
+  DecoderListenerEvents,
+  DecoderListenerStats,
+  IDecoderListener,
+  MessageType,
+} from "./listener-types.js";
 import { TcpListener } from "./tcp-listener.js";
 import { UdpListener } from "./udp-listener.js";
 import { ZmqListener } from "./zmq-listener.js";
 
 // ============================================================================
-// Shared event / stats types
+// Re-exports
+//
+// Shared types live in `./listener-types.js` to avoid a circular dependency
+// between this factory and the concrete listener implementations.  They are
+// re-exported here so that existing callers can continue importing them
+// from `./decoder-listener.js` unchanged.
 // ============================================================================
 
-export interface DecoderListenerEvents {
-  message: [type: MessageType, data: unknown];
-  connected: [type: MessageType];
-  disconnected: [type: MessageType];
-  error: [type: MessageType, error: Error];
-}
-
-export interface DecoderListenerStats {
-  type: MessageType;
-  listenType: ListenType;
-  /** Human-readable "host:port" or "bind:port" connection point */
-  connectionPoint: string;
-  connected: boolean;
-}
-
-// ============================================================================
-// IDecoderListener — contract every listener implementation must satisfy
-// ============================================================================
-
-/**
- * Common interface for all decoder transport listeners (UDP, TCP, ZMQ).
- *
- * Every implementation extends `EventEmitter` and emits the four events
- * defined in `DecoderListenerEvents`.  The `start()` / `stop()` lifecycle
- * methods allow `BackgroundServices` to manage all listeners uniformly
- * regardless of the underlying transport.
- */
-export interface IDecoderListener extends EventEmitter<DecoderListenerEvents> {
-  /** Begin listening / connecting. Idempotent — calling twice is a no-op. */
-  start(): void;
-  /** Stop listening and clean up resources. Idempotent. */
-  stop(): void;
-  /** True when the socket is bound (UDP) or connected (TCP/ZMQ). */
-  readonly connected: boolean;
-  /** Return a snapshot of listener state for status reporting. */
-  getStats(): DecoderListenerStats;
-}
+export type {
+  DecoderListenerEvents,
+  DecoderListenerStats,
+  IDecoderListener,
+  MessageType,
+};
 
 // ============================================================================
 // Factory
