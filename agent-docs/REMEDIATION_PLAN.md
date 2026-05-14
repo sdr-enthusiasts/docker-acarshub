@@ -994,21 +994,41 @@ ingest path).
 
 **Map subsystem (15 of 21 components untested):**
 
-- `Map/AircraftContextMenu.tsx`
-- `Map/AircraftMarkers.tsx`
-- `Map/AircraftMessagesModal.tsx`
-- `Map/AnimatedSprite.tsx`
-- `Map/GeoJSONOverlayButton.tsx`
-- `Map/HeyWhatsThatOverlay.tsx`
-- `Map/MapContextMenu.tsx`
-- `Map/MapControlButton.tsx`
-- `Map/MapControls.tsx`
-- `Map/MapLegend.tsx`
-- `Map/NexradOverlay.tsx`
-- `Map/OpenAIPOverlay.tsx`
-- `Map/RainViewerOverlay.tsx`
-- `Map/RangeRings.tsx`
-- `Map/StationMarker.tsx`
+Status (Phase 6 TEST-GAP-FE Map):
+
+- Bundle 1 DONE (merge `811b9c39`, 45 tests):
+  `MapControlButton`, `MapContextMenu` (pins NIT-09 double-`onClose`),
+  `MapLegend`, `GeoJSONOverlayButton`.
+- Bundle 2 DONE (merge `27ddf67a`, 82 tests):
+  `AircraftContextMenu` (pins onClose-fires-once, no NIT-09 smell),
+  `AircraftMessagesModal` (mark-as-read dedup + body scroll lock + ARIA),
+  `AnimatedSprite` (manual RAF + `Date.now` drivers for frame cycling),
+  `MapControls` (backend-gated range-rings/HeyWhatsThat; ACARS/Unread
+  mutual exclusion; all store-setter wiring).
+- Bundle 3 PENDING (7 Leaflet-dependent components): needs reusable
+  react-leaflet test harness.
+
+Gotcha captured: user-event v14 stomps `navigator.clipboard` at
+`setup()`; install clipboard mock AFTER `userEvent.setup()` (same as
+`LogsViewer.test.tsx`).
+
+Cumulative Map subsystem coverage: 8 of 15 covered, 127 tests.
+
+- `Map/AircraftContextMenu.tsx` — covered (bundle 2)
+- `Map/AircraftMarkers.tsx` — pending (bundle 3, Leaflet)
+- `Map/AircraftMessagesModal.tsx` — covered (bundle 2)
+- `Map/AnimatedSprite.tsx` — covered (bundle 2)
+- `Map/GeoJSONOverlayButton.tsx` — covered (bundle 1)
+- `Map/HeyWhatsThatOverlay.tsx` — pending (bundle 3, Leaflet)
+- `Map/MapContextMenu.tsx` — covered (bundle 1)
+- `Map/MapControlButton.tsx` — covered (bundle 1)
+- `Map/MapControls.tsx` — covered (bundle 2)
+- `Map/MapLegend.tsx` — covered (bundle 1)
+- `Map/NexradOverlay.tsx` — pending (bundle 3, Leaflet)
+- `Map/OpenAIPOverlay.tsx` — pending (bundle 3, Leaflet)
+- `Map/RainViewerOverlay.tsx` — pending (bundle 3, Leaflet)
+- `Map/RangeRings.tsx` — pending (bundle 3, Leaflet)
+- `Map/StationMarker.tsx` — pending (bundle 3, Leaflet)
 
 **Charts (3 of 6 untested):**
 
