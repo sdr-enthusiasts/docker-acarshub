@@ -16,6 +16,7 @@
 
 import { render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { socketService } from "../../services/socket";
 import { useAppStore } from "../../store/useAppStore";
 import { AboutPage } from "../AboutPage";
 
@@ -103,6 +104,85 @@ describe("AboutPage", () => {
 
       // Sanity check: no warning emoji anywhere when not outdated.
       expect(container.textContent).not.toContain("⚠");
+    });
+  });
+
+  describe("page-mount side effects", () => {
+    // The page-mount effect drives two things outside the component:
+    //   1. Marks the current page in the global app store (used by
+    //      the keyboard-shortcut layer to decide whether 'p' should
+    //      pause live updates — Live Messages / Live Map only).
+    //   2. Notifies the backend via socket so server-side
+    //      page-change-aware handlers (currently just analytics-ish
+    //      logging) know which page is active.
+    // A regression that passes a wrong page string here would silently
+    // break the 'p' shortcut elsewhere or send misleading telemetry.
+
+    it("marks the current page as 'About' in the store on mount", () => {
+      render(<AboutPage />);
+      expect(useAppStore.getState().currentPage).toBe("About");
+    });
+
+    it("notifies the backend of the page change exactly once on mount", () => {
+      render(<AboutPage />);
+      expect(socketService.notifyPageChange).toHaveBeenCalledTimes(1);
+      expect(socketService.notifyPageChange).toHaveBeenCalledWith("About");
+    });
+  });
+
+  describe("version information card", () => {
+    // The Version Information card is gated on `version !== null`.
+    // The whole card (and the only mention of container/github version
+    // numbers in this page) appears only after the backend has sent
+    // version metadata. Pinning the gate prevents a regression that
+    // renders the card with literal "undefined" version strings
+    // before the version event has arrived.
+
+    it("does NOT render the Version Information card when version is null", () => {
+      useAppStore.setState({ version: null });
+      const { container } = render(<AboutPage />);
+      expect(container.textContent).not.toContain("Version Information");
+      expect(container.textContent).not.toContain("Container Version:");
+    });
+
+    it("renders the container and github versions when version is set", () => {
+      setVersion({
+        container_version: "2.3.4",
+        backend_version: "2.3.4",
+        frontend_version: "2.3.4",
+        github_version: "2.3.5",
+        is_outdated: true,
+      });
+      const { container } = render(<AboutPage />);
+      expect(container.textContent).toContain("Version Information");
+      expect(container.textContent).toContain("2.3.4");
+      expect(container.textContent).toContain("2.3.5");
+    });
+  });
+
+  describe("external link safety", () => {
+    // Every `target="_blank"` link MUST carry `rel="noopener noreferrer"`.
+    //
+    // Why: a popup that opens in a new tab inherits a `window.opener`
+    // reference back to our page. Without `rel="noopener"` a malicious
+    // (or compromised) destination can call `window.opener.location =
+    // '<phishing url>'` to silently redirect the original tab — a
+    // classic reverse-tabnabbing attack. `noreferrer` additionally
+    // strips the Referer header.
+    //
+    // The lint rule that catches this can be silenced or removed by a
+    // refactor; pinning the runtime contract here gives us a second
+    // layer of defense that survives such a refactor.
+
+    it("every external link uses rel='noopener noreferrer'", () => {
+      const { container } = render(<AboutPage />);
+      const externalLinks = container.querySelectorAll('a[target="_blank"]');
+      expect(externalLinks.length).toBeGreaterThan(0);
+      for (const link of externalLinks) {
+        const rel = link.getAttribute("rel") ?? "";
+        expect(rel).toContain("noopener");
+        expect(rel).toContain("noreferrer");
+      }
     });
   });
 });
