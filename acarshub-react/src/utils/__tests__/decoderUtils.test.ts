@@ -604,6 +604,56 @@ describe("decoderUtils", () => {
         expect(result).toContain("Station1");
         expect(result).toContain("Station2");
       });
+
+      it("regression: formats media-adv current link time from JSON text", () => {
+        const libacarsString = JSON.stringify({
+          "media-adv": {
+            err: false,
+            version: 0,
+            current_link: {
+              code: "H",
+              descr: "HF",
+              established: false,
+              time: { hour: 5, min: 6, sec: 55 },
+            },
+            links_avail: [{ code: "V", descr: "VHF ACARS" }],
+          },
+        });
+
+        const result = parseAndFormatLibacars(libacarsString);
+
+        expect(result).toContain("Media Adv");
+        expect(result).toContain("Current Link");
+        expect(result).toContain("HF");
+        expect(result).toContain("Links Avail");
+        expect(result).toContain("05:06:55 UTC");
+        expect(loggerMocks.error).not.toHaveBeenCalled();
+      });
+
+      it("regression: formats media-adv current link time from parsed objects", () => {
+        const libacarsObject = {
+          "media-adv": {
+            err: false,
+            version: 0,
+            current_link: {
+              code: "H",
+              descr: "HF",
+              established: false,
+              time: { hour: 5, min: 6, sec: 55 },
+            },
+            links_avail: [{ code: "V", descr: "VHF ACARS" }],
+          },
+        };
+
+        const result = parseAndFormatLibacars(libacarsObject);
+
+        expect(result).toContain("Media Adv");
+        expect(result).toContain("Current Link");
+        expect(result).toContain("HF");
+        expect(result).toContain("Links Avail");
+        expect(result).toContain("05:06:55 UTC");
+        expect(loggerMocks.error).not.toHaveBeenCalled();
+      });
     });
 
     describe("data cleaning", () => {
