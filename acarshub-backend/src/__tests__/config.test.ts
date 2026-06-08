@@ -159,9 +159,8 @@ describe("config module", () => {
 
   describe("Decoder enablement", () => {
     it("should default ACARS and VDLM disabled", async () => {
-      const { ENABLE_ACARS, ENABLE_VDLM, ENABLE_HFDL } = await import(
-        "../config.js"
-      );
+      const { ENABLE_ACARS, ENABLE_VDLM, ENABLE_HFDL } =
+        await import("../config.js");
       expect(ENABLE_ACARS).toBe(false);
       expect(ENABLE_VDLM).toBe(false);
       expect(ENABLE_HFDL).toBe(false);
