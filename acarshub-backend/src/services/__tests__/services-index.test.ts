@@ -434,9 +434,8 @@ describe("BackgroundServices — fan-in architecture", () => {
       };
 
       const { BackgroundServices } = await import("../index.js");
-      const { getMessageQueue, destroyMessageQueue } = await import(
-        "../message-queue.js"
-      );
+      const { getMessageQueue, destroyMessageQueue } =
+        await import("../message-queue.js");
 
       // Start with a fresh queue.
       destroyMessageQueue();
@@ -473,9 +472,8 @@ describe("BackgroundServices — fan-in architecture", () => {
       };
 
       const { BackgroundServices } = await import("../index.js");
-      const { getMessageQueue, destroyMessageQueue } = await import(
-        "../message-queue.js"
-      );
+      const { getMessageQueue, destroyMessageQueue } =
+        await import("../message-queue.js");
 
       destroyMessageQueue();
       const queue = getMessageQueue(100);
