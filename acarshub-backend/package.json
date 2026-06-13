@@ -44,12 +44,12 @@
     "@biomejs/biome": "2.4.16",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "25.9.2",
-    "@vitest/coverage-v8": "4.1.5",
+    "@vitest/coverage-v8": "4.1.8",
     "drizzle-kit": "0.31.10",
     "socket.io-client": "4.8.3",
     "tsx": "4.22.4",
     "typescript": "6.0.3",
     "vite": "8.0.16",
-    "vitest": "4.1.5"
+    "vitest": "4.1.8"
   }
 }

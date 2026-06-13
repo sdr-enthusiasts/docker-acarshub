@@ -48,8 +48,8 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
-    "@vitest/coverage-v8": "4.1.5",
-    "@vitest/ui": "4.1.5",
+    "@vitest/coverage-v8": "4.1.8",
+    "@vitest/ui": "4.1.8",
     "axe-core": "4.12.1",
     "canvas": "3.2.3",
     "happy-dom": "20.10.2",
@@ -60,6 +60,6 @@
     "tsx": "4.22.4",
     "typescript": "6.0.3",
     "vite": "8.0.16",
-    "vitest": "4.1.5"
+    "vitest": "4.1.8"
   }
 }
