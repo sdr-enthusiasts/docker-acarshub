@@ -41,9 +41,9 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.16",
+    "@biomejs/biome": "2.5.0",
     "@types/better-sqlite3": "7.6.13",
-    "@types/node": "25.9.2",
+    "@types/node": "25.9.3",
     "@vitest/coverage-v8": "4.1.8",
     "drizzle-kit": "0.31.10",
     "socket.io-client": "4.8.3",
