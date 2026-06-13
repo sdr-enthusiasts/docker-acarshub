@@ -40,7 +40,7 @@
     "@axe-core/playwright": "4.11.3",
     "@biomejs/biome": "2.4.16",
     "@lhci/cli": "0.15.1",
-    "@playwright/test": "1.59.1",
+    "@playwright/test": "1.60.0",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "@testing-library/user-event": "14.6.1",
