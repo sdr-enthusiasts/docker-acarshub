@@ -69,7 +69,7 @@ jobs:
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
     needs: get_version
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@8ceaf9ed0e8f1b329f0df77e0e949a0a7faf7a58 # main
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@7e2533c291e2ecc614b06bd20c3a0c5ada779c59 # main
     with:
       push_enabled: true
       push_destinations: ghcr.io
@@ -89,7 +89,7 @@ jobs:
     if: |
       github.event.inputs.build_latest_as_test == 'true' &&
       (github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '')
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@8ceaf9ed0e8f1b329f0df77e0e949a0a7faf7a58 # main
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@7e2533c291e2ecc614b06bd20c3a0c5ada779c59 # main
     needs: get_version
     with:
       push_enabled: true
