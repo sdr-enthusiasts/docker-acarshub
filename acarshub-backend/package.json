@@ -1,6 +1,6 @@
 {
   "name": "@acarshub/backend",
-  "version": "4.1.6",
+  "version": "4.1.7",
   "description": "ACARS Hub Node.js backend server",
   "type": "module",
   "main": "./dist/server.js",
@@ -30,7 +30,7 @@
     "@acarshub/types": "*",
     "@airframes/acars-decoder": "1.9.0",
     "@fastify/cors": "11.2.0",
-    "better-sqlite3": "12.10.0",
+    "better-sqlite3": "12.11.1",
     "drizzle-orm": "0.45.2",
     "fastify": "5.8.5",
     "pino": "10.3.1",
@@ -41,15 +41,15 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.16",
+    "@biomejs/biome": "2.5.0",
     "@types/better-sqlite3": "7.6.13",
-    "@types/node": "25.9.2",
-    "@vitest/coverage-v8": "4.1.8",
+    "@types/node": "26.0.0",
+    "@vitest/coverage-v8": "4.1.9",
     "drizzle-kit": "0.31.10",
     "socket.io-client": "4.8.3",
     "tsx": "4.22.4",
     "typescript": "6.0.3",
     "vite": "8.0.16",
-    "vitest": "4.1.8"
+    "vitest": "4.1.9"
   }
 }
