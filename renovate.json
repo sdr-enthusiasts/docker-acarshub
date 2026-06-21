@@ -29,6 +29,17 @@
   },
   "packageRules": [
     {
+      "matchPackageNames": [
+        "@axe-core/playwright",
+        "@playwright/test",
+        "@vitest/browser-playwright",
+        "mcr.microsoft.com/playwright",
+        "playwright",
+        "playwright-core"
+      ],
+      "groupName": "playwright"
+    },
+    {
       "matchManagers": ["npm"],
       "automerge": false
     },
