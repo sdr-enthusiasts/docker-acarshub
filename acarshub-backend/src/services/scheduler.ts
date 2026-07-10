@@ -367,8 +367,18 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
   private startTask(task: ScheduledTask): void {
     const intervalMs = this.getIntervalMs(task.interval, task.unit);
 
-    const timer = setInterval(async () => {
-      await this.executeTask(task);
+    // executeTask() is documented to never reject (ERR-03), but nothing
+    // awaits this callback's own returned promise — setInterval discards it.
+    // The .catch() backstop below means a violation of that invariant is
+    // logged rather than becoming an unhandled rejection.
+    const timer = setInterval(() => {
+      this.executeTask(task).catch((error: unknown) => {
+        logger.error("Unexpected error escaped executeTask", {
+          taskId: task.id,
+          taskName: task.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }, intervalMs);
 
     this.timers.set(task.id, timer);
@@ -392,13 +402,29 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
     // disable(), and removeTask() can cancel a pending alignment that has
     // not yet fired — without this, the callback would run after the task
     // was disabled and register a fresh setInterval that nothing owns.
-    const alignmentTimer = setTimeout(async () => {
+    // See startTask() above (ERR-03) — executeTask() is documented never to
+    // reject, but nothing awaits either callback's own returned promise
+    // here, so both the aligned first run and the recurring interval get an
+    // explicit .catch() backstop.
+    const alignmentTimer = setTimeout(() => {
       this.alignmentTimers.delete(task.id);
-      await this.executeTask(task);
+      this.executeTask(task).catch((error: unknown) => {
+        logger.error("Unexpected error escaped executeTask (aligned run)", {
+          taskId: task.id,
+          taskName: task.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
 
       // Then run at regular intervals
-      const timer = setInterval(async () => {
-        await this.executeTask(task);
+      const timer = setInterval(() => {
+        this.executeTask(task).catch((error: unknown) => {
+          logger.error("Unexpected error escaped executeTask", {
+            taskId: task.id,
+            taskName: task.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
       }, intervalMs);
 
       this.timers.set(task.id, timer);
@@ -414,7 +440,19 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
   }
 
   /**
-   * Execute a task handler with error handling
+   * Execute a task handler with error handling.
+   *
+   * Invariant (ERR-03): this method must never throw or return a rejected
+   * promise. Every await inside the try block, and the emit() calls in both
+   * the try and catch branches, are covered by the outer try/catch — but
+   * `this.emit(...)` runs listeners synchronously, so a listener that throws
+   * would otherwise escape as an unhandled rejection from the `async () =>
+   * await this.executeTask(task)` callbacks passed to `setInterval`/
+   * `setTimeout` in startTask()/startTaskAt(), since nothing awaits those
+   * callbacks' returned promises. As defense in depth, both call sites also
+   * wrap the returned promise in an explicit `.catch(...)` backstop — see
+   * the comments there — so a violation of this invariant is logged instead
+   * of crashing the process.
    */
   private async executeTask(task: ScheduledTask): Promise<void> {
     const startTime = Date.now();

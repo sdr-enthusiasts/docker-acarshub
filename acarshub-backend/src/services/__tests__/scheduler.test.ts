@@ -488,6 +488,33 @@ describe("Scheduler", () => {
       vi.advanceTimersByTime(3000);
       expect(healthyTaskCount).toBe(3); // Healthy task continues to run
     });
+
+    it("regression: a taskError listener that throws does not become an unhandled rejection (ERR-03)", async () => {
+      // executeTask() is documented to never reject, but its only caller is
+      // the setInterval(() => { this.executeTask(task).catch(...) }, ...)
+      // callback in startTask() — nothing awaits *that* callback's own
+      // returned value either. Before the ERR-03 backstop, a "taskError"
+      // listener throwing (e.g. this.emit("taskError", ...) itself throwing
+      // synchronously from inside executeTask's catch block) would escape
+      // as an unhandled rejection. Prove the fix holds by installing a
+      // listener that throws and confirming no unhandled rejection surfaces.
+      scheduler.on("taskError", () => {
+        throw new Error("listener misbehaves");
+      });
+
+      scheduler.every(1, "seconds").do(() => {
+        throw new Error("task fails");
+      }, "failing-task-with-bad-listener");
+
+      scheduler.start();
+
+      // If the throwing listener escaped as an unhandled rejection, vitest
+      // would surface it as a test-run "Unhandled Rejection" error even
+      // though this assertion itself passes.
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(true).toBe(true);
+    });
   });
 
   describe("Task Metadata", () => {
