@@ -173,6 +173,31 @@ export function initDatabase(
         logger.error("Failed to initialize backup database", {
           error: error instanceof Error ? error.message : String(error),
         });
+
+        // LEAK-04: if `new Database()` above succeeded but a later pragma
+        // call (or the drizzle() wrap) threw, sqliteBackupConnection would
+        // otherwise be left as a live, only-partially-configured handle
+        // while drizzleBackupClient stayed null — an inconsistent partial
+        // state where hasBackupDatabase() correctly reports "disabled" but
+        // sqliteBackupConnection-based callers (e.g.
+        // getBackupWalCheckpointStatus()) would still see a non-null,
+        // possibly misconfigured connection. Close the raw handle if one
+        // was opened, then null both refs so backup-db state is
+        // all-or-nothing.
+        if (sqliteBackupConnection) {
+          try {
+            sqliteBackupConnection.close();
+          } catch (closeError) {
+            logger.trace("Error closing partially-initialized backup DB", {
+              error:
+                closeError instanceof Error
+                  ? closeError.message
+                  : String(closeError),
+            });
+          }
+        }
+        sqliteBackupConnection = null;
+        drizzleBackupClient = null;
         // Don't fail if backup init fails, just log it
       }
     }
