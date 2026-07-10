@@ -45,21 +45,41 @@ const logger = createLogger("db:alerts");
 // ============================================================================
 
 /**
- * In-memory cache of monitored alert terms
- * Loaded from database at startup, updated when setAlertTerms() is called
+ * In-memory alert term cache.
+ *
+ * STATE-02: encapsulated in a small factory rather than three independent
+ * bare module-level `let`s (alertTermsCache, alertTermsIgnoreCache,
+ * cacheInitialized), so the three ambient-singleton pieces of state are
+ * grouped under one object with a single reset() entry point instead of
+ * three separately-mutable globals.
  */
-let alertTermsCache: string[] = [];
+function createAlertCacheState() {
+  let terms: string[] = [];
+  let ignoreTerms: string[] = [];
+  let initialized = false;
 
-/**
- * In-memory cache of alert ignore terms
- * Loaded from database at startup, updated when setAlertIgnore() is called
- */
-let alertTermsIgnoreCache: string[] = [];
+  return {
+    getTerms: (): string[] => terms,
+    setTerms: (next: string[]): void => {
+      terms = next;
+    },
+    getIgnoreTerms: (): string[] => ignoreTerms,
+    setIgnoreTerms: (next: string[]): void => {
+      ignoreTerms = next;
+    },
+    isInitialized: (): boolean => initialized,
+    setInitialized: (value: boolean): void => {
+      initialized = value;
+    },
+    reset: (): void => {
+      terms = [];
+      ignoreTerms = [];
+      initialized = false;
+    },
+  };
+}
 
-/**
- * Flag to track if cache has been initialized
- */
-let cacheInitialized = false;
+const alertCacheState = createAlertCacheState();
 
 /**
  * Initialize alert term cache from database
@@ -70,16 +90,14 @@ let cacheInitialized = false;
 /**
  * Reset in-memory alert cache state for testing purposes only.
  *
- * This resets the module-level `cacheInitialized` flag and empties both
- * cache arrays so that `initializeAlertCache()` can be called again in
- * the next test with a fresh in-memory database.
+ * This resets alertCacheState's `initialized` flag and empties both cache
+ * arrays so that `initializeAlertCache()` can be called again in the next
+ * test with a fresh in-memory database.
  *
  * @internal - Do NOT call this in production code.
  */
 export function resetAlertCacheForTesting(): void {
-  cacheInitialized = false;
-  alertTermsCache = [];
-  alertTermsIgnoreCache = [];
+  alertCacheState.reset();
 }
 
 export function initializeAlertCache(): void {
@@ -88,21 +106,25 @@ export function initializeAlertCache(): void {
 
     // Load alert terms from alert_stats table
     const terms = db.select().from(alertStats).all();
-    alertTermsCache = terms
-      .filter((t): t is AlertStat & { term: string } => t.term !== null)
-      .map((t) => t.term.toUpperCase());
+    alertCacheState.setTerms(
+      terms
+        .filter((t): t is AlertStat & { term: string } => t.term !== null)
+        .map((t) => t.term.toUpperCase()),
+    );
 
     // Load ignore terms from ignore_alert_terms table
     const ignoreTerms = db.select().from(ignoreAlertTerms).all();
-    alertTermsIgnoreCache = ignoreTerms
-      .filter((t): t is IgnoreAlertTerm & { term: string } => t.term !== null)
-      .map((t) => t.term.toUpperCase());
+    alertCacheState.setIgnoreTerms(
+      ignoreTerms
+        .filter((t): t is IgnoreAlertTerm & { term: string } => t.term !== null)
+        .map((t) => t.term.toUpperCase()),
+    );
 
-    cacheInitialized = true;
+    alertCacheState.setInitialized(true);
 
     logger.debug("Alert term cache initialized", {
-      alertTerms: alertTermsCache.length,
-      ignoreTerms: alertTermsIgnoreCache.length,
+      alertTerms: alertCacheState.getTerms().length,
+      ignoreTerms: alertCacheState.getIgnoreTerms().length,
     });
   } catch (error) {
     logger.error("Failed to initialize alert cache", { error });
@@ -119,11 +141,11 @@ export function initializeAlertCache(): void {
  * @returns Array of alert terms (uppercase)
  */
 export function getCachedAlertTerms(): string[] {
-  if (!cacheInitialized) {
+  if (!alertCacheState.isInitialized()) {
     logger.warn("Alert cache not initialized, initializing now");
     initializeAlertCache();
   }
-  return alertTermsCache;
+  return alertCacheState.getTerms();
 }
 
 /**
@@ -135,11 +157,11 @@ export function getCachedAlertTerms(): string[] {
  * @returns Array of ignore terms (uppercase)
  */
 export function getCachedAlertIgnoreTerms(): string[] {
-  if (!cacheInitialized) {
+  if (!alertCacheState.isInitialized()) {
     logger.warn("Alert cache not initialized, initializing now");
     initializeAlertCache();
   }
-  return alertTermsIgnoreCache;
+  return alertCacheState.getIgnoreTerms();
 }
 
 /**
@@ -324,7 +346,7 @@ export function setAlertTerms(terms: string[]): void {
   }
 
   // Update in-memory cache
-  alertTermsCache = upperTerms;
+  alertCacheState.setTerms(upperTerms);
   logger.info("Alert terms updated", { count: upperTerms.length });
 }
 
@@ -355,7 +377,7 @@ export function setAlertIgnore(terms: string[]): void {
   }
 
   // Update in-memory cache
-  alertTermsIgnoreCache = upperTerms;
+  alertCacheState.setIgnoreTerms(upperTerms);
   logger.info("Alert ignore terms updated", { count: upperTerms.length });
 }
 
