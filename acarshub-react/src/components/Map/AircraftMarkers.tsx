@@ -17,6 +17,10 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Marker, useMap } from "react-map-gl/maplibre";
+import {
+  type HoveredTooltipState,
+  useTooltipPositioning,
+} from "../../hooks/useTooltipPositioning";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { MessageGroup } from "../../types";
@@ -92,13 +96,6 @@ export interface ViewportBounds {
   south: number;
   east: number;
   west: number;
-}
-
-interface TooltipState {
-  hex: string;
-  showBelow: boolean;
-  alignLeft: boolean;
-  alignRight: boolean;
 }
 
 interface ContextMenuState {
@@ -228,7 +225,11 @@ export function AircraftMarkers({
     (state) => state.settings.map.groundAltitudeThreshold,
   );
   const [localHoveredAircraft, setLocalHoveredAircraft] =
-    useState<TooltipState | null>(null);
+    useState<HoveredTooltipState | null>(null);
+  const {
+    onMouseEnter: handleTooltipMouseEnter,
+    onMouseLeave: handleTooltipMouseLeave,
+  } = useTooltipPositioning(setLocalHoveredAircraft);
   const [selectedMessageGroup, setSelectedMessageGroup] =
     useState<MessageGroup | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -748,36 +749,8 @@ export function AircraftMarkers({
                     onContextMenu={(e) =>
                       handleMarkerContextMenu(e, markerData.aircraft)
                     }
-                    onMouseEnter={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const distanceFromTop = rect.top;
-                      const showBelow = distanceFromTop < 280;
-                      const mapContainer =
-                        e.currentTarget.closest(".maplibregl-map");
-                      const mapBounds = mapContainer
-                        ? mapContainer.getBoundingClientRect()
-                        : { left: 0, right: window.innerWidth };
-                      const tooltipWidth = 280;
-                      const halfTooltipWidth = tooltipWidth / 2;
-                      const markerCenterX = rect.left + rect.width / 2;
-                      const tooltipLeftEdgeIfCentered =
-                        markerCenterX - halfTooltipWidth;
-                      const tooltipRightEdgeIfCentered =
-                        markerCenterX + halfTooltipWidth;
-                      const wouldClipLeft =
-                        tooltipLeftEdgeIfCentered < mapBounds.left;
-                      const wouldClipRight =
-                        tooltipRightEdgeIfCentered > mapBounds.right;
-                      const alignLeft = wouldClipLeft && !wouldClipRight;
-                      const alignRight = wouldClipRight && !wouldClipLeft;
-                      setLocalHoveredAircraft({
-                        hex: markerData.hex,
-                        showBelow,
-                        alignLeft,
-                        alignRight,
-                      });
-                    }}
-                    onMouseLeave={() => setLocalHoveredAircraft(null)}
+                    onMouseEnter={handleTooltipMouseEnter(markerData.hex)}
+                    onMouseLeave={handleTooltipMouseLeave}
                     isHovered={hoveredAircraftHex === markerData.hex}
                     isFollowed={followedAircraftHex === markerData.hex}
                     hasUnreadMessages={markerData.hasUnreadMessages}
@@ -817,53 +790,8 @@ export function AircraftMarkers({
                     onContextMenu={(e) =>
                       handleMarkerContextMenu(e, markerData.aircraft)
                     }
-                    onMouseEnter={(e) => {
-                      // Calculate if tooltip should appear above or below marker
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const distanceFromTop = rect.top;
-                      const showBelow = distanceFromTop < 280; // Show below if within 280px of top (accounts for full tooltip height)
-
-                      // Get the map container bounds (not window bounds - accounts for sidebar)
-                      const mapContainer =
-                        e.currentTarget.closest(".maplibregl-map");
-                      const mapBounds = mapContainer
-                        ? mapContainer.getBoundingClientRect()
-                        : { left: 0, right: window.innerWidth };
-
-                      // Calculate if tooltip should align left or right based on horizontal position
-                      const tooltipWidth = 280; // Approximate tooltip width
-                      const halfTooltipWidth = tooltipWidth / 2;
-
-                      // Calculate where the tooltip will actually be positioned relative to map container
-                      const markerCenterX = rect.left + rect.width / 2;
-                      const tooltipLeftEdgeIfCentered =
-                        markerCenterX - halfTooltipWidth;
-                      const tooltipRightEdgeIfCentered =
-                        markerCenterX + halfTooltipWidth;
-
-                      // Check if the centered tooltip would clip map container edges
-                      const wouldClipLeft =
-                        tooltipLeftEdgeIfCentered < mapBounds.left;
-                      const wouldClipRight =
-                        tooltipRightEdgeIfCentered > mapBounds.right;
-
-                      // Only align left/right if tooltip would actually clip, otherwise center
-                      // Mutually exclusive: can't be both left AND right aligned
-                      const alignLeft = wouldClipLeft && !wouldClipRight;
-                      const alignRight = wouldClipRight && !wouldClipLeft;
-
-                      setLocalHoveredAircraft({
-                        hex: markerData.hex,
-                        showBelow,
-                        alignLeft,
-                        alignRight,
-                      });
-                      // Don't call onAircraftHover - pulsing glow is only for list hover
-                    }}
-                    onMouseLeave={() => {
-                      setLocalHoveredAircraft(null);
-                      // Don't call onAircraftHover - pulsing glow is only for list hover
-                    }}
+                    onMouseEnter={handleTooltipMouseEnter(markerData.hex)}
+                    onMouseLeave={handleTooltipMouseLeave}
                   />
                 )
               ) : (
@@ -894,53 +822,8 @@ export function AircraftMarkers({
                   onContextMenu={(e) =>
                     handleMarkerContextMenu(e, markerData.aircraft)
                   }
-                  onMouseEnter={(e) => {
-                    // Calculate if tooltip should appear above or below marker
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const distanceFromTop = rect.top;
-                    const showBelow = distanceFromTop < 280; // Show below if within 280px of top (accounts for full tooltip height)
-
-                    // Get the map container bounds (not window bounds - accounts for sidebar)
-                    const mapContainer =
-                      e.currentTarget.closest(".maplibregl-map");
-                    const mapBounds = mapContainer
-                      ? mapContainer.getBoundingClientRect()
-                      : { left: 0, right: window.innerWidth };
-
-                    // Calculate if tooltip should align left or right based on horizontal position
-                    const tooltipWidth = 280; // Approximate tooltip width
-                    const halfTooltipWidth = tooltipWidth / 2;
-
-                    // Calculate where the tooltip will actually be positioned relative to map container
-                    const markerCenterX = rect.left + rect.width / 2;
-                    const tooltipLeftEdgeIfCentered =
-                      markerCenterX - halfTooltipWidth;
-                    const tooltipRightEdgeIfCentered =
-                      markerCenterX + halfTooltipWidth;
-
-                    // Check if the centered tooltip would clip map container edges
-                    const wouldClipLeft =
-                      tooltipLeftEdgeIfCentered < mapBounds.left;
-                    const wouldClipRight =
-                      tooltipRightEdgeIfCentered > mapBounds.right;
-
-                    // Only align left/right if tooltip would actually clip, otherwise center
-                    // Mutually exclusive: can't be both left AND right aligned
-                    const alignLeft = wouldClipLeft && !wouldClipRight;
-                    const alignRight = wouldClipRight && !wouldClipLeft;
-
-                    setLocalHoveredAircraft({
-                      hex: markerData.hex,
-                      showBelow,
-                      alignLeft,
-                      alignRight,
-                    });
-                    // Don't call onAircraftHover - pulsing glow is only for list hover
-                  }}
-                  onMouseLeave={() => {
-                    setLocalHoveredAircraft(null);
-                    // Don't call onAircraftHover - pulsing glow is only for list hover
-                  }}
+                  onMouseEnter={handleTooltipMouseEnter(markerData.hex)}
+                  onMouseLeave={handleTooltipMouseLeave}
                 >
                   <img
                     src={markerData.iconHtml}

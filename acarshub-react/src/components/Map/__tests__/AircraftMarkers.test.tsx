@@ -22,9 +22,10 @@
  *   - Right-click opens context menu
  *
  * Intentionally NOT covered (covered by other suites or unsuitable for unit
- * test): sprite loading pipeline, tooltip positioning math, sprite class
- * derivation, follow/unfollow flow (uses callback prop — covered at
- * integration level).
+ * test): sprite loading pipeline, sprite class derivation, follow/unfollow
+ * flow (uses callback prop — covered at integration level). Tooltip
+ * positioning math was extracted to hooks/useTooltipPositioning.ts (GOD-08)
+ * and is covered by hooks/__tests__/useTooltipPositioning.test.ts.
  */
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
