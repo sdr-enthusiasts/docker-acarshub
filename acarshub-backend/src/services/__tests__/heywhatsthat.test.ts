@@ -50,6 +50,7 @@ import {
   getHeyWhatsThatUrl,
   initHeyWhatsThat,
   readSavedGeoJSON,
+  resetCachedUrlForTesting,
 } from "../heywhatsthat.js";
 
 // ---------------------------------------------------------------------------
@@ -87,14 +88,6 @@ function makeApiResponse(altitudesFeet: number[] = [10000, 30000]) {
       ] as [number, number][],
     })),
   };
-}
-
-/**
- * Reset the module-level `cachedUrl` between tests by calling initHeyWhatsThat
- * with an empty token, which is always a no-op that sets cachedUrl to undefined.
- */
-async function resetCachedUrl(): Promise<void> {
-  await initHeyWhatsThat("", "10000,30000", "/tmp/hwt-reset-unused.geojson");
 }
 
 // ---------------------------------------------------------------------------
@@ -287,8 +280,8 @@ describe("initHeyWhatsThat", () => {
     savePath = join(tmpDir, "heywhatsthat.geojson");
   });
 
-  afterEach(async () => {
-    await resetCachedUrl();
+  afterEach(() => {
+    resetCachedUrlForTesting();
     vi.restoreAllMocks();
     if (existsSync(tmpDir)) {
       rmSync(tmpDir, { recursive: true, force: true });

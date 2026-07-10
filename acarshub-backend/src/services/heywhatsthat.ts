@@ -144,8 +144,31 @@ interface HWTMeta {
 // Internal state
 // ---------------------------------------------------------------------------
 
-/** Cached URL (with ?v= param) returned to connected clients */
-let cachedUrl: string | undefined;
+/**
+ * Cached URL (with ?v= param) returned to connected clients.
+ *
+ * STATE-02: encapsulated in a small factory rather than a bare module-level
+ * `let`, with an explicit test-reset export. Previously tests had to reset
+ * this indirectly by calling initHeyWhatsThat("", ...) as a side channel
+ * (relying on the "not configured" branch's cachedUrl = undefined as an
+ * ad-hoc reset hook) — see resetCachedUrlForTesting() below.
+ */
+function createCachedUrlState() {
+  let url: string | undefined;
+  return {
+    get: (): string | undefined => url,
+    set: (next: string | undefined): void => {
+      url = next;
+    },
+  };
+}
+
+const cachedUrlState = createCachedUrlState();
+
+/** Reset the cached HWT URL for tests. @internal */
+export function resetCachedUrlForTesting(): void {
+  cachedUrlState.set(undefined);
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -379,7 +402,7 @@ function ensureSaveDir(savePath: string): void {
  * altitudes the hash changes, causing browsers to ignore their cached copy.
  */
 export function getHeyWhatsThatUrl(): string | undefined {
-  return cachedUrl;
+  return cachedUrlState.get();
 }
 
 /**
@@ -418,7 +441,7 @@ export async function initHeyWhatsThat(
 ): Promise<void> {
   if (!token) {
     logger.debug("HEYWHATSTHAT not configured — coverage overlay disabled");
-    cachedUrl = undefined;
+    cachedUrlState.set(undefined);
     return;
   }
 
@@ -436,7 +459,7 @@ export async function initHeyWhatsThat(
         savePath,
         cachedAt: new Date(meta.fetchedAt).toISOString(),
       });
-      cachedUrl = urlWithVersion;
+      cachedUrlState.set(urlWithVersion);
       return;
     }
 
@@ -478,7 +501,7 @@ export async function initHeyWhatsThat(
         .join(", "),
     });
 
-    cachedUrl = urlWithVersion;
+    cachedUrlState.set(urlWithVersion);
   } catch (error) {
     const normalizedError =
       error instanceof Error ? error : new Error(String(error));
@@ -486,7 +509,7 @@ export async function initHeyWhatsThat(
       "Failed to fetch Hey What's That coverage data — overlay will be unavailable",
       { error: normalizedError.message, token, alts },
     );
-    // Don't set cachedUrl — feature gracefully degrades to disabled
-    cachedUrl = undefined;
+    // Don't set cachedUrlState — feature gracefully degrades to disabled
+    cachedUrlState.set(undefined);
   }
 }
