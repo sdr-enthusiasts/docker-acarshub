@@ -210,9 +210,9 @@ function createServer() {
       return reply
         .header("Cache-Control", "no-cache")
         .send({ acars, vdlm2, hfdl, imsl, irdm, total });
-    } catch (err) {
+    } catch (error) {
       logger.error("Failed to generate stats.json", {
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       return reply.status(500).send({ error: "Internal Server Error" });
     }
@@ -224,9 +224,9 @@ function createServer() {
     try {
       const body = await collectMetrics();
       return reply.header("Content-Type", METRICS_CONTENT_TYPE).send(body);
-    } catch (err) {
+    } catch (error) {
       logger.error("Failed to generate metrics", {
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       return reply.status(500).send("Internal Server Error");
     }
@@ -354,10 +354,10 @@ async function main(): Promise<void> {
           { framesRemaining },
         );
       }
-    } catch (err) {
+    } catch (error) {
       // Non-fatal: the scheduled task will pick this up within 5 minutes.
       logger.warn("Startup WAL checkpoint failed (non-fatal)", {
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 

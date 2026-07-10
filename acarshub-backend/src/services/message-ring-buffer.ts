@@ -352,10 +352,10 @@ export async function warmMessageBuffers(): Promise<void> {
           pushMessage(enriched);
           messageCount++;
         }
-      } catch (err) {
+      } catch (error) {
         logger.warn("Failed to enrich message during warm-up — skipping", {
           id: (raw as { id?: number }).id,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -387,10 +387,10 @@ export async function warmMessageBuffers(): Promise<void> {
           row.matchType === "tail" ? [row.term] : undefined;
         pushAlert(enriched);
         alertCount++;
-      } catch (err) {
+      } catch (error) {
         logger.warn("Failed to enrich alert during warm-up — skipping", {
           id: (row.message as { id?: number }).id,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -399,12 +399,12 @@ export async function warmMessageBuffers(): Promise<void> {
       messages: messageCount,
       alerts: alertCount,
     });
-  } catch (err) {
+  } catch (error) {
     // A failure here means the buffers will start empty.  Clients will still
     // connect and receive live messages going forward — the only impact is
     // that the first client after startup sees fewer historical messages.
     logger.error("Failed to warm message ring buffers from database", {
-      error: err instanceof Error ? err.message : String(err),
+      error: error instanceof Error ? error.message : String(error),
     });
   }
 }

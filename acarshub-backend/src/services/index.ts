@@ -462,10 +462,10 @@ export class BackgroundServices extends EventEmitter {
             station_ids: getStationIds(),
           });
         }
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to process message", {
           type: queuedMessage.type,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     });
@@ -518,9 +518,9 @@ export class BackgroundServices extends EventEmitter {
               prunedAlerts,
             });
           }
-        } catch (err) {
+        } catch (error) {
           logger.error("Failed to prune database", {
-            error: err instanceof Error ? err.message : String(err),
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       }, "prune_database");
@@ -536,9 +536,9 @@ export class BackgroundServices extends EventEmitter {
       try {
         await optimizeDbMerge();
         logger.debug("FTS5 merge complete");
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to run FTS5 merge", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }, "optimize_db_merge");
@@ -571,9 +571,9 @@ export class BackgroundServices extends EventEmitter {
       try {
         await optimizeDbFts();
         logger.debug("FTS5 optimize complete");
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to run FTS5 optimize", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }, "optimize_db_fts");
@@ -584,9 +584,9 @@ export class BackgroundServices extends EventEmitter {
       try {
         await optimizeDbRegular();
         logger.info("Database optimized (ANALYZE)");
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to optimize database (ANALYZE)", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }, "optimize_db_full");
@@ -617,9 +617,9 @@ export class BackgroundServices extends EventEmitter {
             framesRemaining,
           });
         }
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to run WAL checkpoint", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }, "wal_checkpoint");

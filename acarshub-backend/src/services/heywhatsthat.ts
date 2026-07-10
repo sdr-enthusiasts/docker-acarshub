@@ -475,11 +475,12 @@ export async function initHeyWhatsThat(
     });
 
     cachedUrl = urlWithVersion;
-  } catch (err) {
-    const error = err instanceof Error ? err : new Error(String(err));
+  } catch (error) {
+    const normalizedError =
+      error instanceof Error ? error : new Error(String(error));
     logger.error(
       "Failed to fetch Hey What's That coverage data — overlay will be unavailable",
-      { error: error.message, token, alts },
+      { error: normalizedError.message, token, alts },
     );
     // Don't set cachedUrl — feature gracefully degrades to disabled
     cachedUrl = undefined;

@@ -1471,8 +1471,8 @@ export function runMigrationsInWorker(dbPath: string): Promise<void> {
       try {
         runMigrations(dbPath);
         resolve();
-      } catch (err) {
-        reject(err);
+      } catch (error) {
+        reject(error);
       }
       return;
     }
@@ -1516,8 +1516,8 @@ export function runMigrationsInWorker(dbPath: string): Promise<void> {
       try {
         runMigrations(dbPath);
         resolve();
-      } catch (err) {
-        reject(err);
+      } catch (error) {
+        reject(error);
       }
       return;
     }

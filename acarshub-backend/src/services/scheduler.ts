@@ -441,17 +441,18 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
         taskName: task.name,
         duration,
       });
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+    } catch (error) {
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error));
 
       logger.error("Task execution failed", {
         taskId: task.id,
         taskName: task.name,
-        error: error.message,
-        stack: error.stack,
+        error: normalizedError.message,
+        stack: normalizedError.stack,
       });
 
-      this.emit("taskError", task.id, task.name, error);
+      this.emit("taskError", task.id, task.name, normalizedError);
     }
   }
 

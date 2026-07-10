@@ -194,10 +194,10 @@ export class ZmqListener
     try {
       // Dynamic import so tests can mock the module without the native add-on.
       zmq = (await import("zeromq")) as unknown as ZmqModuleLike;
-    } catch (err) {
+    } catch (error) {
       logger.error(`${this.messageType} ZMQ: failed to load zeromq module`, {
         type: this.messageType,
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       this.isRunning = false;
       return;
@@ -215,16 +215,16 @@ export class ZmqListener
     try {
       sock.connect(endpoint);
       await Promise.resolve(sock.subscribe(""));
-    } catch (err) {
+    } catch (error) {
       logger.error(`${this.messageType} ZMQ connect/subscribe failed`, {
         type: this.messageType,
         endpoint,
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       this.emit(
         "error",
         this.messageType,
-        err instanceof Error ? err : new Error(String(err)),
+        error instanceof Error ? error : new Error(String(error)),
       );
       this.closeSocket();
       this.isRunning = false;
@@ -256,18 +256,18 @@ export class ZmqListener
         }
         this.handleFrame(frame);
       }
-    } catch (err) {
+    } catch (error) {
       // ETERM / ENOTSUP are thrown when the socket is closed — that is the
       // normal stop() path and should not be logged as an error.
       if (this.isRunning) {
         logger.error(`${this.messageType} ZMQ receive loop error`, {
           type: this.messageType,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.emit(
           "error",
           this.messageType,
-          err instanceof Error ? err : new Error(String(err)),
+          error instanceof Error ? error : new Error(String(error)),
         );
       }
     }
@@ -339,11 +339,11 @@ export class ZmqListener
       try {
         const message = JSON.parse(trimmed);
         this.emit("message", this.messageType, message);
-      } catch (err) {
+      } catch (error) {
         logger.debug(`${this.messageType} ZMQ skipping invalid JSON frame`, {
           type: this.messageType,
           line: trimmed.substring(0, 100),
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }

@@ -243,10 +243,10 @@ export class TcpListener
 
     try {
       this.socket.connect(this.port, this.host);
-    } catch (err) {
+    } catch (error) {
       logger.error(`${this.messageType} TCP connection failed`, {
         type: this.messageType,
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
 
       this.handleDisconnect();
@@ -331,7 +331,7 @@ export class TcpListener
       try {
         const message = JSON.parse(line);
         this.emit("message", this.messageType, message);
-      } catch (err) {
+      } catch (error) {
         if (i === lines.length - 1) {
           this.partialMessage = line;
 
@@ -343,7 +343,7 @@ export class TcpListener
           logger.debug(`${this.messageType} TCP skipping invalid JSON`, {
             type: this.messageType,
             line: line.substring(0, 100),
-            error: err instanceof Error ? err.message : String(err),
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       }
