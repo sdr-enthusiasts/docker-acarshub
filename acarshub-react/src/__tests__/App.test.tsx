@@ -162,9 +162,8 @@ describe("App", () => {
     it("wires Socket.IO + theme-aware-map hooks on mount", async () => {
       const App = await importApp();
       const { useSocketIO } = await import("../hooks/useSocketIO.ts");
-      const { useThemeAwareMapProvider } = await import(
-        "../hooks/useThemeAwareMapProvider.ts"
-      );
+      const { useThemeAwareMapProvider } =
+        await import("../hooks/useThemeAwareMapProvider.ts");
 
       render(<App />);
 
