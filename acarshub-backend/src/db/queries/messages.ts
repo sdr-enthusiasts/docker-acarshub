@@ -48,14 +48,31 @@ const logger = createLogger("db:messages");
  * DB_SAVEALL / emptiness checks).  Negative values distinguish them from real
  * DB row IDs (always positive) and guarantee every emitted message carries a
  * unique `uid` — preventing duplicate React keys on the frontend.
+ *
+ * STATE-02: encapsulated in a small factory rather than a bare module-level
+ * `let`, matching the pattern used for the other ambient-singleton counters
+ * in this module tree (statistics.ts, alerts.ts).
  */
-let unsavedMessageCounter = 0;
+function createUnsavedMessageCounterState() {
+  let counter = 0;
+  return {
+    decrementAndGet: (): number => {
+      counter -= 1;
+      return counter;
+    },
+    reset: (): void => {
+      counter = 0;
+    },
+  };
+}
+
+const unsavedMessageCounterState = createUnsavedMessageCounterState();
 
 /**
  * Reset the unsaved-message counter.  Exposed only for tests.
  */
 export function resetUnsavedMessageCounter(): void {
-  unsavedMessageCounter = 0;
+  unsavedMessageCounterState.reset();
 }
 
 /**
@@ -99,8 +116,7 @@ export function addMessage(
   // Provisional uid – replaced by the real row id when the message is saved.
   // For unsaved messages (empty + DB_SAVEALL off) we mint a unique negative id
   // so every Socket.IO emission carries a distinct uid (avoids duplicate React keys).
-  unsavedMessageCounter -= 1;
-  let uid = String(unsavedMessageCounter);
+  let uid = String(unsavedMessageCounterState.decrementAndGet());
 
   // Initialize alert match tracking
   const alertMetadata: AlertMetadata = {
