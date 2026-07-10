@@ -538,8 +538,31 @@ async function handleUpdateAlerts(
  * better-sqlite3 is synchronous so Node is single-threaded here, but we still
  * guard against a second client kicking off a second run while the first is
  * executing inside a setImmediate callback.
+ *
+ * STATE-02: encapsulated in a small factory (rather than a bare `let`) so
+ * the mutable flag isn't a raw module-level export, and so tests get an
+ * explicit reset hook instead of relying on the code's own finally-block
+ * cleanup to happen to leave the flag false between test cases.
  */
-let alertRegenInProgress = false;
+function createAlertRegenState() {
+  let inProgress = false;
+  return {
+    isInProgress: (): boolean => inProgress,
+    setInProgress: (value: boolean): void => {
+      inProgress = value;
+    },
+    reset: (): void => {
+      inProgress = false;
+    },
+  };
+}
+
+const alertRegenState = createAlertRegenState();
+
+/** Test-only reset hook for alertRegenState — see STATE-02. */
+export function resetAlertRegenStateForTesting(): void {
+  alertRegenState.reset();
+}
 
 /**
  * Handle regenerate alert matches request
@@ -574,7 +597,7 @@ function handleRegenerateAlertMatches(
     return;
   }
 
-  if (alertRegenInProgress) {
+  if (alertRegenState.isInProgress()) {
     logger.warn("Alert regeneration already in progress", {
       socketId: socket.id,
     });
@@ -584,7 +607,7 @@ function handleRegenerateAlertMatches(
     return;
   }
 
-  alertRegenInProgress = true;
+  alertRegenState.setInProgress(true);
 
   logger.info("Starting alert match regeneration", { socketId: socket.id });
 
@@ -656,7 +679,7 @@ function handleRegenerateAlertMatches(
         });
         socket.emit("regenerate_alert_matches_error", { error: message });
       } finally {
-        alertRegenInProgress = false;
+        alertRegenState.setInProgress(false);
       }
     })().catch((error: unknown) => {
       logger.error(
@@ -666,7 +689,7 @@ function handleRegenerateAlertMatches(
           error: error instanceof Error ? error.message : String(error),
         },
       );
-      alertRegenInProgress = false;
+      alertRegenState.setInProgress(false);
     });
   });
 }

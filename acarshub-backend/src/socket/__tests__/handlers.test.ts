@@ -211,7 +211,10 @@ import {
   isMigrationRunning,
   registerPendingSocket,
 } from "../../startup-state.js";
-import { registerHandlers } from "../handlers.js";
+import {
+  registerHandlers,
+  resetAlertRegenStateForTesting,
+} from "../handlers.js";
 
 // ---------------------------------------------------------------------------
 // Typed aliases for mocked functions
@@ -358,6 +361,11 @@ function simulateConnect(socket: MockSocket): void {
 beforeEach(() => {
   // Reset all mocks
   vi.clearAllMocks();
+
+  // STATE-02: alertRegenState is module-level; without this reset, a test
+  // that leaves it mid-flight (or a future test added before the finally
+  // block's own cleanup runs) would leak "in progress" into the next test.
+  resetAlertRegenStateForTesting();
 
   // Default config
   mockGetConfig.mockReturnValue(makeDefaultConfig());
@@ -1227,6 +1235,47 @@ describe("handleRegenerateAlertMatches", () => {
     expect(errors.some((e) => e.error.toLowerCase().includes("progress"))).toBe(
       false,
     );
+  });
+
+  it("regression: resetAlertRegenStateForTesting() clears in-progress state left dangling by a prior test (STATE-02)", async () => {
+    // Simulate a prior test leaving the module-level flag "stuck" at
+    // in-progress — e.g. because it triggered a regen but never awaited the
+    // deferred setImmediate work to let the finally block run. Without an
+    // explicit reset hook, this state would leak into whichever test runs
+    // next in this file (module-level state is shared across all `it`
+    // blocks since the module is only imported once).
+    mockGetCachedAlertTerms.mockReturnValue([]);
+    mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
+    mockRegenerateAllAlertMatches.mockReturnValue({
+      total_messages: 0,
+      matched_messages: 0,
+      total_matches: 0,
+    });
+
+    const dirtySocket = makeMockSocket("dirty-socket");
+    simulateConnect(dirtySocket);
+    dirtySocket.handlers.regenerate_alert_matches();
+    // Deliberately do NOT flush setImmediate — the finally block that would
+    // naturally clear the flag never runs, leaving it stuck at true.
+
+    resetAlertRegenStateForTesting();
+
+    // A fresh request on a different socket must succeed (not be rejected
+    // as "already in progress"), proving the explicit reset — not the
+    // code's own eventual cleanup — is what cleared the flag.
+    const freshSocket = makeMockSocket("fresh-socket");
+    triggerRegen(freshSocket);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const errors = emittedAs<{ error: string }>(
+      freshSocket,
+      "regenerate_alert_matches_error",
+    );
+    expect(errors.some((e) => e.error.toLowerCase().includes("progress"))).toBe(
+      false,
+    );
+    const started = emittedAs(freshSocket, "regenerate_alert_matches_started");
+    expect(started).toHaveLength(1);
   });
 });
 
