@@ -21,7 +21,7 @@
 import type { CurrentSearch, SearchHtmlMsg } from "@acarshub/types";
 import { SEARCH_PAGE_SIZE } from "../../config.js";
 import { databaseSearch } from "../../db/index.js";
-import type { SearchParams } from "../../db/queries/messages.js";
+import type { SearchParams } from "../../db/queries/messages/index.js";
 import { enrichMessages } from "../../formatters/enrichment.js";
 import { createLogger } from "../../utils/logger.js";
 import type { TypedSocket } from "../types.js";

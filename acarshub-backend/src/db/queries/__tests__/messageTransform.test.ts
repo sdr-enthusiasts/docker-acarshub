@@ -17,7 +17,7 @@ import {
   setAlertIgnore,
   setAlertTerms,
 } from "../alerts.js";
-import { getMessageByUid } from "../messages.js";
+import { getMessageByUid } from "../messages/index.js";
 import {
   addMessageFromJson,
   createDbSafeParams,

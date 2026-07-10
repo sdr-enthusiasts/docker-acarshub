@@ -1,6 +1,17 @@
 /**
  * Unit tests for message query functions
  *
+ * GOD-03: this file used to live at db/queries/__tests__/messages.test.ts
+ * and test a single 1281-line messages.ts. It now lives alongside the split
+ * module tree (db/queries/messages/{insert,search,range,delete,prune,
+ * optimize}.ts) and imports through the barrel (../index.js) exactly as
+ * external consumers do. The tests are intentionally NOT split per-module:
+ * every scenario shares one in-memory SQLite fixture (schema + FTS5 virtual
+ * table + triggers) set up once in beforeEach, and splitting would mean
+ * duplicating that fixture six times for no behavioural benefit — the
+ * module boundaries are an implementation-organisation concern, not a
+ * testing-boundary concern.
+ *
  * Tests cover:
  * - FTS5 full-text search with prefix matching
  * - LIKE-based fallback for substring matching
@@ -12,10 +23,11 @@ import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as clientModule from "../../client.js";
-import type * as helpersModule from "../../helpers.js";
-import * as schema from "../../schema.js";
-import { messages } from "../../schema.js";
+import * as clientModule from "../../../client.js";
+import type * as helpersModule from "../../../helpers.js";
+import * as schema from "../../../schema.js";
+import { messages } from "../../../schema.js";
+import { initializeMessageCounters } from "../../statistics.js";
 import {
   addMessage,
   databaseSearch,
@@ -25,8 +37,7 @@ import {
   grabMostRecent,
   pruneDatabase,
   resetUnsavedMessageCounter,
-} from "../messages.js";
-import { initializeMessageCounters } from "../statistics.js";
+} from "../index.js";
 
 // Mock updateFrequencies to avoid errors from missing frequency tables in test DB
 vi.mock("../../helpers.js", async () => {

@@ -70,7 +70,7 @@ import {
 } from "../db/index.js";
 import { runMigrations } from "../db/migrate.js";
 import { initializeAlertCache, setAlertTerms } from "../db/queries/alerts.js";
-import { getMessageByUid } from "../db/queries/messages.js";
+import { getMessageByUid } from "../db/queries/messages/index.js";
 import type { RawMessage } from "../db/queries/messageTransform.js";
 import { enrichMessage } from "../formatters/enrichment.js";
 import { formatAcarsMessage } from "../formatters/index.js";
