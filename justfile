@@ -108,7 +108,16 @@ ci:
     @echo "Building shared types package (required before TypeScript project references check)..."
     cd acarshub-types && npm run build
     @echo "Running TypeScript checks (all projects via project references)..."
-    npx tsc --build --force
+    # NOTE: deliberately NOT `npx tsc` here. `madge` (devDependency, NIT-05) pulls
+    # in a transitive typescript@5.x (its own tooling is incompatible with
+    # TypeScript 7 — see the tsc pin bump commit) which npm hoists to the
+    # *root* node_modules/.bin/tsc, shadowing the 7.x actually pinned by every
+    # workspace. `npx tsc` run from repo root would silently type-check with
+    # that wrong, older compiler instead of the one CI is actually meant to
+    # verify. Invoke a workspace-local tsc explicitly instead — all three
+    # workspaces pin the same exact typescript version by policy, so which
+    # one's binary drives the multi-project `--build` is arbitrary.
+    ./acarshub-backend/node_modules/.bin/tsc --build --force
     @echo "Running frontend build..."
     cd acarshub-react && npm run build
     @echo "Running backend build..."
