@@ -394,9 +394,16 @@ function parseLogLevel(input: string): LogLevel {
     return "error"; // <= 2
   }
 
-  // Fallback to string validation
-  if (validLogLevels.includes(input.toLocaleLowerCase() as LogLevel)) {
-    return input.toLowerCase() as LogLevel;
+  // Fallback to string validation. Use `toLowerCase()` (not
+  // `toLocaleLowerCase()`) on both the check and the returned value —
+  // we want deterministic ASCII-locale casing for log-level identifiers
+  // regardless of the host locale. In the Turkish locale, for example,
+  // `toLocaleLowerCase()` maps "I" to "ı" (dotless i) rather than "i",
+  // which could make the validation check and the returned value disagree
+  // (TYPE-07).
+  const lowered = input.toLowerCase();
+  if (validLogLevels.includes(lowered as LogLevel)) {
+    return lowered as LogLevel;
   }
 
   return "info";

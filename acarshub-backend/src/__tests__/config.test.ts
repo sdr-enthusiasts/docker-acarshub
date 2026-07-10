@@ -415,6 +415,19 @@ describe("config module", () => {
       const { MIN_LOG_LEVEL } = await import("../config.js");
       expect(MIN_LOG_LEVEL).toBe("warn");
     });
+
+    it("should use toLowerCase() (not toLocaleLowerCase()) so log-level parsing is locale-independent (TYPE-07 regression)", async () => {
+      // Turkish-locale toLocaleLowerCase() maps "I" -> "ı" (dotless i)
+      // instead of "i", which used to make the validation check
+      // (toLocaleLowerCase) and the returned value (toLowerCase) disagree.
+      // Spy on toLocaleLowerCase to prove parseLogLevel never calls it.
+      const localeSpy = vi.spyOn(String.prototype, "toLocaleLowerCase");
+      process.env.MIN_LOG_LEVEL = "WARN";
+      const { MIN_LOG_LEVEL } = await import("../config.js");
+      expect(MIN_LOG_LEVEL).toBe("warn");
+      expect(localeSpy).not.toHaveBeenCalled();
+      localeSpy.mockRestore();
+    });
   });
 
   describe("getConfig()", () => {
