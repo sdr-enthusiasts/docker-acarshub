@@ -108,7 +108,11 @@ function sleepSync(ms: number): void {
 // Types
 // ---------------------------------------------------------------------------
 
-export interface MigrateWorkerResult {
+// NIT-04: not exported — used only within this file's own `satisfies`
+// expressions below. Verified via grep that no other module or test
+// imports MigrateWorkerResult; the parent (migrate.ts) that spawns this
+// worker communicates over a plain JSON message, not this type.
+interface MigrateWorkerResult {
   success: boolean;
   error?: string;
 }
