@@ -344,7 +344,12 @@ export const LiveMessagesPage = () => {
               fieldMatches(msg.text, "text") ||
               fieldMatches(msg.data, "data") ||
               fieldMatches(msg.decoded_msg, "decoded_msg") ||
-              fieldMatches(msg.libacars, "libacars") ||
+              fieldMatches(
+                typeof msg.libacars === "object" && msg.libacars !== null
+                  ? JSON.stringify(msg.libacars)
+                  : msg.libacars,
+                "libacars",
+              ) ||
               // Identifiers
               fieldMatches(msg.tail, "tail") ||
               fieldMatches(msg.flight, "flight") ||

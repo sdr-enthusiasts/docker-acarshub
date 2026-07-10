@@ -380,6 +380,54 @@ describe("LiveMessagesPage", () => {
       expect(screen.getByText("Group: UAL123")).toBeInTheDocument();
       expect(screen.queryByText("Group: DAL456")).not.toBeInTheDocument();
     });
+
+    it("regression: filters groups by matching an already-parsed libacars object", async () => {
+      // msg.libacars can arrive as a pre-parsed LibacarsData object (not just
+      // a raw JSON string) — the search filter must stringify it rather than
+      // assume it's always a string.
+      const user = userEvent.setup();
+
+      useAppStore.setState({
+        messageGroups: new Map([
+          makeGroup("UAL123", 1, {
+            messages: [
+              {
+                uid: "UAL123-msg-0",
+                station_id: "TEST",
+                text: "test message",
+                timestamp: 1_000_000,
+                matched: false,
+                matched_text: [],
+                label: "H1",
+                message_type: "ACARS",
+                libacars: {
+                  "media-adv": {
+                    err: false,
+                    version: 0,
+                    current_link: {
+                      code: "H",
+                      descr: "HFVERYUNIQUETOKEN",
+                      established: false,
+                    },
+                  },
+                },
+              },
+            ] as unknown as MessageGroup["messages"],
+          }),
+          makeGroup("DAL456", 1),
+        ]),
+      });
+
+      render(<LiveMessagesPage />);
+
+      const filterInput = screen.getByTestId("text-filter");
+      await user.type(filterInput, "HFVERYUNIQUETOKEN");
+
+      const groups = screen.getAllByTestId("message-group");
+      expect(groups).toHaveLength(1);
+      expect(screen.getByText("Group: UAL123")).toBeInTheDocument();
+      expect(screen.queryByText("Group: DAL456")).not.toBeInTheDocument();
+    });
   });
 
   // -------------------------------------------------------------------------
