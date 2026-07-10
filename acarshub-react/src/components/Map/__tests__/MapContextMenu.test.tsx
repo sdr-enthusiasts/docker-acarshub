@@ -86,15 +86,6 @@ describe("MapContextMenu", () => {
     ).toBeInTheDocument();
   });
 
-  // Note on onClose call counts: MapContextMenu defines each item's onClick
-  // as `() => { handler(); onClose(); }`, AND the underlying ContextMenu
-  // ALSO calls onClose after every item click (see ContextMenu.tsx:173).
-  // This means onClose is invoked TWICE per item activation. It's harmless
-  // (onClose is idempotent in practice) but is a redundant call worth pinning
-  // so a future cleanup either removes the inner onClose or makes the dual
-  // call explicit. Tests below assert "at least once" rather than "exactly
-  // once" so the pin is on observable behaviour (menu closes) rather than
-  // implementation detail.
   it("invokes onTogglePause and closes the menu when toggle-pause is clicked", async () => {
     const user = userEvent.setup();
     const { onTogglePause, onClose } = renderMenu();
@@ -102,7 +93,7 @@ describe("MapContextMenu", () => {
     await user.click(screen.getByRole("menuitem", { name: /pause updates/i }));
 
     expect(onTogglePause).toHaveBeenCalledTimes(1);
-    expect(onClose).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("invokes onUnfollowAircraft and closes the menu when unfollow is clicked", async () => {
@@ -116,16 +107,21 @@ describe("MapContextMenu", () => {
     );
 
     expect(onUnfollowAircraft).toHaveBeenCalledTimes(1);
-    expect(onClose).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("regression: onClose is invoked twice per item activation (item-level + ContextMenu auto-close) — pinned so a cleanup that removes the redundancy is intentional, not accidental", async () => {
+  it("regression: onClose is invoked exactly once per item activation, from ContextMenu's own auto-close (NIT-09)", async () => {
+    // Previously MapContextMenu's item onClick handlers called onClose()
+    // themselves IN ADDITION TO the underlying ContextMenu component already
+    // calling onClose() after every item click (see ContextMenu.tsx
+    // handleItemClick) — a redundant double-call. This test fails (count
+    // === 2) without the NIT-09 fix and passes (count === 1) with it.
     const user = userEvent.setup();
     const { onClose } = renderMenu();
 
     await user.click(screen.getByRole("menuitem", { name: /pause updates/i }));
 
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("does not invoke onTogglePause when unfollow is clicked", async () => {
