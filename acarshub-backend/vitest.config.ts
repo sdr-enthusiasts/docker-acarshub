@@ -22,11 +22,12 @@ export default defineConfig({
       //
       // Thresholds are intentionally a few points below the floor so that
       // small unrelated refactors don't tip the build red. Ratchet these
-      // upward as untested modules (services/index.ts, services/station-ids.ts,
-      // services/decoder-listener.ts, db/client.ts, services/stats-pruning.ts)
-      // gain coverage. AGENTS.md targets are 80% for services and 90% for
-      // formatters/enrichment — the global floor below is the conservative
-      // services target; per-area higher thresholds can be added later.
+      // upward as untested modules (services/background-services.ts,
+      // services/station-ids.ts, services/decoder-listener.ts, db/client.ts,
+      // services/stats-pruning.ts) gain coverage. AGENTS.md targets are 80%
+      // for services and 90% for formatters/enrichment — the global floor
+      // below is the conservative services target; per-area higher
+      // thresholds can be added later.
       thresholds: {
         statements: 80,
         branches: 65,

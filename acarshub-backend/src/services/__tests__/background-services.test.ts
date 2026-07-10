@@ -17,7 +17,8 @@
 /**
  * BackgroundServices fan-in integration tests
  *
- * These tests verify that BackgroundServices correctly:
+ * These tests verify that BackgroundServices — composing a ListenerManager
+ * instance (services/listener-manager.ts, GOD-04) — correctly:
  * - Creates one listener per ConnectionDescriptor when multiple are configured.
  * - Reports connected: true when ANY listener for a type is connected.
  * - Reports connected: false only when ALL listeners for a type are disconnected.
@@ -25,8 +26,10 @@
  *
  * We do NOT exercise the full BackgroundServices lifecycle (database, socket.io,
  * scheduler) here — those are covered by their own test files.  Instead we
- * directly test the private wiring logic by inspecting the public
- * getConnectionStatus() and by interacting with the MessageQueue.
+ * directly test the wiring logic by inspecting the public getConnectionStatus()
+ * and by interacting with the MessageQueue. ListenerManager's own unit tests
+ * live in listener-manager.test.ts; this file is the integration seam that
+ * exercises it through BackgroundServices' public surface.
  *
  * The decoder-listener factory and all three listener classes are mocked so
  * that the tests are deterministic and fast without network sockets.

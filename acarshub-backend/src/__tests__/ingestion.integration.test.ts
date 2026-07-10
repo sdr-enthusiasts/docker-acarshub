@@ -20,7 +20,7 @@
  *  - Formatter output keys mismatching what createDbSafeParams reads
  *    (the entire ACARS column set is keyed by string and silently
  *    defaults to "" when a key is missing).
- *  - normalizeMessageType in services/index.ts being skipped or run
+ *  - normalizeMessageType in services/background-services.ts being skipped or run
  *    in the wrong order (must be BEFORE addMessageFromJson AND
  *    BEFORE the Socket.IO emit so DB rows and clients see the same
  *    "VDL-M2"/"IMS-L" form, not the wire-format "VDLM2"/"IMSL").
@@ -42,7 +42,7 @@
  * STRATEGY
  * --------
  * Re-implement the *processing handler* from
- * services/index.ts::setupMessageQueue() in this file rather than
+ * services/background-services.ts::setupMessageQueue() in this file rather than
  * instantiating BackgroundServices.  BackgroundServices.initialize()
  * pulls env-driven config, creates scheduler tasks, optionally
  * spawns ADS-B pollers, and binds decoder listeners — none of which
@@ -90,12 +90,12 @@ import {
 import type { MessageType } from "../services/tcp-listener.js";
 
 // ---------------------------------------------------------------------------
-// Production handler — kept in sync with services/index.ts::setupMessageQueue
+// Production handler — kept in sync with services/background-services.ts::setupMessageQueue
 // ---------------------------------------------------------------------------
 
 /**
  * Wire format -> DB format. Mirrors normalizeMessageType() in
- * services/index.ts. Kept as a free function (rather than imported)
+ * services/background-services.ts. Kept as a free function (rather than imported)
  * because the production copy is private.  If they ever diverge, the
  * "DB row uses VDL-M2 not VDLM2" test below catches it.
  */
@@ -517,7 +517,7 @@ describe("ingestion pipeline (integration)", () => {
         // Pin the real MessageQueue -> handler wiring. The queue
         // emits 'message' (QueuedMessage) for each push() once
         // through the internal EventEmitter. This is the actual
-        // glue used by services/index.ts::setupMessageQueue.
+        // glue used by services/background-services.ts::setupMessageQueue.
         const queue = getMessageQueue(15);
 
         queue.on("message", (queued: QueuedMessage) => {
