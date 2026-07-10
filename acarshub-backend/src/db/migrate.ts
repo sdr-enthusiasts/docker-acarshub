@@ -48,7 +48,6 @@ import { assertRow, assertRowOrUndefined } from "./helpers.js";
 
 const logger = createLogger("db:migrate");
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
-const LATEST_REVISION = "803398f85958";
 
 interface MigrationStep {
   revision: string;
@@ -1388,6 +1387,18 @@ const MIGRATIONS: MigrationStep[] = [
     upgrade: migration15_dropUnnecessaryIndexes2,
   },
 ];
+
+/**
+ * Revision of the most recent migration step, used only for log messages
+ * (the actual "are we up to date" decision is driven by MIGRATIONS.length,
+ * not this constant). Derived from the array itself — rather than a
+ * hand-maintained string literal — specifically because NIT-07 found the
+ * previous hardcoded copy ("803398f85958") had drifted one migration
+ * behind the real latest ("8c9d47f5ed13") after migration 15 was added.
+ * Declared here, immediately after MIGRATIONS, so the two can never drift
+ * apart again.
+ */
+const LATEST_REVISION = MIGRATIONS[MIGRATIONS.length - 1]?.revision ?? "";
 
 /**
  * Run migrations from current version to latest
