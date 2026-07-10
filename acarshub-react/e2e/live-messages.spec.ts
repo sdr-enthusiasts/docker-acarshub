@@ -234,10 +234,28 @@ test.describe("Live Messages Page", () => {
     });
     await expect(uAl123Groups).toHaveCount(1);
 
-    // The counter inside the group should read "Message 1/2"
+    // The tab strip always renders one tab per message regardless of
+    // viewport (`.message-group__tabs` is only hidden under `@media print`),
+    // so it's the viewport-agnostic way to assert "this group holds 2
+    // messages, and the first one is active".
+    await expect(uAl123Groups.locator(".tab-list .tab")).toHaveCount(2);
     await expect(
-      uAl123Groups.locator(".counter-text", { hasText: /message 1\/2/i }),
-    ).toBeVisible();
+      uAl123Groups.locator(".tab-list .tab").first(),
+    ).toHaveAttribute("aria-selected", "true");
+
+    // The header counter chip (`.counter-text`, "Message 1/2") is
+    // intentionally hidden below 420px viewport width to avoid clipping
+    // against the other header chips -- see the `&__counter` comment in
+    // `_message-group.scss`. Only assert on it when the current viewport
+    // is wide enough for it to actually render (regression: this test used
+    // to assert unconditionally and failed 100% of the time on the Mobile
+    // Chrome / Mobile Safari projects, whose emulated viewports are ~390px).
+    const vp = page.viewportSize() ?? { width: 1280, height: 720 };
+    if (vp.width > 420) {
+      await expect(
+        uAl123Groups.locator(".counter-text", { hasText: /message 1\/2/i }),
+      ).toBeVisible();
+    }
   });
 
   // -------------------------------------------------------------------------
