@@ -46,13 +46,17 @@ export class SpriteLoader {
     try {
       // Import spritesheet data directly - Vite handles base path
       // Use a timeout to prevent mobile Safari from hanging
-      const loadPromise = new Promise<void>((resolve, reject) => {
-        try {
-          this.data = spritesheetData as SpritesheetData;
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
+      //
+      // NIT-06: the assignment below is a plain reference to a value
+      // already resolved by the static `import spritesheetData from "..."`
+      // at the top of this module — Vite/esbuild inline JSON imports at
+      // build time, so this line can never throw. The try/catch that used
+      // to wrap it here was unreachable dead code (confirmed via coverage:
+      // the branch was never hit in any test run). The outer try/catch
+      // below still applies to the genuinely-reachable timeout rejection.
+      const loadPromise = new Promise<void>((resolve) => {
+        this.data = spritesheetData as SpritesheetData;
+        resolve();
       });
 
       const timeoutPromise = new Promise<void>((_, reject) => {
