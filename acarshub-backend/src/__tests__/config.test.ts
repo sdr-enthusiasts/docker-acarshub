@@ -430,6 +430,56 @@ describe("config module", () => {
     });
   });
 
+  describe("Operational tunables (NIT-01)", () => {
+    it("should use documented defaults", async () => {
+      const {
+        MESSAGE_BATCH_CHUNK_SIZE,
+        SEARCH_PAGE_SIZE,
+        HEYWHATSTHAT_TIMEOUT_MS,
+        TCP_READ_TIMEOUT_MS,
+        DB_CACHE_SIZE_KB,
+        DB_WAL_AUTOCHECKPOINT_PAGES,
+        DB_BACKUP_MMAP_SIZE_BYTES,
+      } = await import("../config.js");
+
+      expect(MESSAGE_BATCH_CHUNK_SIZE).toBe(25);
+      expect(SEARCH_PAGE_SIZE).toBe(50);
+      expect(HEYWHATSTHAT_TIMEOUT_MS).toBe(30_000);
+      expect(TCP_READ_TIMEOUT_MS).toBe(1000);
+      expect(DB_CACHE_SIZE_KB).toBe(10_000);
+      expect(DB_WAL_AUTOCHECKPOINT_PAGES).toBe(200);
+      expect(DB_BACKUP_MMAP_SIZE_BYTES).toBe(268_435_456);
+    });
+
+    it("should allow each tunable to be overridden via its env var", async () => {
+      process.env.MESSAGE_BATCH_CHUNK_SIZE = "10";
+      process.env.SEARCH_PAGE_SIZE = "20";
+      process.env.HEYWHATSTHAT_TIMEOUT_MS = "5000";
+      process.env.TCP_READ_TIMEOUT_MS = "2000";
+      process.env.DB_CACHE_SIZE_KB = "5000";
+      process.env.DB_WAL_AUTOCHECKPOINT_PAGES = "100";
+      process.env.DB_BACKUP_MMAP_SIZE_BYTES = "1000000";
+
+      const {
+        MESSAGE_BATCH_CHUNK_SIZE,
+        SEARCH_PAGE_SIZE,
+        HEYWHATSTHAT_TIMEOUT_MS,
+        TCP_READ_TIMEOUT_MS,
+        DB_CACHE_SIZE_KB,
+        DB_WAL_AUTOCHECKPOINT_PAGES,
+        DB_BACKUP_MMAP_SIZE_BYTES,
+      } = await import("../config.js");
+
+      expect(MESSAGE_BATCH_CHUNK_SIZE).toBe(10);
+      expect(SEARCH_PAGE_SIZE).toBe(20);
+      expect(HEYWHATSTHAT_TIMEOUT_MS).toBe(5000);
+      expect(TCP_READ_TIMEOUT_MS).toBe(2000);
+      expect(DB_CACHE_SIZE_KB).toBe(5000);
+      expect(DB_WAL_AUTOCHECKPOINT_PAGES).toBe(100);
+      expect(DB_BACKUP_MMAP_SIZE_BYTES).toBe(1_000_000);
+    });
+  });
+
   describe("getConfig()", () => {
     it("should return complete configuration object", async () => {
       const { getConfig } = await import("../config.js");

@@ -40,7 +40,12 @@ import type {
   Terms,
 } from "@acarshub/types";
 import { sql } from "drizzle-orm";
-import { getConfig, VERSIONS } from "../config.js";
+import {
+  getConfig,
+  MESSAGE_BATCH_CHUNK_SIZE,
+  SEARCH_PAGE_SIZE,
+  VERSIONS,
+} from "../config.js";
 import {
   databaseSearch,
   getAlertCounts,
@@ -263,7 +268,7 @@ export function handleConnect(
     // 6. Send recent messages in chunks (from ring buffer — no DB query or re-enrichment)
     const nonAlertMessages = getRecentMessages();
 
-    const chunkSize = 25;
+    const chunkSize = MESSAGE_BATCH_CHUNK_SIZE;
     const totalMessages = nonAlertMessages.length;
 
     logger.debug("Sending recent messages", {
@@ -406,7 +411,7 @@ function handleQuerySearch(
 
     // Calculate pagination: results_after is the page number (0-indexed)
     const page = params.results_after ?? 0;
-    const limit = 50;
+    const limit = SEARCH_PAGE_SIZE;
     const offset = page * limit;
 
     // Normalize msg_type from display values to database storage format.
@@ -777,7 +782,7 @@ function handleAlertTermQuery(
       icao: params.icao || undefined,
       flight: params.flight || undefined,
       tail: params.tail || undefined,
-      limit: 50,
+      limit: SEARCH_PAGE_SIZE,
     });
 
     const enrichedMessages = enrichMessages(searchResults.messages);
@@ -820,8 +825,8 @@ function handleQueryAlertsByTerm(
 
     const results = searchAlertsByTerm(
       params.term,
-      50,
-      (params.page ?? 0) * 50,
+      SEARCH_PAGE_SIZE,
+      (params.page ?? 0) * SEARCH_PAGE_SIZE,
     );
 
     const enrichedAlerts = results.map((alert) => {

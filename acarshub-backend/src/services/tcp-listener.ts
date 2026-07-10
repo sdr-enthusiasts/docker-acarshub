@@ -17,6 +17,7 @@
 import { EventEmitter } from "node:events";
 import { Socket } from "node:net";
 import type { ConnectionDescriptor } from "../config.js";
+import { TCP_READ_TIMEOUT_MS } from "../config.js";
 import { createLogger } from "../utils/logger.js";
 import type {
   DecoderListenerEvents,
@@ -191,7 +192,7 @@ export class TcpListener
     }
 
     this.socket = new Socket();
-    this.socket.setTimeout(1000); // 1 second timeout for reads
+    this.socket.setTimeout(TCP_READ_TIMEOUT_MS);
 
     this.socket.on("connect", () => {
       this.isConnected = true;

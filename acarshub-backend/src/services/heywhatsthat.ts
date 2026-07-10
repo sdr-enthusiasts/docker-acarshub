@@ -47,6 +47,7 @@ import {
   HEYWHATSTHAT_ALTS,
   HEYWHATSTHAT_ID,
   HEYWHATSTHAT_SAVE,
+  HEYWHATSTHAT_TIMEOUT_MS,
 } from "../config.js";
 import { createLogger } from "../utils/logger.js";
 
@@ -311,7 +312,10 @@ async function fetchFromApi(
   logger.info("Fetching Hey What's That coverage data", { url });
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30_000); // 30 s timeout
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    HEYWHATSTHAT_TIMEOUT_MS,
+  );
 
   let response: Response;
   try {

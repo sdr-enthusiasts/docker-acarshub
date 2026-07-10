@@ -115,6 +115,9 @@ vi.mock("../../config.js", () => ({
     backend: "4.0.0-test",
     frontend: "4.0.0-test",
   },
+  // NIT-01: formerly-hardcoded magic numbers, now sourced from config.ts.
+  MESSAGE_BATCH_CHUNK_SIZE: 25,
+  SEARCH_PAGE_SIZE: 50,
 }));
 
 vi.mock("../../db/index.js", () => ({

@@ -417,6 +417,51 @@ export const MIN_LOG_LEVEL: LogLevel = parseLogLevel(rawLogLevel);
 export const RRD_PATH = process.env.RRD_PATH || "/run/acars/acarshub.rrd";
 
 /**
+ * Operational tunables (NIT-01)
+ *
+ * These were previously hardcoded magic numbers scattered across
+ * socket/handlers.ts, services/heywhatsthat.ts, services/tcp-listener.ts,
+ * and db/client.ts. Centralised here with documented defaults and env-var
+ * overrides for ops tunability.
+ */
+
+/** Number of messages per `acars_msg_batch` chunk sent to a newly connected client. */
+export const MESSAGE_BATCH_CHUNK_SIZE = process.env.MESSAGE_BATCH_CHUNK_SIZE
+  ? Number.parseInt(process.env.MESSAGE_BATCH_CHUNK_SIZE, 10)
+  : 25;
+
+/** Page size for `query_search` / `alert_term_query` database searches. */
+export const SEARCH_PAGE_SIZE = process.env.SEARCH_PAGE_SIZE
+  ? Number.parseInt(process.env.SEARCH_PAGE_SIZE, 10)
+  : 50;
+
+/** Timeout for the Hey What's That coverage-data fetch. */
+export const HEYWHATSTHAT_TIMEOUT_MS = process.env.HEYWHATSTHAT_TIMEOUT_MS
+  ? Number.parseInt(process.env.HEYWHATSTHAT_TIMEOUT_MS, 10)
+  : 30_000;
+
+/** Read-idle timeout for TCP decoder-feed connections. */
+export const TCP_READ_TIMEOUT_MS = process.env.TCP_READ_TIMEOUT_MS
+  ? Number.parseInt(process.env.TCP_READ_TIMEOUT_MS, 10)
+  : 1000;
+
+/** SQLite page cache size, in KB (applied as a negative `cache_size` pragma). */
+export const DB_CACHE_SIZE_KB = process.env.DB_CACHE_SIZE_KB
+  ? Number.parseInt(process.env.DB_CACHE_SIZE_KB, 10)
+  : 10_000;
+
+/** SQLite `wal_autocheckpoint` threshold, in pages, for both primary and backup connections. */
+export const DB_WAL_AUTOCHECKPOINT_PAGES = process.env
+  .DB_WAL_AUTOCHECKPOINT_PAGES
+  ? Number.parseInt(process.env.DB_WAL_AUTOCHECKPOINT_PAGES, 10)
+  : 200;
+
+/** SQLite `mmap_size` for the backup connection only, in bytes (primary is intentionally 0 — see db/client.ts). */
+export const DB_BACKUP_MMAP_SIZE_BYTES = process.env.DB_BACKUP_MMAP_SIZE_BYTES
+  ? Number.parseInt(process.env.DB_BACKUP_MMAP_SIZE_BYTES, 10)
+  : 268_435_456;
+
+/**
  * Alert terms (loaded from environment or defaults)
  *
  * STATE-01: These are kept as module-private mutable state and exposed only
