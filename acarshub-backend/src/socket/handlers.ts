@@ -590,61 +590,79 @@ function handleRegenerateAlertMatches(
 
   // Defer the heavy synchronous work so Socket.IO can flush the started event
   // before the DB work blocks the event loop (mirrors Python's background task)
-  setImmediate(async () => {
-    try {
-      const startTime = performance.now();
-      const alertTerms = getCachedAlertTerms();
-      const alertIgnoreTerms = getCachedAlertIgnoreTerms();
-      const stats = regenerateAllAlertMatches(alertTerms, alertIgnoreTerms);
+  //
+  // The inner try/catch/finally handles the expected regeneration-failure
+  // path, but if that catch/finally block *itself* throws (e.g. socket.emit
+  // failing because the client disconnected mid-run), the outer async
+  // function's returned promise would reject with nothing awaiting it —
+  // an unhandled rejection at process level (ERR-02). Explicitly catch the
+  // IIFE's promise as a backstop so that can never happen.
+  setImmediate(() => {
+    void (async () => {
+      try {
+        const startTime = performance.now();
+        const alertTerms = getCachedAlertTerms();
+        const alertIgnoreTerms = getCachedAlertIgnoreTerms();
+        const stats = regenerateAllAlertMatches(alertTerms, alertIgnoreTerms);
 
-      // Reheat ring buffers so alert cache reflects the regenerated matches.
-      // regenerateAllAlertMatches() no longer calls reheatMessageBuffers()
-      // internally — the socket handler owns the full sequence so it can
-      // broadcast the result to clients after the await completes.
-      await reheatMessageBuffers();
+        // Reheat ring buffers so alert cache reflects the regenerated matches.
+        // regenerateAllAlertMatches() no longer calls reheatMessageBuffers()
+        // internally — the socket handler owns the full sequence so it can
+        // broadcast the result to clients after the await completes.
+        await reheatMessageBuffers();
 
-      const elapsed = performance.now() - startTime;
+        const elapsed = performance.now() - startTime;
 
-      logger.info("Alert match regeneration complete", {
-        socketId: socket.id,
-        stats,
-        elapsed: `${elapsed.toFixed(2)}ms`,
-      });
+        logger.info("Alert match regeneration complete", {
+          socketId: socket.id,
+          stats,
+          elapsed: `${elapsed.toFixed(2)}ms`,
+        });
 
-      socket.emit("regenerate_alert_matches_complete", {
-        success: true,
-        stats,
-      });
+        socket.emit("regenerate_alert_matches_complete", {
+          success: true,
+          stats,
+        });
 
-      // Broadcast updated alert counts to ALL clients (matches Python behaviour)
-      const alertCounts = getAlertCounts();
-      const alertTermData: Record<
-        number,
-        { count: number; id: number; term: string }
-      > = {};
-      for (let i = 0; i < alertCounts.length; i++) {
-        alertTermData[i] = {
-          count: alertCounts[i].count ?? 0,
-          id: i,
-          term: alertCounts[i].term ?? "",
-        };
+        // Broadcast updated alert counts to ALL clients (matches Python behaviour)
+        const alertCounts = getAlertCounts();
+        const alertTermData: Record<
+          number,
+          { count: number; id: number; term: string }
+        > = {};
+        for (let i = 0; i < alertCounts.length; i++) {
+          alertTermData[i] = {
+            count: alertCounts[i].count ?? 0,
+            id: i,
+            term: alertCounts[i].term ?? "",
+          };
+        }
+        io.of("/main").emit("alert_terms", { data: alertTermData });
+
+        // Broadcast refreshed alert content to all connected clients so their
+        // alert pages update without requiring a reconnect.
+        const refreshedAlerts = getRecentAlerts();
+        io.of("/main").emit("alerts_refreshed", { messages: refreshedAlerts });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error("Error during alert match regeneration", {
+          socketId: socket.id,
+          error: message,
+        });
+        socket.emit("regenerate_alert_matches_error", { error: message });
+      } finally {
+        alertRegenInProgress = false;
       }
-      io.of("/main").emit("alert_terms", { data: alertTermData });
-
-      // Broadcast refreshed alert content to all connected clients so their
-      // alert pages update without requiring a reconnect.
-      const refreshedAlerts = getRecentAlerts();
-      io.of("/main").emit("alerts_refreshed", { messages: refreshedAlerts });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.error("Error during alert match regeneration", {
-        socketId: socket.id,
-        error: message,
-      });
-      socket.emit("regenerate_alert_matches_error", { error: message });
-    } finally {
+    })().catch((error: unknown) => {
+      logger.error(
+        "Unhandled error in alert match regeneration background task",
+        {
+          socketId: socket.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
       alertRegenInProgress = false;
-    }
+    });
   });
 }
 

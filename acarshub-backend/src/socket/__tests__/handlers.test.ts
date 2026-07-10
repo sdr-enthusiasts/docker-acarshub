@@ -1173,6 +1173,58 @@ describe("handleRegenerateAlertMatches", () => {
       messages: [fakeAlert],
     });
   });
+
+  it("regression: an error thrown from within the catch block itself does not become an unhandled rejection and still clears the in-progress flag (ERR-02)", async () => {
+    // Force the regeneration path to throw so we exercise the inner catch...
+    mockGetCachedAlertTerms.mockReturnValue([]);
+    mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
+    mockRegenerateAllAlertMatches.mockImplementation(() => {
+      throw new Error("regen failed");
+    });
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // ...and make the catch block's own socket.emit() call throw, simulating
+    // e.g. the client having disconnected mid-run. Before the ERR-02 fix,
+    // this would reject the setImmediate(async () => {...}) IIFE's promise
+    // with nothing awaiting it — an unhandled rejection that vitest surfaces
+    // as a test-file failure. After the fix, the outer .catch() backstop
+    // handles it and this test completes normally.
+    (socket.emit as Mock).mockImplementation((event: string) => {
+      if (event === "regenerate_alert_matches_error") {
+        throw new Error("socket disconnected mid-emit");
+      }
+    });
+
+    socket.handlers.regenerate_alert_matches();
+
+    // Flush the setImmediate and the backstop .catch() microtask.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // The backstop must have reset the in-progress flag — prove it by
+    // switching the mock back to a normal implementation and confirming a
+    // fresh request is NOT rejected as "already in progress".
+    (socket.emit as Mock).mockImplementation(vi.fn());
+    mockRegenerateAllAlertMatches.mockReturnValue({
+      total_messages: 0,
+      matched_messages: 0,
+      total_matches: 0,
+    });
+    mockGetAlertCounts.mockReturnValue([]);
+
+    socket.handlers.regenerate_alert_matches();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const errors = emittedAs<{ error: string }>(
+      socket,
+      "regenerate_alert_matches_error",
+    );
+    expect(errors.some((e) => e.error.toLowerCase().includes("progress"))).toBe(
+      false,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
