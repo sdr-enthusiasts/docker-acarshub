@@ -27,6 +27,23 @@ import type {
 const logger = createLogger("services:zmq-listener");
 
 /**
+ * Minimal shape of the zeromq `Subscriber` instance this listener relies on.
+ * Hoisted to module scope (TYPE-08) so it can be used as the `socket` field's
+ * type instead of `unknown` + an inline cast at every call site.
+ */
+interface ZmqSubscriberLike {
+  connect(endpoint: string): void;
+  subscribe(topic: string): void | Promise<void>;
+  close(): void;
+  events: AsyncIterable<{ type: string }>;
+  [Symbol.asyncIterator](): AsyncIterator<[Buffer]>;
+}
+
+interface ZmqModuleLike {
+  Subscriber: new () => ZmqSubscriberLike;
+}
+
+/**
  * ZMQ Subscriber listener for decoder feeds.
  *
  * Opens a ZMQ SUB socket and connects to the remote PUB endpoint exposed by
@@ -59,10 +76,11 @@ export class ZmqListener
   private isConnected = false;
 
   // The socket is created on start() and set to null on stop().
-  // Typed as unknown to avoid a hard import of the zeromq types at the module
-  // level — zeromq is loaded dynamically so tests can mock it without needing
-  // the native add-on compiled.
-  private socket: unknown = null;
+  // Typed as ZmqSubscriberLike (a hand-rolled structural interface, not the
+  // real zeromq types) to avoid a hard import of the zeromq module at the
+  // module level — zeromq is loaded dynamically so tests can mock it without
+  // needing the native add-on compiled.
+  private socket: ZmqSubscriberLike | null = null;
 
   constructor(type: MessageType, descriptor: ConnectionDescriptor) {
     super();
@@ -143,7 +161,7 @@ export class ZmqListener
     if (this.socket !== null) {
       try {
         // zeromq Subscriber exposes .close() synchronously.
-        (this.socket as { close(): void }).close();
+        this.socket.close();
       } catch (error) {
         // The "expected" case is calling close() on an already-closed socket,
         // which the zeromq add-on can throw on. Anything else (OOM, native
@@ -171,18 +189,6 @@ export class ZmqListener
    * closed by stop().
    */
   private async connectAndReceive(): Promise<void> {
-    interface ZmqSubscriberLike {
-      connect(endpoint: string): void;
-      subscribe(topic: string): void | Promise<void>;
-      close(): void;
-      events: AsyncIterable<{ type: string }>;
-      [Symbol.asyncIterator](): AsyncIterator<[Buffer]>;
-    }
-
-    interface ZmqModuleLike {
-      Subscriber: new () => ZmqSubscriberLike;
-    }
-
     let zmq: ZmqModuleLike;
 
     try {
