@@ -24,7 +24,7 @@
 import type { Server as HTTPServer } from "node:http";
 import { Server as SocketIOServer } from "socket.io";
 import { createLogger } from "../utils/logger.js";
-import { registerHandlers } from "./handlers.js";
+import { registerHandlers } from "./handlers/index.js";
 import type { TypedSocketServer } from "./types.js";
 
 const logger = createLogger("socket:server");

@@ -214,7 +214,7 @@ import {
 import {
   registerHandlers,
   resetAlertRegenStateForTesting,
-} from "../handlers.js";
+} from "../handlers/index.js";
 
 // ---------------------------------------------------------------------------
 // Typed aliases for mocked functions

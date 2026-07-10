@@ -55,7 +55,7 @@ import {
   initTimeSeriesCache,
   stopTimeSeriesCache,
 } from "./services/timeseries-cache.js";
-import { handleConnect } from "./socket/handlers.js";
+import { handleConnect } from "./socket/handlers/index.js";
 import {
   initializeSocketServer,
   shutdownSocketServer,
