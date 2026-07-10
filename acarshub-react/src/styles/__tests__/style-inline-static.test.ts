@@ -93,8 +93,11 @@ describe("STYLE-INLINE-STATIC: static inline styles moved to SCSS", () => {
     });
   });
 
-  describe("SettingsModal.tsx — 3 inline-style sites", () => {
-    const tsx = read("components/SettingsModal.tsx");
+  describe("SettingsModal.tsx — 3 inline-style sites (now in settings/MapTab.tsx, GOD-05)", () => {
+    // GOD-05 split SettingsModal.tsx into per-tab components; all three of
+    // these sites live in the Map tab's markup, extracted to
+    // components/settings/MapTab.tsx.
+    const tsx = read("components/settings/MapTab.tsx");
     const scss = read("styles/components/_settings-modal.scss");
 
     it("no longer uses any `style={{ width: ... }}` props", () => {
