@@ -19,7 +19,7 @@ import {
   type Server as NetServer,
   type Socket as NetSocket,
 } from "node:net";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TcpListener } from "../tcp-listener.js";
 
 describe("TcpListener", () => {
@@ -608,6 +608,55 @@ describe("TcpListener", () => {
 
       // Should only have connected once
       expect(connectCount).toBe(1);
+    });
+
+    it("regression: clears the reconnectTimer handle when stop() is called (LEAK-02)", async () => {
+      // connect()/handleDisconnect() both early-return once isRunning is
+      // false, so a stale (uncleared) reconnectTimer firing after stop()
+      // produces no observable behaviour difference — assert on the
+      // pending-timer count directly instead.
+      ({ server: testServer, port: assignedPort } = await createTestServer());
+
+      const listener = new TcpListener({
+        type: "ACARS",
+        host: "127.0.0.1",
+        port: assignedPort,
+        reconnectDelay: 5000,
+      });
+
+      await new Promise<void>((resolve) => {
+        listener.once("connected", () => resolve());
+        listener.start();
+      });
+
+      // Fake timers *after* the connection is established so the
+      // setTimeout() inside handleDisconnect() is the one
+      // vi.getTimerCount() can see. Socket close/end events are real
+      // socket I/O (net.Socket), not JS timers, so they still fire
+      // normally while fake timers are active.
+      vi.useFakeTimers();
+
+      try {
+        const disconnectedPromise = new Promise<void>((resolve) => {
+          listener.once("disconnected", () => resolve());
+        });
+
+        await closeTestServer(testServer);
+        testServer = null;
+        await disconnectedPromise;
+
+        // Exactly one pending timer: the reconnectTimer scheduled by
+        // handleDisconnect().
+        expect(vi.getTimerCount()).toBe(1);
+
+        listener.stop();
+
+        // LEAK-02 regression: stop() must clear the reconnectTimer handle,
+        // not just set isRunning = false.
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

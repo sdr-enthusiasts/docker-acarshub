@@ -15,7 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import * as dgram from "node:dgram";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConnectionDescriptor } from "../../config.js";
 import { UdpListener } from "../udp-listener.js";
 
@@ -324,6 +324,52 @@ describe("UdpListener", () => {
       // Second call should be a no-op — no error, still connected
       listener.start();
       expect(listener.connected).toBe(true);
+    });
+
+    it("regression: clears the retryTimer handle when stop() is called (LEAK-02)", async () => {
+      // Occupy the port so start() schedules a retryTimer via
+      // handleBindFailure(). bind()'s eventual "error" no longer calling
+      // this.bind() again post-stop is unobservable from the outside (bind()
+      // itself early-returns once isRunning is false), so this test asserts
+      // directly on the pending-timer count instead of on retry behaviour.
+      const occupier = dgram.createSocket("udp4");
+      await new Promise<void>((resolve, reject) => {
+        occupier.bind(port, "127.0.0.1", () => resolve());
+        occupier.on("error", reject);
+      });
+
+      // Fake timers *before* start() so the setTimeout() call inside
+      // handleBindFailure() is the one vi.getTimerCount() can see. The
+      // dgram bind failure itself is real async I/O (libuv), not a JS
+      // timer, so it still fires normally while fake timers are active.
+      vi.useFakeTimers();
+
+      try {
+        const descriptor: ConnectionDescriptor = {
+          listenType: "udp",
+          host: "127.0.0.1",
+          port,
+        };
+        listener = new UdpListener("ACARS", descriptor, 5000);
+
+        const errorPromise = waitForEvent(listener, "error");
+        listener.start();
+        await errorPromise;
+
+        // Exactly one pending timer: the retryTimer scheduled by
+        // handleBindFailure(). (waitForEvent()'s own guard timer was
+        // already cleared when the "error" event resolved the promise.)
+        expect(vi.getTimerCount()).toBe(1);
+
+        listener.stop();
+
+        // LEAK-02 regression: stop() must clear the retryTimer handle,
+        // not just set isRunning = false.
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+        occupier.close();
+      }
     });
   });
 
