@@ -16,22 +16,17 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type React from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MessageCard } from "../components/MessageCard";
 import { MessageGroup } from "../components/MessageGroup";
+import { useAlertsHistoricalSearch } from "../hooks/useAlertsHistoricalSearch";
+import { useAlertsListHeight } from "../hooks/useAlertsListHeight";
+import { useAlertsScrollAnchor } from "../hooks/useAlertsScrollAnchor";
+import { useAlertsScrollReset } from "../hooks/useAlertsScrollReset";
 import { useRegisterScrollContainer } from "../hooks/useRegisterScrollContainer";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import type { AcarsMsg } from "../types";
 import { uiLogger } from "../utils/logger";
-import { isScrollingToTop } from "../utils/scrollRegistry";
 
 const RESULTS_PER_PAGE = 50;
 
@@ -68,21 +63,31 @@ const LIST_PADDING_START = 16;
  * - Manual "Mark All Read" button
  * - Individual "Mark Read" buttons per message
  * - Mobile-first responsive design
+ *
+ * EFFECT-04: the page's original 5 useEffects + 1 useLayoutEffect (list-
+ * height measurement, historical search subscription/trigger, scroll reset,
+ * scroll anchoring) have been extracted into domain hooks under src/hooks/.
+ * This component composes those hooks plus the pure derivations
+ * (stats/alertGroupsArray/pageNumbers) and the virtualizers.
  */
 export const AlertsPage = () => {
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("live");
   const [selectedTerm, setSelectedTerm] = useState<string>("");
-  const [historicalResults, setHistoricalResults] = useState<AcarsMsg[]>([]);
-  const [historicalTotal, setHistoricalTotal] = useState(0);
   const [historicalPage, setHistoricalPage] = useState(0);
-  const [queryTime, setQueryTime] = useState<number | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
   const alertMessageGroups = useAppStore((state) => state.alertMessageGroups);
   const alertTerms = useAppStore((state) => state.alertTerms);
   const readMessageUids = useAppStore((state) => state.readMessageUids);
   const markAllAlertsAsRead = useAppStore((state) => state.markAllAlertsAsRead);
+
+  const { historicalResults, historicalTotal, queryTime, isSearching } =
+    useAlertsHistoricalSearch({
+      viewMode,
+      selectedTerm,
+      historicalPage,
+      setHistoricalPage,
+    });
 
   // ---------------------------------------------------------------------------
   // Virtual list infrastructure
@@ -106,50 +111,7 @@ export const AlertsPage = () => {
    */
   const activeTabIndices = useRef<Map<string, number>>(new Map());
 
-  /**
-   * Total virtual size from the previous render, used by scroll anchoring.
-   */
-  const prevLiveTotalSize = useRef(0);
-
-  /**
-   * Height of the virtual scroll container in pixels, measured via
-   * ResizeObserver so it exactly fills the remaining viewport below the
-   * page header and controls bar without any hardcoded pixel values.
-   */
-  const [listHeight, setListHeight] = useState(() =>
-    typeof window !== "undefined"
-      ? Math.max(window.innerHeight - 200, 300)
-      : 400,
-  );
-
-  // Dynamically measure the available height for the virtual scroll container.
-  useEffect(() => {
-    const scrollEl = scrollContainerRef.current;
-    if (!scrollEl) return;
-
-    // Make the container keyboard-scrollable (WCAG 2.1.1 / axe
-    // scrollable-region-focusable).  Set programmatically here rather than
-    // as a JSX attribute to avoid Biome's noNoninteractiveTabindex lint,
-    // which cannot be suppressed via a JSX expression comment (the suppression
-    // target and the attribute node are different AST nodes).
-    scrollEl.tabIndex = 0;
-
-    const measure = () => {
-      const rect = scrollEl.getBoundingClientRect();
-      const available = window.innerHeight - rect.top;
-      setListHeight(Math.max(available, 200));
-    };
-
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(scrollEl);
-    window.addEventListener("resize", measure);
-
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
+  const listHeight = useAlertsListHeight(scrollContainerRef);
 
   // Count total alert messages, unread alerts, and unique aircraft
   const stats = useMemo(() => {
@@ -185,44 +147,6 @@ export const AlertsPage = () => {
     };
   }, [alertMessageGroups, readMessageUids]);
 
-  // Socket listener for historical alerts results
-  useEffect(() => {
-    if (!socketService.isInitialized()) {
-      return;
-    }
-
-    const socket = socketService.getSocket();
-
-    const handleHistoricalResults = (data: {
-      total_count: number;
-      messages: AcarsMsg[];
-      term: string;
-      page: number;
-      query_time: number;
-    }) => {
-      // Backend already enriches messages with decodedText
-      setHistoricalResults(data.messages);
-      setHistoricalTotal(data.total_count);
-      setHistoricalPage(data.page);
-      setQueryTime(data.query_time);
-      setIsSearching(false);
-
-      uiLogger.info("Received historical alerts results", {
-        term: data.term,
-        page: data.page,
-        count: data.messages.length,
-        total: data.total_count,
-        queryTime: data.query_time,
-      });
-    };
-
-    socket.on("alerts_by_term_results", handleHistoricalResults);
-
-    return () => {
-      socket.off("alerts_by_term_results", handleHistoricalResults);
-    };
-  }, []);
-
   useEffect(() => {
     setCurrentPage("Alerts");
     socketService.notifyPageChange("Alerts");
@@ -241,22 +165,14 @@ export const AlertsPage = () => {
     viewMode,
   ]);
 
-  // Execute historical search when term or page changes
-  useEffect(() => {
-    if (viewMode === "historical" && selectedTerm) {
-      setIsSearching(true);
-      socketService.queryAlertsByTerm(selectedTerm, historicalPage);
-    }
-  }, [viewMode, selectedTerm, historicalPage]);
-
   // Scroll to top when the user switches modes, changes the selected term,
   // or navigates to a different historical page.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: viewMode, selectedTerm, and historicalPage are intentional trigger dependencies — the effect reads scrollContainerRef (a stable ref) but must fire whenever these values change to reset the scroll position.
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0;
-    }
-  }, [viewMode, selectedTerm, historicalPage]);
+  useAlertsScrollReset(
+    scrollContainerRef,
+    viewMode,
+    selectedTerm,
+    historicalPage,
+  );
 
   // Convert messageGroups Map to array and sort by most recent message (newest first)
   const alertGroupsArray = useMemo(() => {
@@ -310,41 +226,13 @@ export const AlertsPage = () => {
     paddingStart: LIST_PADDING_START,
   });
 
-  // ---------------------------------------------------------------------------
-  // Scroll anchoring for live mode
-  //
-  // When the virtual size changes (new prepend or height remeasurement) AND
-  // the user has scrolled past the padding zone, adjust scrollTop by the same
-  // delta so the currently-visible content does not appear to jump.
-  //
-  // Historical mode skips anchoring because results replace entirely on each
-  // page change — the scroll-to-top effect above handles that reset.
-  // ---------------------------------------------------------------------------
-  useLayoutEffect(() => {
-    if (viewMode !== "live") {
-      prevLiveTotalSize.current = liveVirtualizer.getTotalSize();
-      return;
-    }
-
-    const newTotalSize = liveVirtualizer.getTotalSize();
-    const scrollEl = scrollContainerRef.current;
-
-    // Skip the anchor while a scroll-to-top animation is in flight.
-    // A direct scrollTop assignment would cancel the smooth scroll mid-flight,
-    // leaving the user stuck partway down the page when a new message arrives
-    // during the animation.
-    if (
-      scrollEl &&
-      scrollEl.scrollTop > LIST_PADDING_START &&
-      !isScrollingToTop()
-    ) {
-      const delta = newTotalSize - prevLiveTotalSize.current;
-      if (delta !== 0) {
-        scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop + delta);
-      }
-    }
-
-    prevLiveTotalSize.current = newTotalSize;
+  // Scroll anchoring for live mode — see useAlertsScrollAnchor's own
+  // docstring for why historical mode is excluded.
+  useAlertsScrollAnchor({
+    viewMode,
+    liveVirtualizer,
+    scrollContainerRef,
+    paddingStart: LIST_PADDING_START,
   });
 
   const handleMarkAllRead = useCallback(() => {
