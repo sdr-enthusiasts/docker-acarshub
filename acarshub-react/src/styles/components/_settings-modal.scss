@@ -23,42 +23,51 @@
  */
 
 .settings-modal {
+  // Mobile-first: full-screen modal by default (no backdrop inset, no
+  // rounded corners, fills the viewport). _modal.scss's own .modal-backdrop
+  // and .modal base classes provide the desktop-sized/centered/rounded
+  // appearance restored below at the tablet breakpoint.
+  .modal-backdrop {
+    padding: 0;
+
+    @include breakpoint(md) {
+      padding: $spacing-lg; // restore _modal.scss's own default backdrop inset
+    }
+  }
+
   .modal {
-    max-width: 700px;
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    border-radius: 0;
+
+    @include breakpoint(md) {
+      max-width: 700px;
+      height: auto;
+      max-height: 90vh; // restore _modal.scss's .modal base max-height
+      margin: auto; // restore centering
+      border-radius: $radius-lg; // restore _modal.scss's .modal base radius
+    }
   }
 
   .modal__header {
     padding-top: 1.5rem;
     padding-bottom: 1rem;
-    border-top-left-radius: 0.75rem;
-    border-top-right-radius: 0.75rem;
+    border-radius: 0;
     background-color: var(--color-surface0);
+
+    @include breakpoint(md) {
+      border-top-left-radius: 0.75rem;
+      border-top-right-radius: 0.75rem;
+    }
   }
 
   .modal__body {
     flex: 1;
     overflow-y: auto;
     padding: 0;
-  }
-
-  // Mobile responsiveness - full screen
-  @media (max-width: 768px) {
-    .modal-backdrop {
-      padding: 0;
-    }
-
-    .modal {
-      max-width: 100%;
-      width: 100%;
-      height: 100vh;
-      max-height: 100vh;
-      margin: 0;
-      border-radius: 0;
-    }
-
-    .modal__header {
-      border-radius: 0;
-    }
   }
 }
 
@@ -73,7 +82,8 @@
   display: flex;
   gap: 0.5rem;
   border-bottom: 2px solid var(--color-surface1);
-  padding: 0 1.5rem;
+  // Mobile-first: extra bottom padding for the always-visible scrollbar.
+  padding: 0 0.75rem 0.5rem;
   background-color: var(--color-surface0);
   position: sticky;
   top: 0;
@@ -82,60 +92,60 @@
   overflow-y: hidden;
   position: relative;
 
-  // Desktop: hide scrollbar, show on hover
+  // Mobile-first: visible scrollbar always (no hover state on touch devices
+  // to reveal it on demand).
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-
-  &:hover {
-    scrollbar-color: var(--color-surface2) transparent;
-  }
+  scrollbar-color: var(--color-overlay0) var(--color-surface1);
 
   &::-webkit-scrollbar {
-    height: 3px;
+    height: 6px;
   }
 
   &::-webkit-scrollbar-track {
-    background: transparent;
+    background: var(--color-surface1);
+    border-radius: 3px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 2px;
+    background: var(--color-overlay0);
+    border-radius: 3px;
   }
 
-  &:hover::-webkit-scrollbar-thumb {
-    background: var(--color-surface2);
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-overlay1);
   }
 
-  // Mobile: show visible scrollbar always
-  @media (max-width: 768px) {
-    padding: 0 0.75rem 0.5rem; // Extra bottom padding for scrollbar
-    gap: 0.5rem;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-overlay0) var(--color-surface1);
+  @include breakpoint(md) {
+    padding: 0 1.5rem;
+
+    // Desktop: hide scrollbar, show on hover
+    scrollbar-color: transparent transparent;
+
+    &:hover {
+      scrollbar-color: var(--color-surface2) transparent;
+    }
 
     &::-webkit-scrollbar {
-      height: 6px;
+      height: 3px;
     }
 
     &::-webkit-scrollbar-track {
-      background: var(--color-surface1);
-      border-radius: 3px;
+      background: transparent;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: var(--color-overlay0);
-      border-radius: 3px;
+      background: transparent;
+      border-radius: 2px;
     }
 
-    &::-webkit-scrollbar-thumb:hover {
-      background: var(--color-overlay1);
+    &:hover::-webkit-scrollbar-thumb {
+      background: var(--color-surface2);
     }
   }
 }
 
 .settings-tab {
-  padding: 0.625rem 1rem;
+  padding: 0.75rem 1rem; // mobile-first
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -146,6 +156,10 @@
   white-space: nowrap;
   transition: all 0.2s ease;
   margin-bottom: -2px;
+
+  @include breakpoint(md) {
+    padding: 0.625rem 1rem;
+  }
 
   &:hover {
     color: var(--color-text);
@@ -161,18 +175,17 @@
     outline: 2px solid var(--color-blue);
     outline-offset: -2px;
   }
-
-  @media (max-width: 768px) {
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
-  }
 }
 
 // Settings Panel (Tab Content)
 .settings-panel {
-  padding: 1.5rem 1.5rem 0;
+  padding: 1rem 1rem 0; // mobile-first
   flex: 1;
   animation: fadeIn 0.2s ease;
+
+  @include breakpoint(md) {
+    padding: 1.5rem 1.5rem 0;
+  }
 
   // Cards handle their own padding and styling
   .card {
@@ -180,10 +193,6 @@
     margin-left: 0;
     margin-right: 0;
     width: 100%;
-  }
-
-  @media (max-width: 768px) {
-    padding: 1rem 1rem 0;
   }
 }
 
@@ -267,7 +276,8 @@
 // Custom Slider (for volume, max messages, etc.)
 .settings-slider {
   width: 100%;
-  height: 6px;
+  // Mobile-first: larger touch target track/thumb sizing.
+  height: 8px;
   appearance: none;
   -webkit-appearance: none;
   background: transparent;
@@ -275,19 +285,29 @@
   cursor: pointer;
   margin: 0.75rem 0;
 
+  @include breakpoint(md) {
+    height: 6px;
+  }
+
   // WebKit (Chrome, Safari, Edge)
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     background: var(--color-blue);
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     border: 3px solid var(--color-base);
-    margin-top: -7px; // Centers thumb on track: (20px - 6px) / 2 = 7px
+    margin-top: -8px; // Centers thumb on track: (24px - 8px) / 2 = 8px
+
+    @include breakpoint(md) {
+      width: 20px;
+      height: 20px;
+      margin-top: -7px; // Centers thumb on track: (20px - 6px) / 2 = 7px
+    }
 
     &:hover {
       background: var(--color-sapphire);
@@ -301,21 +321,30 @@
 
   &::-webkit-slider-runnable-track {
     width: 100%;
-    height: 6px;
+    height: 8px;
     background: var(--color-surface1);
     border-radius: 3px;
+
+    @include breakpoint(md) {
+      height: 6px;
+    }
   }
 
   // Firefox
   &::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     background: var(--color-blue);
     border: 3px solid var(--color-base);
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+    @include breakpoint(md) {
+      width: 20px;
+      height: 20px;
+    }
 
     &:hover {
       background: var(--color-sapphire);
@@ -329,15 +358,23 @@
 
   &::-moz-range-track {
     width: 100%;
-    height: 6px;
+    height: 8px;
     background: var(--color-surface1);
     border-radius: 3px;
+
+    @include breakpoint(md) {
+      height: 6px;
+    }
   }
 
   &::-moz-range-progress {
     background: var(--color-blue);
-    height: 6px;
+    height: 8px;
     border-radius: 3px;
+
+    @include breakpoint(md) {
+      height: 6px;
+    }
   }
 
   // Focus state
@@ -359,34 +396,6 @@
       cursor: not-allowed;
     }
   }
-
-  // Mobile: larger touch targets
-  @media (max-width: 768px) {
-    height: 8px;
-
-    &::-webkit-slider-thumb {
-      width: 24px;
-      height: 24px;
-      margin-top: -8px; // (24px - 8px) / 2 = 8px
-    }
-
-    &::-webkit-slider-runnable-track {
-      height: 8px;
-    }
-
-    &::-moz-range-thumb {
-      width: 24px;
-      height: 24px;
-    }
-
-    &::-moz-range-track {
-      height: 8px;
-    }
-
-    &::-moz-range-progress {
-      height: 8px;
-    }
-  }
 }
 
 // Settings Footer
@@ -394,21 +403,23 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  // Mobile-first: stacked, no rounded corners (full-screen modal).
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 0;
   border-top: 1px solid var(--color-surface1);
   background-color: var(--color-surface0);
-  border-bottom-left-radius: 0.75rem;
-  border-bottom-right-radius: 0.75rem;
   position: sticky;
   bottom: 0;
   z-index: 10;
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-radius: 0; // No rounded corners on mobile (full screen)
+  @include breakpoint(md) {
+    flex-direction: row;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom-left-radius: 0.75rem;
+    border-bottom-right-radius: 0.75rem;
   }
 }
 
@@ -417,26 +428,39 @@
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  // Mobile-first: stacked, full-width buttons.
+  width: 100%;
+  flex-direction: column;
 
-  @media (max-width: 768px) {
+  .btn {
     width: 100%;
-    flex-direction: column;
+  }
+
+  @include breakpoint(md) {
+    width: auto;
+    flex-direction: row;
 
     .btn {
-      width: 100%;
+      width: auto;
     }
   }
 }
 
 .settings-footer-left {
-  @media (max-width: 768px) {
-    order: 2;
+  // Mobile-first: secondary actions (Import/Export) come after the primary
+  // actions on the stacked mobile layout.
+  order: 2;
+
+  @include breakpoint(md) {
+    order: 0;
   }
 }
 
 .settings-footer-right {
-  @media (max-width: 768px) {
-    order: 1;
+  order: 1;
+
+  @include breakpoint(md) {
+    order: 0;
   }
 }
 
@@ -511,8 +535,9 @@
 
 .alert-terms-input {
   flex: 1;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.8125rem;
+  // Mobile-first: larger padding/font, better for mobile keyboards.
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
   color: var(--color-text);
   background-color: var(--color-surface0);
   border: 1px solid var(--color-surface2);
@@ -520,6 +545,11 @@
   outline: none;
   transition: all 0.2s ease;
   font-family: inherit;
+
+  @include breakpoint(md) {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
 
   &::placeholder {
     color: var(--color-subtext0);
@@ -532,11 +562,6 @@
   &:focus {
     border-color: var(--color-blue);
     box-shadow: 0 0 0 3px rgba(var(--color-blue-rgb), 0.1);
-  }
-
-  @media (max-width: 768px) {
-    padding: 0.75rem 1rem;
-    font-size: 1rem; // Better for mobile keyboards
   }
 }
 
@@ -559,11 +584,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0.625rem;
+  // Mobile-first: larger chip padding/font.
+  padding: 0.5rem 0.875rem;
   background-color: var(--color-red);
   color: var(--color-base);
   border-radius: 1rem;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
   font-family: monospace;
   letter-spacing: 0.02em;
@@ -571,6 +597,11 @@
   max-width: 100%;
   word-break: break-word;
   overflow-wrap: break-word;
+
+  @include breakpoint(md) {
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+  }
 
   &--ignore {
     background-color: var(--color-overlay2);
@@ -581,19 +612,29 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    // SCSS-TOUCH mobile-first base: chip removal × previously 28×28 on
+    // mobile — below WCAG 2.1 AA 44×44 mandate.
+    width: 44px;
+    height: 44px;
     padding: 0;
     margin: 0;
     background: transparent;
     border: none;
     border-radius: 50%;
     color: inherit;
-    font-size: 1.125rem;
+    font-size: 1.5rem;
     line-height: 1;
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: inherit;
+
+    @include breakpoint(md) {
+      // Desktop stays compact (chips can be dense; mouse pointer doesn't
+      // need the larger affordance).
+      width: 18px;
+      height: 18px;
+      font-size: 1.125rem;
+    }
 
     &:hover {
       background-color: rgba(0, 0, 0, 0.2);
@@ -606,21 +647,6 @@
     &:focus-visible {
       outline: 2px solid currentColor;
       outline-offset: 2px;
-    }
-  }
-
-  // Mobile: larger touch targets
-  @media (max-width: 768px) {
-    padding: 0.5rem 0.875rem;
-    font-size: 0.875rem;
-
-    &__remove {
-      // SCSS-TOUCH: chip removal × on mobile. Previously 28×28 — below WCAG
-      // 2.1 AA 44×44 mandate. Desktop stays compact at 18×18 (chips can be
-      // dense; mouse pointer doesn't need the affordance).
-      width: 44px;
-      height: 44px;
-      font-size: 1.5rem;
     }
   }
 }
