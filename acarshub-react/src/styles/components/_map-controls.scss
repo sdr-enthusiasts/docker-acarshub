@@ -21,9 +21,27 @@
   position: absolute;
   top: 94px; // Below zoom controls (32px height + borders + margins)
   right: 10px;
-  z-index: 100;
+  // Must exceed maplibre's own .maplibregl-ctrl-top-right (z-index: 300, see
+  // _map.scss) -- .map-controls establishes its own stacking context here,
+  // so no descendant z-index (e.g. .map-overlays-menu__dropdown, the
+  // provider-selector menu, the filters flyout) can ever escape and stack
+  // above a sibling context with a higher z-index than this one, no matter
+  // how high the descendant's own z-index is set. Popouts that open upward
+  // or extend past this column's own footprint need to render above the
+  // zoom controls when they spatially overlap.
+  z-index: 310;
   display: flex;
   flex-direction: column;
+  // Each group sizes to its own content instead of being stretched to match
+  // the widest sibling (default align-items: stretch). Without this, a
+  // group containing a wider button (e.g. the 44px MapOverlaysMenu flyout,
+  // shown only at short viewport heights) stretches every other group to
+  // its width, and since their buttons have an explicit (narrower) width,
+  // they fall back to flex-start alignment -- visibly shifting every other
+  // icon left/inward. flex-end keeps every group flush against the right
+  // edge (matching the `right: 10px` positioning intent) regardless of
+  // which sibling group is currently widest.
+  align-items: flex-end;
   gap: var(--spacing-sm);
   pointer-events: none;
 
