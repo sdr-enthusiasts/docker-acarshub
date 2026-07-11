@@ -2,7 +2,11 @@
   "$schema": "https://biomejs.dev/schemas/2.4.9/schema.json",
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/js-other"]
+    "includes": [
+      "**",
+      "!**/js-other",
+      "!acarshub-react/src/assets/images/*.svg"
+    ]
   },
   "vcs": {
     "enabled": true,
