@@ -245,9 +245,17 @@
   }
 }
 
-// Generic breakpoint-max mixin with size parameter (max-width)
+// DEPRECATED (SCSS-MOBILE): max-width media queries are a desktop-first
+// anti-pattern -- DESIGN_LANGUAGE.md mandates mobile-first (min-width).
+// Base styles should be unqualified mobile defaults; use `breakpoint($size)`
+// (min-width) for tablet/desktop overrides instead of gating mobile styles
+// behind a max-width query. This mixin is kept only until every existing
+// caller is converted (see SCSS-MOBILE in agent-docs/REMEDIATION_PLAN.md),
+// then it will be deleted outright.
+//
 // Used to hide content or apply styles only on screens smaller than breakpoint
 @mixin breakpoint-max($size) {
+  @warn "breakpoint-max() is deprecated (desktop-first anti-pattern -- see SCSS-MOBILE in agent-docs/REMEDIATION_PLAN.md). Restructure to mobile-first using breakpoint() for tablet/desktop overrides instead.";
   @if $size == sm {
     @media (max-width: #{$breakpoint-sm - 1px}) {
       @content;
