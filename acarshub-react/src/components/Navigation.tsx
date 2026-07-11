@@ -18,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import acarsLogo from "../assets/images/acarshub.svg";
 import { useMediaQuery } from "../hooks/useMediaQuery";
-import { getMessageFilterProps } from "../pages/LiveMessagesPage";
+import { getMessageFilterProps } from "../hooks/useMessageFilters";
 import {
   selectAdsbEnabled,
   selectUnreadAlertCount,

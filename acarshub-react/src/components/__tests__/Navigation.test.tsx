@@ -90,10 +90,12 @@ vi.mock("../../utils/scrollRegistry", () => ({
   scrollToTop: vi.fn(),
 }));
 
-// LiveMessagesPage exports a module-level singleton that Navigation
-// polls via getMessageFilterProps(). We don't want to pull the page
-// into the test (it would drag the entire socket layer with it).
-vi.mock("../../pages/LiveMessagesPage", () => ({
+// useMessageFilters (EFFECT-02: extracted from LiveMessagesPage.tsx) exports
+// a module-level singleton that Navigation polls via getMessageFilterProps().
+// Mocked for explicit test isolation, even though the hook module itself is
+// now lightweight (no socket-layer imports) — unlike the page it used to
+// live in.
+vi.mock("../../hooks/useMessageFilters", () => ({
   getMessageFilterProps: vi.fn(() => null),
 }));
 
