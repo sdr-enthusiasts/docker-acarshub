@@ -228,18 +228,19 @@
  */
 
 .btn--sm {
-  // SCSS-TOUCH hybrid: keep compact appearance on desktop (current padding/font),
-  // grow padding + font on mobile so the visible affordance matches the 44px hit
-  // area. Without the mobile bump, .btn--sm renders at ~26px tall — well below
-  // the WCAG 2.1 AA / AGENTS.md 44px mandate.
-  padding: $spacing-xs $spacing-md;
-  font-size: $font-size-sm;
+  // SCSS-TOUCH hybrid, mobile-first: grow padding + font so the visible
+  // affordance matches the 44px hit area on mobile. Desktop relaxes back
+  // to the compact appearance -- without the mobile bump, .btn--sm renders
+  // at ~26px tall, well below the WCAG 2.1 AA / AGENTS.md 44px mandate.
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-base;
+  min-height: 44px;
   gap: $spacing-xs;
 
-  @media (max-width: #{$breakpoint-md - 1px}) {
-    padding: $spacing-sm $spacing-md;
-    font-size: $font-size-base;
-    min-height: 44px;
+  @include breakpoint(md) {
+    padding: $spacing-xs $spacing-md;
+    font-size: $font-size-sm;
+    min-height: unset;
   }
 }
 
@@ -281,25 +282,25 @@
  */
 
 .btn--icon {
-  // SCSS-TOUCH: desktop keeps 40px (existing density), mobile grows to 44px to
-  // meet WCAG 2.1 AA. Same pattern applied to sm/lg variants below.
+  // SCSS-TOUCH mobile-first: 44px to meet WCAG 2.1 AA. Desktop relaxes to
+  // 40px (existing density). Same pattern applied to the sm variant below.
   padding: $spacing-sm;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 
-  @media (max-width: #{$breakpoint-md - 1px}) {
-    width: 44px;
-    height: 44px;
+  @include breakpoint(md) {
+    width: 40px;
+    height: 40px;
   }
 
   &.btn--sm {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     padding: $spacing-xs;
 
-    @media (max-width: #{$breakpoint-md - 1px}) {
-      width: 44px;
-      height: 44px;
+    @include breakpoint(md) {
+      width: 32px;
+      height: 32px;
     }
   }
 
