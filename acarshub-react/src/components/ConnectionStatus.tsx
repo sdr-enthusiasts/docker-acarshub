@@ -42,10 +42,10 @@ export const ConnectionStatus = ({ isConnected }: ConnectionStatusProps) => {
   }
 
   return (
-    <div className="connection-status disconnected">
-      <div className="connection-status-content">
-        <span className="connection-status-icon">⚠️</span>
-        <span className="connection-status-text">
+    <div className="connection-status connection-status--disconnected">
+      <div className="connection-status__content">
+        <span className="connection-status__icon">⚠️</span>
+        <span className="connection-status__text">
           Disconnected from ACARS Hub backend. Attempting to reconnect...
         </span>
       </div>

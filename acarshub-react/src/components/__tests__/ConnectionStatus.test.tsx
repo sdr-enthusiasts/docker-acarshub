@@ -16,10 +16,22 @@
  *     enabled — otherwise the user sees a phantom warning on every page
  *     load before the first heartbeat lands.
  *  3. When disconnected AND the setting is enabled, the banner MUST
- *     render with the warning copy and the .disconnected class so the
- *     SCSS theme can colour it (Catppuccin red on Mocha, peach on
- *     Latte).  A render-without-class regression would silently leave
+ *     render with the warning copy and the
+ *     .connection-status--disconnected BEM modifier class so the SCSS
+ *     theme can colour it (Catppuccin red/warning on Mocha, peach on
+ *     Latte). A render-without-class regression would silently leave
  *     the banner styled like a normal info bar.
+ *
+ * Regression: the component previously rendered bare, non-BEM classes
+ * (class="connection-status disconnected", connection-status-content,
+ * connection-status-icon, connection-status-text) that did not match
+ * any selector in _connection-status.scss (which uses BEM
+ * connection-status--disconnected / __content / __icon / __text).
+ * Every color-coded/structural rule in that file was consequently dead
+ * CSS -- the banner rendered but never received its intended warning
+ * background. Fixed by aligning the component's classes to the BEM
+ * convention the SCSS (and every other component in this codebase)
+ * already uses.
  *
  * The component takes `isConnected` as a prop (not from a store) so the
  * tests drive that directly; only the showConnectionStatus setting is
@@ -101,13 +113,20 @@ describe("ConnectionStatus", () => {
       expect(banner).not.toBeNull();
     });
 
-    it("applies the .disconnected modifier class for SCSS theming", () => {
-      // Regression guard: the SCSS theme keys off .disconnected to
-      // colour the banner red/peach.  Losing this class would silently
-      // leave the warning styled like a normal info bar.
+    it("applies the connection-status--disconnected BEM modifier class for SCSS theming", () => {
+      // Regression guard: _connection-status.scss keys off the BEM
+      // modifier .connection-status--disconnected (not a bare
+      // .disconnected class) to colour the banner red/peach. Losing
+      // this class -- or reverting to the bare, non-BEM class name --
+      // would silently leave every color-coded rule in that stylesheet
+      // dead, and the warning styled like a normal info bar.
       const { container } = render(<ConnectionStatus isConnected={false} />);
       const banner = container.querySelector(".connection-status");
-      expect(banner?.classList.contains("disconnected")).toBe(true);
+      expect(
+        banner?.classList.contains("connection-status--disconnected"),
+      ).toBe(true);
+      // Explicitly pin against regressing to the old, mismatched name.
+      expect(banner?.classList.contains("disconnected")).toBe(false);
     });
 
     it("includes the warning icon and reconnect copy", () => {
@@ -120,18 +139,20 @@ describe("ConnectionStatus", () => {
       expect(text).toContain("reconnect");
     });
 
-    it("uses the expected DOM structure for SCSS targeting", () => {
-      // Pin the .connection-status > .connection-status-content >
-      // (.connection-status-icon + .connection-status-text) structure.
-      // The SCSS depends on this nesting; flattening or renaming would
-      // silently break the layout.
+    it("uses the expected BEM DOM structure for SCSS targeting", () => {
+      // Pin the .connection-status > .connection-status__content >
+      // (.connection-status__icon + .connection-status__text) structure.
+      // _connection-status.scss depends on this exact BEM nesting;
+      // flattening or reverting to non-BEM names would silently break
+      // the styling again (see the regression note at the top of this
+      // file).
       const { container } = render(<ConnectionStatus isConnected={false} />);
       const content = container.querySelector(
-        ".connection-status > .connection-status-content",
+        ".connection-status > .connection-status__content",
       );
       expect(content).not.toBeNull();
-      expect(content?.querySelector(".connection-status-icon")).not.toBeNull();
-      expect(content?.querySelector(".connection-status-text")).not.toBeNull();
+      expect(content?.querySelector(".connection-status__icon")).not.toBeNull();
+      expect(content?.querySelector(".connection-status__text")).not.toBeNull();
     });
   });
 });
