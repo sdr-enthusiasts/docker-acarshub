@@ -1884,6 +1884,153 @@ code yet).**
 
 **Effort:** Phase A: 0.5-1 day. Phase B: 1-2 days.
 
+**Phase A findings (this session — audit only, no code changed).**
+
+**1. Implementation site confirmed.** `acarshub-react/src/components/Map/RangeRings.tsx`
+is the sole implementation; `RangeRings.test.tsx`'s existing 13-test suite
+already pins the nice-form-base and settings-fallback behavior described
+below, so no new unit-test infrastructure is needed for Phase B — the
+existing suite is the regression harness.
+
+The exact algorithm (`RangeRings.tsx:127-208`):
+
+1. If there's no live map ref or `viewState` (SSR/first-paint/tests), fall
+   back to `settings.map.rangeRings` (default `[100, 200, 300]`) — not
+   itself part of the bug, just the static-fallback path.
+2. Otherwise, read `map.getBounds()` and compute the great-circle distance
+   (haversine, NM) from the station to each of the four edge midpoints
+   (north/south/east/west), **not** the corners.
+3. `minEdgeDistance = min(north, south, east, west)` — the single shortest
+   of the four edge distances.
+4. `maxDistance = minEdgeDistance * 0.7` — a flat 30% safety margin,
+   applied on top of the already-shortest edge.
+5. `spacing = maxDistance / 3`, rounded to a "nice" `1/2/5 × 10^n` interval
+   (`roundToNiceInterval`).
+6. Rings are always exactly `[spacing, spacing * 2, spacing * 3]` — a
+   hardcoded count of 3, unconditionally, at every zoom level and viewport
+   size. There is no zoom-level branching at all; the only inputs are
+   `stationLat/Lon`, `map.getBounds()`, and the constant `0.7` / `3`.
+
+**2. Live reproduction (Docker Playwright, `mcr.microsoft.com/playwright:v1.61.1-noble`,
+matching `Dockerfile.e2e`'s pinned version).** Built `acarshub-types` +
+`acarshub-react` (`VITE_E2E=true`) inside a throwaway container, served via
+`vite preview`, and drove screenshots with an ad-hoc script (not committed)
+using the same injection pattern as `e2e/marker-size.spec.ts`
+(`window.__ACARS_STORE__.getState().setDecoders(...)` for a non-`(0,0)`
+station) plus a `localStorage.setItem("map.viewState", ...)` pre-seed
+(`Map.tsx:100-140` reads this in a `useState` lazy initializer, so it must
+be set via `addInitScript` before the app's first render, not after —
+setting decoders alone races the initial camera placement). Station fixed
+at `(40, -75)`, `zoom=7` (`Map.tsx`'s own default once `decoders.adsb`
+is known), captured at all four required viewport widths with the real
+`.live-map-page__map` canvas sizes (sidebar included):
+
+| Viewport (page) | Map canvas (measured) | Rendered rings  |
+| --------------- | --------------------- | --------------- |
+| 320×658         | 320×544               | 5 / 10 / 15 NM  |
+| 768×1024        | 375×899               | 10 / 20 / 30 NM |
+| 1024×768        | 631×661               | 20 / 40 / 60 NM |
+| 1920×1080       | 1527×955              | 20 / 40 / 60 NM |
+
+At every width the screenshot shows the reported bug exactly: three
+tightly-clustered rings occupying a small disc near the station marker,
+surrounded by a large unannotated band out to the actual edge of the
+visible map. The effect is most dramatic on the two widest viewports
+(1024×768, 1920×1080) where the rings visually read as "the whole map is
+basically empty except a small circle in the middle."
+
+**3. Clipping buffer quantified — confirmed by cross-checking a standalone
+reimplementation of `RangeRings.tsx`'s exact formulas against the real
+screenshots (predicted ring set matched the rendered labels exactly at
+all four viewports above).** The buffer is expressed as a **unitless
+fraction (`0.7`) of `minEdgeDistance`, which is itself in nautical
+miles** — not pixels, not a viewport percentage in the CSS sense. Two
+independent effects compound to waste far more than the nominal 30%:
+
+- **The 30% cut itself.** By construction, the outer ring can never
+  exceed 70% of `minEdgeDistance` even before rounding.
+- **Nice-interval rounding loses more.** `roundToNiceInterval` snaps down
+  to the nearest `1/2/5 × 10^n`, which can discard a further 10-30
+  percentage points depending on where `spacing` falls between two nice
+  steps (observed outer-ring/`minEdgeDistance` ratios ranged from 37% to
+  89% across the tested scenarios — the nominal 70% target is rarely hit
+  exactly).
+- **Using `minEdgeDistance` (the shortest of 4 directions) as the sole
+  basis, on a landscape/wide map container (the overwhelmingly common
+  case — sidebar-adjacent map area is wider than it is tall on tablet+
+  viewports), the shortest direction is consistently the vertical
+  (north/south) extent, not the horizontal one.** The rings are sized to
+  fit the _short_ axis, then look tiny against the _long_ axis. Measured
+  outer-ring-radius as a fraction of the true visible corner distance
+  (the actual reach of the visible map, diagonally): **19-53% across the
+  four tested viewports**, worst on mobile portrait (320×658 → 19%) and
+  ultrawide desktop (2560×1080 → 17% in the pre-screenshot analytical
+  pass) — i.e. **the majority of the visible map, in every tested
+  configuration, has no ring anywhere near its edge.**
+
+**4. Comparable tooling survey (tar1090 / dump1090-fa / dump1090-mutability).**
+All three use a fundamentally different design: range rings are **static,
+user-configured physical distances** (`SiteCirclesDistances` /
+`TAR1090_RANGERINGSDISTANCES`, e.g. dump1090's long-standing default
+`[100, 150, 200]` NM, tar1090's default `[100, 150, 200, 250]` NM — 4
+rings), drawn at a fixed real-world radius regardless of current zoom or
+viewport size. There is **no dynamic recomputation, no clipping buffer,
+and no guarantee the rings fit inside the visible frame at all** — at
+high zoom the rings are simply off-screen or only their innermost arc is
+visible; the tool doesn't try to solve that problem, and users are
+expected to zoom out if they want to see their configured rings. Rings
+are allowed to be **clipped by the viewport edge** exactly like any other
+map overlay (a polygon or point layer just stops rendering past the
+canvas bounds) — this is treated as normal cartography, not a bug to
+engineer around.
+
+This is the crux of why ACARS Hub's implementation ends up so
+conservative: it is solving a harder, self-imposed problem (guarantee
+all `N` rings are fully visible, uncut, at every zoom level) that none of
+the comparison tools attempt. Relaxing that self-imposed
+full-visibility requirement is itself a valid, precedented design choice
+(see recommendation below).
+
+**5. Recommendation: (c) — both, but reframed around one root cause
+rather than two independent tweaks.** The dominant contributor is not
+"the constant should be 0.8 instead of 0.7" — it's the underlying
+assumption that a ring must never be clipped by the viewport frame at
+all, which forces the whole calculation onto the single shortest edge
+and then pads it further for safety. Every comparable tool (tar1090,
+dump1090-fa, dump1090-mutability) accepts ring clipping at the frame
+edge as ordinary behavior — a `Layer`/`Source` GeoJSON polygon that
+extends past the visible canvas simply stops rendering past the edge,
+the same as any other MapLibre overlay; nothing breaks. Once that
+constraint is relaxed:
+
+- The extent basis can move from `minEdgeDistance * 0.7` (short-axis,
+  heavily padded) toward something close to the corner/diagonal distance
+  (or at minimum a generous ~90-95% of `minEdgeDistance`, keeping _some_
+  margin so the innermost invariant — "at least one full ring is always
+  fully visible" — still holds), which alone recovers most of the
+  17-56% currently wasted in the tested scenarios.
+- Ring count can then grow from a hardcoded 3 to an adaptive 3-5,
+  keeping the existing `roundToNiceInterval` step logic but choosing the
+  step so that `count = floor(extent / step)` lands in `[3, 5]` rather
+  than always dividing the extent into exactly 3 parts — this keeps ring
+  spacing visually consistent as the extent grows across zoom levels,
+  instead of 3 rings getting proportionally sparser-looking at every
+  zoom-out step.
+
+Both changes are needed together: a more generous buffer alone (option a)
+still leaves the "only 3 datapoints regardless of scale" sparseness at
+very wide zooms; more rings alone (option b) without relaxing the buffer
+just clusters 4-5 rings into the same too-small disc instead of 3.
+Neither sub-fix addresses the actual root cause (the no-clipping
+assumption) in isolation.
+
+**Not yet decided (defer to Phase B design, not blocking Phase A
+sign-off):** the precise new buffer fraction, the exact `count`-selection
+rule, and whether "at least one ring always fully visible" should key off
+`minEdgeDistance` (current behavior) or something more permissive. These
+are implementation details appropriately resolved when Phase B is
+actually scoped, not audit findings.
+
 ---
 
 ## 16. Suggested execution order
@@ -2010,7 +2157,7 @@ extracted hooks) are in place before new feature surface lands on them.
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | FEAT-MARKER-SIZE | ✅ DONE — see full write-up in §15. `MarkerSize` setting (small/medium/large, default medium) with store migration v9→v10, `RadioGroup` in `MapTab.tsx`. Scale baked into sprite/SVG generation math (not CSS transform, to avoid atlas-crop misalignment and touch-target/transform composition bugs); new `.aircraft-marker-hit` 44px-floored wrapper decouples the clickable area from the visual icon so sprite crops never bleed. Two real bugs found and fixed during verification: a stale parallel stylesheet hardcoding `.aircraft-sprite` width/height froze the visual box while the crop kept scaling (atlas bleed at "small", clipping at "large"); `AnimatedSprite`'s `scale` prop was never actually passed at its JSX call site, freezing all animated (propeller) aircraft at the default scale — both pinned by regression tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| FEAT-RANGE-RINGS | Dynamic range-ring sizing on the map — investigate clipping buffer and/or dynamic 4th+ ring                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| FEAT-RANGE-RINGS | Phase A audit DONE (this session, see full write-up in §15) — confirmed `minEdgeDistance * 0.7` (short-axis-only, no-clipping-allowed design) is the root cause, cross-validated against real Docker-Playwright screenshots at 320/768/1024/1920px; recommended strategy (c) — relax the buffer toward the corner distance and let ring count grow 3-5. **Phase B (implementation) awaiting review before starting**, per the plan's investigate-first/implement-second structure.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | FE-MODAL-A11Y    | `acarshub-react/src/components/Modal.tsx` accessibility fixes (flagged during Phase 4 TEST-GAP-FE work). DONE `c8e3f790`: (1) new `hooks/useFocusTrap.ts` hook traps Tab/Shift+Tab within the dialog while open (wraps at both boundaries, falls back to focusing the container itself via `tabIndex={-1}` when there are no focusable descendants) and restores focus to whatever triggered the modal on close/unmount — closes the WCAG 2.1 AA violation where Tab could walk focus out of an open modal into the underlying page. (2) `role="dialog"`/`aria-modal`/`aria-labelledby`/`tabIndex={-1}` moved off the backdrop `<div>` onto the inner `.modal` element (matching the WAI-ARIA APG "Dialog (Modal)" pattern and the existing `Map/AircraftMessagesModal.tsx` precedent); the backdrop's dead `onKeyDown`-for-Enter handler (unreachable — it had no `tabIndex` so a real user could never focus it to trigger it) was removed outright rather than fixed, since Escape (already implemented, already tested) is the documented working keyboard equivalent to backdrop-click dismissal. 16 new unit tests in `hooks/__tests__/useFocusTrap.test.tsx` (pure-function `getFocusableElements` DOM-order/disabled/tabindex/aria-hidden coverage, plus full trap behavior including wrap-around both directions and focus restoration); `Modal.test.tsx` gained a "focus trap" describe block pinning the same "focus returns to trigger after close" contract that `e2e/accessibility.spec.ts`'s "Focus Management" tests check in a real browser — confirmed via a rebuilt Dockerized-Playwright image that those two pre-existing e2e tests now pass for a genuine reason (a real trap) rather than the coincidental DOM-order luck they were passing on before. Verified via `git stash`: 7 tests fail against the pre-fix code, all pass with the fix restored. |
 
 ### Phase 9 — Cleanup
