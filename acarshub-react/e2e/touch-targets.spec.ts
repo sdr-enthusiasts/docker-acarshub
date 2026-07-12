@@ -37,6 +37,12 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 //   .radio-option__label                 (wrapper 44px floor)
 //   .small_nav summary, a, .link-button  (mobile flyout)
 //   .mobile_nav_button
+//   .aircraft-list__pause-button, .aircraft-list__collapse-button
+//                                         (Live Map sidebar header, 36 → 44;
+//                                          found post-hoc during the
+//                                          SCSS-MOBILE pass — SCSS-TOUCH's
+//                                          original abbd7123 commit never
+//                                          actually touched this file)
 //
 // Note: the .btn SCSS module exists (`_button.scss`) but is currently unused
 // by TSX (the codebase uses `.button.button--primary` instead, which has no
@@ -280,5 +286,38 @@ test.describe("SCSS-TOUCH: 44px touch-target floor (mobile)", () => {
 
     // Pagination buttons appear only after a search returns results — we do
     // not run a full query here. The test stays focused on form controls.
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Live Map aircraft-list sidebar — tablet-and-up only
+// ---------------------------------------------------------------------------
+//
+// .live-map-page__sidebar (which contains .aircraft-list) is `display: none`
+// below the `md` breakpoint (768px, see _live-map.scss) — it simply does not
+// render on phone-width viewports at all, unlike every other control in this
+// file. It first becomes visible at exactly the same 768px threshold the
+// `touch-target()` mixin's desktop-density branch keys off, so this is *not*
+// a "mobile viewport" test the way the rest of this file is: it targets the
+// smallest viewport width at which the component actually exists, which is
+// itself a touch-capable form factor (tablets). The main mobile-only
+// `describe` block above deliberately skips viewports > 768px, so this lives
+// in its own block with an explicit viewport override instead.
+test.describe("SCSS-TOUCH: 44px touch-target floor (tablet sidebar)", () => {
+  test("aircraft list pause and collapse buttons meet 44px", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto("/adsb");
+    await expect(page.locator(".aircraft-list")).toBeVisible();
+
+    const pauseBtn = page.locator(".aircraft-list__pause-button");
+    await expectTouchTargetFloor(pauseBtn, ".aircraft-list__pause-button");
+
+    const collapseBtn = page.locator(".aircraft-list__collapse-button");
+    await expectTouchTargetFloor(
+      collapseBtn,
+      ".aircraft-list__collapse-button",
+    );
   });
 });
