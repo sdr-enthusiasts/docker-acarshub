@@ -31,10 +31,10 @@
     // Matches .map-control-button's sizing convention so this button (which
     // replaces a whole group of individual .map-control-buttons at short
     // viewport heights) doesn't look oversized next to its siblings at
-    // desktop widths. 44px only applies at mobile widths, same breakpoint
-    // .map-control-button itself uses.
-    width: 32px;
-    height: 32px;
+    // desktop widths. Mobile-first: 44px, same breakpoint .map-control-button
+    // itself uses.
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -45,9 +45,9 @@
     font-size: 1.125rem;
     transition: all 0.2s ease;
 
-    @include breakpoint-max(md) {
-      width: 44px;
-      height: 44px;
+    @include breakpoint(md) {
+      width: 32px;
+      height: 32px;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -136,25 +136,25 @@
   &__item {
     display: flex;
     align-items: center;
-    // Compact by default: this flyout only appears at short viewport
-    // heights, which are overwhelmingly a desktop/mouse scenario (a short
-    // *window*, not a small touch device) -- the previous 44px-everywhere
-    // sizing (matching the touch-target floor used elsewhere) made a
-    // 4-5 item list needlessly tall on exactly the viewports where space
-    // is already the scarce resource. Reserve the roomier, touch-friendly
-    // sizing for actual mobile widths.
-    gap: 0.5rem;
-    padding: 0.375rem 0.5rem;
-    min-height: 32px;
+    // Mobile-first: touch-friendly sizing. Desktop overrides to compact --
+    // this flyout only appears at short viewport heights, which are
+    // overwhelmingly a desktop/mouse scenario (a short *window*, not a
+    // small touch device) -- the 44px-everywhere sizing (matching the
+    // touch-target floor used elsewhere) made a 4-5 item list needlessly
+    // tall on exactly the viewports where space is already the scarce
+    // resource.
+    gap: 0.75rem;
+    padding: 0.75rem;
+    min-height: 44px;
     cursor: pointer;
     user-select: none;
     border-radius: 4px;
     transition: background-color 0.15s ease;
 
-    @include breakpoint-max(md) {
-      gap: 0.75rem;
-      padding: 0.75rem;
-      min-height: 44px;
+    @include breakpoint(md) {
+      gap: 0.5rem;
+      padding: 0.375rem 0.5rem;
+      min-height: 32px;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -172,40 +172,40 @@
 
   &__icon {
     flex-shrink: 0;
-    width: 16px;
+    width: 20px; // mobile-first
     text-align: center;
     color: var(--color-subtext0);
-    font-size: 0.875rem;
+    font-size: 1rem;
 
-    @include breakpoint-max(md) {
-      width: 20px;
-      font-size: 1rem;
+    @include breakpoint(md) {
+      width: 16px;
+      font-size: 0.875rem;
     }
   }
 
   &__label {
     flex: 1;
     color: var(--color-text);
-    font-size: 0.8125rem;
+    font-size: 0.875rem; // mobile-first
     font-weight: 500;
 
-    @include breakpoint-max(md) {
-      font-size: 0.875rem;
+    @include breakpoint(md) {
+      font-size: 0.8125rem;
     }
   }
 
   // Checkbox styling
   input[type="checkbox"] {
     flex-shrink: 0;
-    width: 16px;
-    height: 16px;
+    width: 20px; // mobile-first
+    height: 20px;
     cursor: pointer;
     accent-color: var(--color-blue);
     margin: 0;
 
-    @include breakpoint-max(md) {
-      width: 20px;
-      height: 20px;
+    @include breakpoint(md) {
+      width: 16px;
+      height: 16px;
     }
   }
 
