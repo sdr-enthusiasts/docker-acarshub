@@ -97,18 +97,20 @@
   %message-group-chip {
     display: inline-flex;
     align-items: center;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: var(--font-size-xs);
+    // Mobile-first: 44px WCAG floor + larger padding/font.
+    min-height: 44px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-sm);
     font-weight: 700;
     line-height: 1;
     white-space: nowrap;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 
-    @media (max-width: 768px) {
-      min-height: 44px;
-      padding: var(--spacing-sm) var(--spacing-md);
-      font-size: var(--font-size-sm);
+    @include breakpoint(md) {
+      min-height: unset;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: var(--font-size-xs);
     }
   }
 
@@ -291,22 +293,25 @@
   &__counter {
     // Counter wrapper is a layout slot; the chip styling lives on
     // `.counter-text` (hoisted out of this block — see below for the
-    // specificity rationale). Wrapper is flex so the chip can stretch to
-    // match the banner band height.
-    display: flex;
-    align-items: stretch;
+    // specificity rationale).
+    //
+    // Mobile-first: hidden by default. Ultra-narrow viewports (≤420px) run
+    // out of room in the banner band when all four chips render
+    // simultaneously (callsign + alert-count + adsb + counter), and the
+    // counter chip gets clipped against the card edge -- visible around the
+    // 375-405px range with alerts present. The same Message N/M info is
+    // still conveyed by the tab strip below (`.message-group__tabs`), so
+    // hiding it here is redundancy elimination rather than information
+    // loss. The TR corner radius automatically migrates to the
+    // next-rightmost chip via the generic `__header > :last-child >
+    // :last-child` rule. 421px doesn't correspond to one of the standard
+    // sm/md/lg tiers, so a bespoke min-width query is used instead of the
+    // breakpoint() mixin.
+    display: none;
 
-    // Ultra-narrow viewports (≤420px): the banner band runs out of room when
-    // all four chips render simultaneously (callsign + alert-count + adsb +
-    // counter), and the counter chip gets clipped against the card edge —
-    // visible around the 375–405px range with alerts present. Hide the
-    // counter entirely here; the same Message N/M info is still conveyed by
-    // the tab strip below (`.message-group__tabs`), so this is redundancy
-    // elimination rather than information loss. The TR corner radius
-    // automatically migrates to the next-rightmost chip via the generic
-    // `__header > :last-child > :last-child` rule.
-    @media (max-width: 420px) {
-      display: none;
+    @media (min-width: 421px) {
+      display: flex;
+      align-items: stretch;
     }
   }
 
@@ -359,15 +364,15 @@
   }
 
   &__content {
-    padding: var(--spacing-sm);
+    // Mobile-first: the message-group card already sits inside a
+    // zero-padding message list (see `.message-list` mobile override), so
+    // any internal content padding compounds with the inner
+    // `.message-card` padding and wastes horizontal space. No padding here
+    // on mobile; let the message card own its own padding.
+    padding: 0;
 
-    // On mobile the message-group card already sits inside a zero-padding
-    // message list (see `.message-list` mobile override), so any internal
-    // content padding compounds with the inner `.message-card` padding and
-    // wastes horizontal space.  Drop it on mobile and let the message card
-    // own its own padding.
-    @media (max-width: 768px) {
-      padding: 0;
+    @include breakpoint(md) {
+      padding: var(--spacing-sm);
     }
   }
 }
