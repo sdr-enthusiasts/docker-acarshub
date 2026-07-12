@@ -162,18 +162,20 @@
   // -------------------------------------------------------------------------
   .message-rate {
     position: relative;
-    display: flex;
+    // Mobile-first: hidden by default (the 320px floor is too narrow for
+    // the compact "X msg/min" text without overflowing). Shown from 375px
+    // (iPhone SE) and up, in both the mobile and desktop nav bars. 375px
+    // doesn't correspond to one of the standard sm/md/lg tiers, so a
+    // bespoke min-width query is used instead of the breakpoint() mixin.
+    display: none;
     align-items: center;
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-md;
     cursor: default;
     user-select: none;
 
-    // Hide only on very narrow screens (< 375px); iPhone SE (375px) and
-    // wider can fit the compact "X msg/min" text in both the mobile and
-    // desktop nav bars.
-    @media (max-width: 374px) {
-      display: none;
+    @media (min-width: 375px) {
+      display: flex;
     }
   }
 
