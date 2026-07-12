@@ -37,18 +37,25 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    // Mobile-first.
+    width: 44px;
+    height: 44px;
+    font-size: 1.125rem;
     background-color: var(--color-surface0);
     border: 2px solid var(--color-overlay0);
     border-radius: var(--border-radius-sm);
     color: var(--color-subtext1);
-    font-size: 1rem;
     padding: 0;
     cursor: pointer;
     transition:
       background-color $transition-fast,
       opacity $transition-fast;
+
+    @include breakpoint(md) {
+      width: 32px;
+      height: 32px;
+      font-size: 1rem;
+    }
 
     &:hover {
       background-color: var(--color-surface1);
@@ -75,12 +82,7 @@
    * Dropdown menu
    */
   &__menu {
-    position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
     z-index: 1000;
-    width: 280px;
-    max-height: 500px;
     overflow-y: auto;
     background-color: var(--color-base);
     border: 1px solid var(--color-overlay0);
@@ -89,48 +91,58 @@
 
     @include scrollbar-thin;
 
-    // Animation
-    animation: map-provider-menu-slide-in 0.15s ease-out;
+    // Mobile-first: fixed, centered modal (small viewports don't have room
+    // for a corner-anchored dropdown without risking off-screen overflow).
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: 90vw;
+    max-width: 320px;
+    max-height: 80vh;
 
-    @keyframes map-provider-menu-slide-in {
+    animation: map-provider-menu-modal-in 0.2s ease-out;
+
+    @keyframes map-provider-menu-modal-in {
       from {
         opacity: 0;
-        transform: translateY(-8px);
+        transform: translate(-50%, -50%) scale(0.95);
       }
       to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    // Desktop: absolute-positioned dropdown anchored below the trigger.
+    @include breakpoint(sm) {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      left: auto;
+      right: 0;
+      transform: none;
+      width: 280px;
+      max-width: none;
+      max-height: 500px;
+
+      animation: map-provider-menu-slide-in 0.15s ease-out;
+
+      @keyframes map-provider-menu-slide-in {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
     }
 
     // Reduce motion support
     @media (prefers-reduced-motion: reduce) {
       animation: none;
-    }
-
-    // Mobile responsiveness
-    @include breakpoint-max(sm) {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      right: auto;
-      transform: translate(-50%, -50%);
-      width: 90vw;
-      max-width: 320px;
-      max-height: 80vh;
-
-      animation: map-provider-menu-modal-in 0.2s ease-out;
-
-      @keyframes map-provider-menu-modal-in {
-        from {
-          opacity: 0;
-          transform: translate(-50%, -50%) scale(0.95);
-        }
-        to {
-          opacity: 1;
-          transform: translate(-50%, -50%) scale(1);
-        }
-      }
     }
   }
 
@@ -298,18 +310,5 @@
     text-align: center;
     border-top: 1px solid var(--color-overlay0);
     background-color: var(--color-mantle);
-  }
-}
-
-/**
- * Mobile responsiveness
- */
-@include breakpoint-max(md) {
-  .map-provider-selector {
-    &__button {
-      width: 44px;
-      height: 44px;
-      font-size: 1.125rem;
-    }
   }
 }
