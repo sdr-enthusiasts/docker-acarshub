@@ -33,16 +33,23 @@
   opacity: 0;
   transform: scale(0.95);
   animation: context-menu-fade-in 0.15s ease-out forwards;
+  // Mobile-first base: ensure the menu is fully visible on very narrow
+  // phones (this is a further constraint on top of the already-mobile
+  // default below, not the desktop-first anti-pattern -- 375px doesn't
+  // correspond to one of the standard sm/md/lg tiers, so a bespoke
+  // min-width query is used here instead of the breakpoint() mixin).
+  min-width: 160px;
+  max-width: calc(100vw - 16px);
 
   // Focus styles for keyboard navigation
   &:focus {
     outline: none;
   }
 
-  // Mobile-first: Ensure menu is fully visible on small screens
-  @media (max-width: 375px) {
-    min-width: 160px;
-    max-width: calc(100vw - 16px);
+  // Wider phones: relax back to the standard minimum width / no cap.
+  @media (min-width: 376px) {
+    min-width: 180px;
+    max-width: none;
   }
 }
 
