@@ -1828,6 +1828,201 @@ they need.
 **Effort:** Phase A: 1-2 days. Phase B: 3-5 days (one route per PR, plus
 the vendor-split commit).
 
+**Phase A findings (this session — audit only, no code changed).**
+
+**1. Route-level lazy-loading already exists — the motivation section's
+premise is stale.** `App.tsx` already wraps `AboutPage`, `AlertsPage`,
+`LiveMapPage`, `SearchPage`, and `StatsPage` in `React.lazy()` + a shared
+`<Suspense>`/`PageLoader` (only `LiveMessagesPage`, the default landing
+route, stays eager). `git log` traces this to `dc8a5c5e` ("perf: bundle
+size optimizations"), merged **before** the audit that produced this
+plan — the audit's dist listing (`LiveMapPage-D0JSutxw.js` as its own
+166 KB chunk) was already showing the post-lazy-loading state, not a
+"nothing is split" starting point. `manualChunks` in `vite.config.ts`
+also already isolates `react`, `charts` (chart.js + plugins),
+`map` (maplibre-gl), and `socketio` into their own vendor chunks. Most
+of Phase B's original item 1 and item 3 are therefore **already done**;
+the real remaining problem is different from (and larger than) what the
+motivation section describes.
+
+**2. Headline finding: the existing lazy-loading isn't actually saving
+any network bytes, because Vite's default `modulePreload` behavior (and
+its CSS-linking behavior) eagerly fetch the "map" and "charts" vendor
+chunks on _every_ route regardless of whether that route uses them.**
+Inspecting the generated `dist/index.html` (Vite 8 / Rolldown-vite
+build) shows:
+
+```html
+<script type="module" crossorigin src="./assets/index-Dip0cLim.js"></script>
+<link
+  rel="modulepreload"
+  crossorigin
+  href="./assets/rolldown-runtime-QTnfLwEv.js"
+/>
+<link rel="modulepreload" crossorigin href="./assets/charts-Cz7gDwvo.js" />
+<link rel="modulepreload" crossorigin href="./assets/map-Bis6jIMz.js" />
+<link rel="modulepreload" crossorigin href="./assets/react-DshHmojZ.js" />
+<link rel="modulepreload" crossorigin href="./assets/socketio-DWbYxwoO.js" />
+<link rel="modulepreload" crossorigin href="./assets/socket-jPxSwaSw.js" />
+<link rel="modulepreload" crossorigin href="./assets/useAppStore-DVmewl6a.js" />
+<link rel="modulepreload" crossorigin href="./assets/dateUtils-CvTo5sJh.js" />
+<link rel="stylesheet" crossorigin href="./assets/map-B2k4QVOw.css" />
+<link rel="stylesheet" crossorigin href="./assets/index-DoSTZqrU.css" />
+```
+
+Every single page load — including the default Live Messages landing
+route, which never touches the map or charts — modulepreloads the full
+1,050 KB `map-*.js` (280.41 KB gzip) and 253 KB `charts-*.js` (83.20 KB
+gzip) chunks, **and** blocking-loads `map-*.css` (69.8 KB / 10.10 KB
+gzip) as a render-blocking `<link rel="stylesheet">` before first paint.
+Confirmed empirically, not just by documentation: I traced
+`{ chartsJs, mapJs, mapCss }` back to Vite's `build.modulePreload`
+default (`true`, which preloads the entire async-import dependency graph
+reachable from the entry, not just what the current route needs — an
+[experimental but public API](https://vite.dev/config/build-options.html#build-modulepreload),
+`build.modulePreload.resolveDependencies`, exists precisely to filter
+this) and verified by a scratch (unstaged, reverted) edit to
+`vite.config.ts` adding a `resolveDependencies` filter that strips
+`map-*`/`charts-*` from the preload list — rebuilding immediately
+dropped both `<link rel="modulepreload">` lines from `index.html`,
+proving the current behavior is exactly this default, not some other
+cause. The `map-*.css` blocking-stylesheet link persisted even with that
+filter (`resolveDependencies` only governs `<link rel="modulepreload">`
+script hints, not CSS) — the CSS half of this needs a different fix in
+Phase B (candidates below).
+
+**Quantified per-route impact (gzip, from `npm run build` output).**
+Shared/unavoidable baseline present on every route
+(`index` + `react` + `socketio` + `socket` + `useAppStore` + `dateUtils`
+
+- `index.css`) = 159.78 KB. Currently every route also eagerly pays for
+  `map-*.js` (280.41 KB) + `charts-*.js` (83.20 KB) + `map-*.css`
+  (10.10 KB) = **373.71 KB of completely unneeded bytes**, except on the
+  one route that actually needs each:
+
+| Route               | Current total (gzip) | Ideal total (gzip)      | Wasted today    |
+| ------------------- | -------------------- | ----------------------- | --------------- |
+| `/` (Live Messages) | ~533.5 KB            | 159.78 KB               | 373.71 KB (70%) |
+| `/search`           | ~537.4 KB            | 163.66 KB               | 373.71 KB (70%) |
+| `/alerts`           | ~536.7 KB            | 162.96 KB               | 373.71 KB (70%) |
+| `/about`            | ~538.1 KB            | 164.35 KB               | 373.71 KB (70%) |
+| `/status` (Stats)   | ~540.6 KB            | 250.07 KB (charts kept) | 290.51 KB (54%) |
+| `/adsb` (Map)       | ~597.3 KB            | 514.06 KB (map kept)    | 83.20 KB (14%)  |
+
+This is the dominant Phase A finding by a wide margin — an order of
+magnitude larger than any other candidate found this session, and it's
+a pure build-configuration fix (no component risk) rather than a
+refactor.
+
+**3. `services/socket.ts` static/dynamic conflict confirmed still
+live** (the plan's original `INEFFECTIVE_DYNAMIC_IMPORT` note, though
+that exact warning string no longer prints under the current Vite/
+Rolldown version — the underlying architecture issue is unchanged).
+`SettingsModal.tsx` and `AlertsTab.tsx` both wrap `socket.ts` access in
+`import("../services/socket").then(...)` (5 call sites in `AlertsTab.tsx`
+alone), presumably to defer loading the socket client until Settings is
+opened. This is dead weight: `useSocketIO.ts` — called unconditionally
+in `App.tsx`, the eager root component — already statically imports
+`socket.ts`, so it's bundled into the main chunk regardless. The dynamic
+`import()` calls add a promise-indirection with zero bundle-size
+benefit. Recommendation (matches the plan's own stated preference):
+drop the dynamic-import wrapping in both files and import `socket.ts`
+statically — this is pure dead-code removal, not a behavior change.
+
+**4. Settings-modal tab lazy-loading — a smaller, real secondary win.**
+`SettingsModal.tsx` statically imports all 7 tab components
+(`AppearanceTab`, `RegionalTab`, `AlertsTab`, `DataTab`,
+`NotificationsTab`, `MapTab`, `AdvancedTab`), and `SettingsModal.tsx`
+itself is mounted unconditionally and eagerly in `App.tsx`
+(`<SettingsModal />`, always rendered so the modal can open instantly
+from any page). That means every user downloads all 7 tabs' code
+(including `AdvancedTab.tsx`'s `LogsViewer.tsx`, a debug log viewer) on
+every page load, whether or not they ever open Settings. Using the
+bundle visualizer's per-module breakdown, the deferrable subtree
+(`SettingsModal.tsx` + 7 tabs + `LogsViewer.tsx` + `RadioGroup.tsx` +
+`Select.tsx` — the latter two used _only_ by settings tabs, unlike
+`Toggle`/`Modal` which are also used by the eager `MessageFilters.tsx`)
+is ~19.3% of the main eager chunk's pre-minification module weight;
+scaling that fraction against the real post-build gzip size of
+`index-*.js` (53.85 KB) estimates **~10.4 KB gzip saved on every route**
+by lazily loading the Settings modal's internals (e.g. `React.lazy` per
+tab, or lazy-loading the whole tab set behind the modal's first open).
+Real terms: modest compared to finding 2, but free of the CSS-linking
+complication and lower-risk to implement (Settings already has its own
+open/close lifecycle to hang a `Suspense` boundary off).
+
+**5. Minor nit (not worth a dedicated Phase B slot, but free to fix in
+passing): `react-map-gl`'s compatibility shim isn't captured by the
+`manualChunks` matcher.** `react-map-gl@8.1.1` is now a thin re-export
+shim pointing to the real implementation package,
+`@vis.gl/react-maplibre` — the app imports from `"react-map-gl/maplibre"`,
+which resolves to `node_modules/react-map-gl/dist/maplibre.js` (the thin
+shim) re-exporting from `@vis.gl/react-maplibre` (the real ~10 KB
+wrapper, correctly grouped into the `map` vendor chunk since its path
+does contain the substring `"react-maplibre"`). The shim file itself
+does **not** match either `id.includes("maplibre-gl")` or
+`id.includes("react-maplibre")` (its own path is
+`.../react-map-gl/dist/maplibre.js`, missing both substrings), so it
+falls through to default chunking and lands in `LiveMapPage-*.js`
+instead of the `map` vendor chunk. Verified via the bundle visualizer:
+133 bytes. Genuinely negligible impact, but a one-line
+`manualChunks` fix (`id.includes("node_modules/react-map-gl/")`) removes
+the inconsistency for free whenever `vite.config.ts` is next touched.
+
+**6. Lighthouse not run this session.** `just lighthouse` (via `lhci
+autorun`) launches a real Chrome instance and wasn't run — the
+build-artifact analysis above (exact `dist/assets/*` byte counts,
+before/after `resolveDependencies` scratch-test) gives precise,
+reproducible numbers without it. Recommend running `just lighthouse`
+as part of Phase B verification once the `modulePreload`/CSS fix lands,
+to confirm the FCP win the render-blocking `map-*.css` removal should
+produce on the non-map routes.
+
+**Code-splitting risks for Phase B (per the plan's ask).**
+
+- **`resolveDependencies` is a Vite-documented "experimental" API** —
+  low practical risk (it's been stable in the public API surface across
+  recent Vite majors) but worth a comment noting it should be
+  re-verified on the next Vite major bump.
+- **The CSS eager-linking fix is the trickiest part.** Three viable
+  directions to evaluate in Phase B: (a) a small custom Vite plugin
+  hooking `transformIndexHtml` to strip route-specific stylesheet
+  `<link>` tags from the generated `index.html` and let the browser
+  discover them at runtime via the dynamically-imported chunk's own CSS
+  injection (Vite normally does this automatically for genuinely
+  route-only CSS — needs investigation into why `map-*.css` specifically
+  is being hoisted); (b) move the
+  `import "maplibre-gl/dist/maplibre-gl.css"` side-effect import to a
+  dynamic import colocated with the `LiveMapPage` lazy factory instead of
+  `Map.tsx`'s static top-level import; (c) accept the blocking CSS cost
+  on `/adsb` specifically (it's already the heaviest route) and only fix
+  the JS-side `modulePreload` waste, which is the larger of the two
+  numbers anyway. No implementation decision made this session — Phase B
+  should prototype (a) and (b) and pick whichever doesn't regress FOUC
+  on the Map/Stats routes themselves.
+- **Suspense boundaries** for lazily-loaded Settings tabs: `SettingsModal.tsx`
+  would need its own small `<Suspense>` around the active tab's panel,
+  with a loading fallback matching `PageLoader`'s pattern
+  (DESIGN_LANGUAGE.md-compliant, no bespoke spinner).
+- **Existing test suite impact:** `SettingsModal.test.tsx` (50 tests)
+  currently renders tabs synchronously; lazy-loading tabs would need
+  either `await screen.findBy...` conversions or a test-environment
+  `React.lazy` shim — a real but bounded cost, not a blocker.
+- **No SSR/CSR mismatch risk** — confirmed CSR-only (no SSR entry point
+  in this codebase).
+
+**Recommendation for Phase B ordering (highest ROI / lowest risk
+first).** (1) `modulePreload.resolveDependencies` fix — pure build
+config, ~290-374 KB gzip saved per route depending on route, zero
+component risk. (2) The `map-*.css` eager-stylesheet fix — same finding,
+second half of the win, moderate implementation risk (needs the FOUC
+investigation above). (3) Drop the dead `socket.ts` dynamic-import
+wrapping in `SettingsModal.tsx`/`AlertsTab.tsx` — trivial, zero risk,
+pure cleanup. (4) Lazy-load the Settings modal's tab subtree — real but
+smaller win (~10.4 KB/route), needs Suspense wiring and test updates.
+(5) The `react-map-gl` shim `manualChunks` nit — free, do it opportunistically
+alongside (1).
+
 ---
 
 ### FEAT-RANGE-RINGS — Dynamic range-ring sizing on the map — **FEATURE**
@@ -2245,7 +2440,7 @@ extracted hooks) are in place before new feature surface lands on them.
 | ID               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | FEAT-MARKER-SIZE | ✅ DONE — see full write-up in §15. `MarkerSize` setting (small/medium/large, default medium) with store migration v9→v10, `RadioGroup` in `MapTab.tsx`. Scale baked into sprite/SVG generation math (not CSS transform, to avoid atlas-crop misalignment and touch-target/transform composition bugs); new `.aircraft-marker-hit` 44px-floored wrapper decouples the clickable area from the visual icon so sprite crops never bleed. Two real bugs found and fixed during verification: a stale parallel stylesheet hardcoding `.aircraft-sprite` width/height froze the visual box while the crop kept scaling (atlas bleed at "small", clipping at "large"); `AnimatedSprite`'s `scale` prop was never actually passed at its JSX call site, freezing all animated (propeller) aircraft at the default scale — both pinned by regression tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| PERF-BUNDLE      | Phase A audit DONE (this session, see full write-up in §15) — route-level lazy-loading and vendor chunking already existed pre-audit (`dc8a5c5e`); the actual live problem is Vite's default `modulePreload` + eager CSS linking defeating that split by preloading the 1MB `map` and 253KB `charts` vendor chunks (plus a render-blocking `map-*.css`) on every route regardless of need — quantified at 373.71 KB gzip wasted per non-map/non-stats route (70% of total payload), verified via a reverted scratch edit to `vite.config.ts`. **Phase B (implementation) awaiting review before starting.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | FEAT-RANGE-RINGS | ✅ DONE — see full write-up in §15. Phase A confirmed `minEdgeDistance * 0.7` (short-axis-only, no-clipping-allowed design) as the root cause; Phase B implemented strategy (c) (`getMaxRingCount` 3-5 by container width, `calculateRangeRingRadii` corner-based buffer with an edge-based no-clip floor). A second, more fundamental defect surfaced during live verification: ring size was computed from `station -> edge/corner distance` rather than `viewport-center -> edge/corner distance`, so panning the map (with the station now off-center) made rings visibly shrink/change count/nearly vanish with no zoom change at all. Fixed by keying the size calculation off the map's own center instead of the station; rings are still drawn anchored at the station's real coordinates. Both defects pinned by regression tests (verified failing pre-fix, passing post-fix via a temporary revert).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | FE-MODAL-A11Y    | `acarshub-react/src/components/Modal.tsx` accessibility fixes (flagged during Phase 4 TEST-GAP-FE work). DONE `c8e3f790`: (1) new `hooks/useFocusTrap.ts` hook traps Tab/Shift+Tab within the dialog while open (wraps at both boundaries, falls back to focusing the container itself via `tabIndex={-1}` when there are no focusable descendants) and restores focus to whatever triggered the modal on close/unmount — closes the WCAG 2.1 AA violation where Tab could walk focus out of an open modal into the underlying page. (2) `role="dialog"`/`aria-modal`/`aria-labelledby`/`tabIndex={-1}` moved off the backdrop `<div>` onto the inner `.modal` element (matching the WAI-ARIA APG "Dialog (Modal)" pattern and the existing `Map/AircraftMessagesModal.tsx` precedent); the backdrop's dead `onKeyDown`-for-Enter handler (unreachable — it had no `tabIndex` so a real user could never focus it to trigger it) was removed outright rather than fixed, since Escape (already implemented, already tested) is the documented working keyboard equivalent to backdrop-click dismissal. 16 new unit tests in `hooks/__tests__/useFocusTrap.test.tsx` (pure-function `getFocusableElements` DOM-order/disabled/tabindex/aria-hidden coverage, plus full trap behavior including wrap-around both directions and focus restoration); `Modal.test.tsx` gained a "focus trap" describe block pinning the same "focus returns to trigger after close" contract that `e2e/accessibility.spec.ts`'s "Focus Management" tests check in a real browser — confirmed via a rebuilt Dockerized-Playwright image that those two pre-existing e2e tests now pass for a genuine reason (a real trap) rather than the coincidental DOM-order luck they were passing on before. Verified via `git stash`: 7 tests fail against the pre-fix code, all pass with the fix restored. |
 
