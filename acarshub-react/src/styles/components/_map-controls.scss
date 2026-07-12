@@ -19,7 +19,8 @@
 
 .map-controls {
   position: absolute;
-  top: 94px; // Below zoom controls (32px height + borders + margins)
+  // Mobile-first: larger mobile zoom controls need more clearance.
+  top: 106px;
   right: 10px;
   // Must exceed maplibre's own .maplibregl-ctrl-top-right (z-index: 300, see
   // _map.scss) -- .map-controls establishes its own stacking context here,
@@ -44,6 +45,10 @@
   align-items: flex-end;
   gap: var(--spacing-sm);
   pointer-events: none;
+
+  @include breakpoint(md) {
+    top: 94px; // Below zoom controls (32px height + borders + margins)
+  }
 
   // Each group of related controls
   &__group {
@@ -95,16 +100,14 @@
   }
 }
 
-// Mobile adjustments
-@include breakpoint-max(md) {
-  .map-controls {
-    top: 106px; // Adjust for larger mobile zoom controls + extra spacing
-    right: 10px;
-  }
+// Mobile-first: hide individual filter buttons (shown in the flyout
+// instead). Shown again as individual buttons from the tablet breakpoint
+// up, where the flyout menu button itself is hidden (see below).
+.map-controls__filter--desktop {
+  display: none;
 
-  // Hide individual filter buttons on mobile (shown in flyout instead)
-  .map-controls__filter--desktop {
-    display: none;
+  @include breakpoint(md) {
+    display: flex;
   }
 }
 
