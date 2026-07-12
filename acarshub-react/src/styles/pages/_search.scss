@@ -211,19 +211,21 @@
 
     input,
     select {
-      // SCSS-TOUCH: 10 search-form fields. Desktop ~29px from compact padding;
-      // mobile gets a 44px floor + 16px font (also fixes iOS focus-zoom).
+      // SCSS-TOUCH mobile-first: 10 search-form fields. Mobile gets a 44px
+      // floor + 16px font (also fixes iOS focus-zoom); desktop relaxes to
+      // ~29px from compact padding.
       padding: var(--spacing-xs) var(--spacing-sm);
       background: var(--color-base);
       border: 2px solid var(--color-surface2);
       border-radius: var(--border-radius-md);
       color: var(--color-text);
-      font-size: var(--font-size-sm);
+      font-size: 1rem;
+      min-height: 44px;
       transition: all var(--transition-normal);
 
-      @media (max-width: #{$breakpoint-md - 1px}) {
-        min-height: 44px;
-        font-size: 1rem;
+      @include breakpoint(md) {
+        font-size: var(--font-size-sm);
+        min-height: unset;
       }
 
       &::placeholder {
