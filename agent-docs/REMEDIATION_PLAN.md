@@ -274,7 +274,7 @@ before the cast.
 
 **Effort:** Trivial.
 
-### TYPE-07 — Locale-sensitive lowercase mismatch — **LOW**
+### TYPE-07 — Locale-sensitive lowercase mismatch — **LOW** — ✅ DONE (`f8feca9b`)
 
 **File:** `acarshub-backend/src/config.ts:398-399`.
 
@@ -287,7 +287,7 @@ ASCII-locale behaviour for log-level identifiers).
 
 **Effort:** Trivial.
 
-### TYPE-08 — `zmq-listener` socket typed as `unknown` — **LOW**
+### TYPE-08 — `zmq-listener` socket typed as `unknown` — **LOW** — ✅ DONE (`765d8f0f`)
 
 **File:** `acarshub-backend/src/services/zmq-listener.ts:65`.
 
@@ -350,7 +350,7 @@ declared locally at line 167.
 
 **Effort:** Low (mechanical, one PR).
 
-### LOG-03 — `console.warn` in tests for skip conditions — **LOW**
+### LOG-03 — `console.warn` in tests for skip conditions — **LOW** — ✅ DONE (`718ed991`)
 
 **File:** `acarshub-backend/src/db/__tests__/config-integration.test.ts:56,
 121, 168, 314`.
@@ -563,7 +563,7 @@ The handler code at `socket/handlers.ts:474-476` literally documents the bug:
 
 **Effort:** Low.
 
-### STATE-02 — Module-level booleans, counters, and caches — **MEDIUM**
+### STATE-02 — Module-level booleans, counters, and caches — **MEDIUM** — ✅ DONE (5 files, see Phase 7 table)
 
 **Files:**
 
@@ -600,7 +600,7 @@ pervasive use leaks state across tests and is hard to reason about.
 
 ## 7. Resource leaks
 
-### LEAK-01 — Alignment-window `setTimeout` handles not captured — **HIGH**
+### LEAK-01 — Alignment-window `setTimeout` handles not captured — **HIGH** — ✅ DONE (`4b414b30`)
 
 **Files:**
 
@@ -632,7 +632,7 @@ callback still fires and registers a fresh `setInterval` after shutdown.
 
 **Effort:** Low.
 
-### LEAK-02 — Reconnect timers in TCP/UDP listeners — **MEDIUM**
+### LEAK-02 — Reconnect timers in TCP/UDP listeners — **MEDIUM** — ✅ DONE (`62c983d6`)
 
 **Files:**
 
@@ -647,7 +647,7 @@ and clear it. Add a `stop()` regression test similar to LEAK-01.
 
 **Effort:** Low.
 
-### LEAK-03 — Bare `catch {}` swallows errors — **HIGH**
+### LEAK-03 — Bare `catch {}` swallows errors — **HIGH** — ✅ DONE (`7ca13e0b`)
 
 **File:** `acarshub-backend/src/services/zmq-listener.ts:147`.
 
@@ -673,7 +673,7 @@ catch (err) {
 
 **Effort:** Trivial.
 
-### LEAK-04 — Backup DB partial-init state — **MEDIUM**
+### LEAK-04 — Backup DB partial-init state — **MEDIUM** — ✅ DONE (`7088cfff`)
 
 **File:** `acarshub-backend/src/db/client.ts:164-169`.
 
@@ -690,7 +690,7 @@ any failure.
 
 ## 8. Error handling consistency
 
-### ERR-01 — Mixed `catch (error)` / `catch (err)` naming — **LOW**
+### ERR-01 — Mixed `catch (error)` / `catch (err)` naming — **LOW** — ✅ DONE (`0421dfa3`)
 
 **Finding.** `services/index.ts` uses `err`; `socket/handlers.ts` uses `error`;
 `services/timeseries-cache.ts` uses `err`; `db/queries/messages.ts` uses
@@ -701,7 +701,7 @@ example. Add a Biome rule (`useNamingConvention` or a custom one) to enforce.
 
 **Effort:** Low (mechanical via Biome auto-fix once rule is added).
 
-### ERR-02 — Fire-and-forget async in `setImmediate` — **MEDIUM**
+### ERR-02 — Fire-and-forget async in `setImmediate` — **MEDIUM** — ✅ DONE (`4ca74830`)
 
 **File:** `acarshub-backend/src/socket/handlers.ts:567`.
 
@@ -715,7 +715,7 @@ rejection becomes an unhandled rejection at process level.
 
 **Effort:** Trivial.
 
-### ERR-03 — Async `setInterval` callbacks — **LOW**
+### ERR-03 — Async `setInterval` callbacks — **LOW** — ✅ DONE (`171cd2f4`)
 
 **File:** `acarshub-backend/src/services/scheduler.ts:339, 361, 365`.
 
@@ -732,7 +732,7 @@ a comment, or wrap the interval callback in a `.catch()` chain explicitly.
 
 ## 9. Architecture and god files
 
-### GOD-01 — `socket/handlers.ts` (1223 lines) — **MEDIUM**
+### GOD-01 — `socket/handlers.ts` (1223 lines) — **MEDIUM** — ✅ DONE (`6e5a4bcb`)
 
 **File:** `acarshub-backend/src/socket/handlers.ts`.
 
@@ -752,7 +752,7 @@ object passed to handlers, or into `services/alert-regen.ts`.
 
 **Effort:** Medium. Tests stay valid; structure improves.
 
-### GOD-02 — `db/migrate.ts` (1652 lines) — **MEDIUM**
+### GOD-02 — `db/migrate.ts` (1652 lines) — **MEDIUM** — ✅ DONE (`166541ae`)
 
 **Remediation.** One file per migration step (`migrations/v1.ts`,
 `migrations/v2.ts`, ...) plus a registry; `migrate.ts` becomes a small runner
@@ -762,7 +762,7 @@ runner" architecture than a monolith.
 **Effort:** Medium-to-high. Schedule alongside any new migration so the work
 isn't pure churn.
 
-### GOD-03 — `db/queries/messages.ts` (1212 lines) — **MEDIUM**
+### GOD-03 — `db/queries/messages.ts` (1212 lines) — **MEDIUM** — ✅ DONE (`56256cb5`)
 
 **Remediation.** Split into `queries/messages/search.ts`, `insert.ts`,
 `update.ts`, `delete.ts`, `prune.ts`, `range.ts`, `transform.ts`. Re-export
@@ -770,7 +770,7 @@ from a barrel.
 
 **Effort:** Medium.
 
-### GOD-04 — `services/index.ts` (848 lines) — **MEDIUM**
+### GOD-04 — `services/index.ts` (848 lines) — **MEDIUM** — ✅ DONE (`8bf9ee72`)
 
 **Remediation.** Split into:
 
@@ -782,7 +782,7 @@ from a barrel.
 
 **Effort:** Medium.
 
-### GOD-05 — `components/SettingsModal.tsx` (1553 lines) — **HIGH**
+### GOD-05 — `components/SettingsModal.tsx` (1553 lines) — **HIGH** — ✅ DONE (`f5d16be9`)
 
 **File:** `acarshub-react/src/components/SettingsModal.tsx`.
 
@@ -801,7 +801,7 @@ Resolves five `as any` socket emits (TYPE-01) and three static inline styles
 
 **Effort:** Medium-to-high.
 
-### GOD-06 — `utils/aircraftIcons.ts` (1510 lines) — **MEDIUM**
+### GOD-06 — `utils/aircraftIcons.ts` (1510 lines) — **MEDIUM** — ✅ DONE (`81d94f2c`)
 
 **Finding.** Likely a large lookup table — verify; if so it's data, acceptable,
 but should split data from any logic.
@@ -811,7 +811,7 @@ mixed with logic, separate the two.
 
 **Effort:** Low (mostly mechanical).
 
-### GOD-07 — `store/useAppStore.ts` (1217 lines) — **HIGH**
+### GOD-07 — `store/useAppStore.ts` (1217 lines) — **HIGH** — ✅ DONE (`2add10af`)
 
 **Remediation.** Split into:
 
@@ -824,7 +824,7 @@ Use Zustand's slice pattern if a single combined store is preferred.
 
 **Effort:** High. Touches every consumer.
 
-### GOD-08 — `components/Map/AircraftMarkers.tsx` (1098 lines) with duplicated tooltip code — **MEDIUM**
+### GOD-08 — `components/Map/AircraftMarkers.tsx` (1098 lines) with duplicated tooltip code — **MEDIUM** — ✅ DONE (`924822ae`)
 
 **File:** `acarshub-react/src/components/Map/AircraftMarkers.tsx:739-862` vs
 `866-948`.
@@ -855,7 +855,7 @@ parsers from the migration driver.
 
 ## 10. React effect-density refactors
 
-### EFFECT-01 — `LiveMapPage.tsx` has 12 `useEffect`s — **MEDIUM**
+### EFFECT-01 — `LiveMapPage.tsx` has 12 `useEffect`s — **MEDIUM** — ✅ DONE (`7835350b`)
 
 **File:** `acarshub-react/src/pages/LiveMapPage.tsx:137, 151, 274, 309, 330,
 342, 354, 360, 386, 400, 519, 530`.
@@ -870,7 +870,7 @@ parsers from the migration driver.
 
 **Effort:** Medium.
 
-### EFFECT-02 — `LiveMessagesPage.tsx` has 9 `useEffect`s — **MEDIUM**
+### EFFECT-02 — `LiveMessagesPage.tsx` has 9 `useEffect`s — **MEDIUM** — ✅ DONE (`d3c8868f`)
 
 **File:** `acarshub-react/src/pages/LiveMessagesPage.tsx:173, 177, 181, 188,
 196, 209, 238, 495, 621`.
@@ -880,13 +880,13 @@ parsers from the migration driver.
 
 **Effort:** Medium.
 
-### EFFECT-03 — `SearchPage.tsx` has 6 `useEffect`s — **LOW**
+### EFFECT-03 — `SearchPage.tsx` has 6 `useEffect`s — **LOW** — ✅ DONE (`202b761c`)
 
 **Remediation.** Combine related effects; extract a `useSearchParamsSync()` hook.
 
 **Effort:** Low.
 
-### EFFECT-04 — `AlertsPage.tsx` has 5 `useEffect`s — **LOW**
+### EFFECT-04 — `AlertsPage.tsx` has 5 `useEffect`s — **LOW** — ✅ DONE (`afe96db9`)
 
 **Remediation.** Same approach as EFFECT-03.
 
@@ -981,7 +981,7 @@ ingest path).
 
 **Effort:** Medium (one test file per PR).
 
-### TEST-GAP-FE — Frontend untested files — **HIGH**
+### TEST-GAP-FE — Frontend untested files — **HIGH** — ✅ DONE (all files covered; `LogsViewer.tsx` closed last via NIT-10 `8cf6f063`)
 
 **Services & infra (critical):**
 
@@ -1108,7 +1108,7 @@ Cumulative Map subsystem coverage: 15 of 15 covered, 200 tests.
 
 **Effort:** High overall; each individual file is Low.
 
-### TEST-QUALITY-01 — `Card.test.tsx` and `Button.test.tsx` are coverage padding — **MEDIUM**
+### TEST-QUALITY-01 — `Card.test.tsx` and `Button.test.tsx` are coverage padding — **MEDIUM** — ✅ DONE (`c3d59458`)
 
 **Files:**
 
@@ -1130,7 +1130,7 @@ behaviour) are missing.
 as the quality template — 64 tests in 14 `describe` blocks with 8 explicit
 `regression:` entries.
 
-### TEST-MISSING-INTEGRATION — No backend ingestion-pipeline integration test — **MEDIUM**
+### TEST-MISSING-INTEGRATION — No backend ingestion-pipeline integration test — **MEDIUM** — ✅ DONE (`28dc9e27`)
 
 **Finding.** Each component (UDP/TCP/ZMQ listener → message-queue → enrichment
 → DB write → ring-buffer → socket emit) is unit-tested in isolation but the
@@ -1142,7 +1142,7 @@ the ring buffer, and emits via a mock socket.
 
 **Effort:** Medium.
 
-### TEST-MISSING-FE — No regression test for `/main` namespace quirk — **MEDIUM**
+### TEST-MISSING-FE — No regression test for `/main` namespace quirk — **MEDIUM** — ✅ DONE (folded into `socket.ts` suite, `c30e8dd1`)
 
 **Finding.** AGENTS.md flags this as critical, but no test locks in the
 behaviour. Closely related to TYPE-01.
@@ -1513,7 +1513,7 @@ Deletion would break the codespell hook. No action required.
 
 ## 14. Miscellaneous nits
 
-### NIT-01 — Hardcoded magic numbers — **LOW**
+### NIT-01 — Hardcoded magic numbers — **LOW** — ✅ DONE (`ed3fc2fc`)
 
 **Locations:**
 
@@ -1554,7 +1554,7 @@ suppression is genuinely required; if not, prefer `aria-roledescription`.
 
 **Effort:** Trivial.
 
-### NIT-04 — Dead/unused exports to verify — **LOW**
+### NIT-04 — Dead/unused exports to verify — **LOW** — ✅ DONE (`27c6992e`)
 
 - `acarshub-backend/src/db/migrate-worker.ts:111-114` — `MigrateWorkerResult`
   exported; verify external consumers (probably tests).
@@ -1878,9 +1878,9 @@ have a safety net.
 | ID                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | TEST-GAP-FE (pages)           | ✅ ALL DONE — 3 parts merged. Parts 1-2 ✅ `AboutPage` + `StatusPage` + `StatsPage` — merge `5ec972ad` (Part 1, 38 tests: AboutPage augmented to 7 covering mount effects + version-card gate + external-link `rel="noopener noreferrer"` safety; StatusPage new suite of 31 covering loading branch, mount side effects, polling cadence (exact 10 000 ms + cleanup on unmount), `getStatusVariant` mapping for every status string, overall-system badge, `getDecoderRate` precedence including unknown-name fallthrough, conditional Threads/Errors/Configuration cards, Errors-card variant flip, locale count formatting). Part 2: StatsPage new suite of 36 tests covering mount effects + dual-poller cadence (30 000 ms stats / 10 000 ms status, both cleared on unmount), section navigation, Reception/Frequency sub-tab strips (enabled-decoder filtering), `freq_type` backend→internal mapping, frequency stale-state guard (resets `selectedFreqDecoder` when previously-selected decoder is disabled remotely), System Status conditionals (threads/errors/Configuration), errors-card warning-variant gate, locale Count formatting with optional-chain fallback. Part 3 ✅ `LiveMapPage` — commit `f6a1c8a4`, 33 tests across initial render (map/sidebar/separator presence, loading-overlay onLoad gate, `socketService.notifyPageChange` + `setCurrentPage` registration, theme badge gated on `userSelectedProvider`), aircraft data flow (paired counts surface in map + sidebar; store-driven updates propagate), pause (button toggle, localStorage persistence write + read-on-mount, `p`/`P` keyboard shortcut, regression test for text-input-focus ignore branch, frozen-snapshot semantics), sidebar (collapse/expand round-trip, persistence to settings store, separator hidden while collapsed, ArrowRight/ArrowLeft/Home keyboard resize with clamping, store commit on keyboard resize), aircraft interactions (list click → `mapRef.flyTo` with correct center/zoom, missing-coords branch, hover hex propagation, follow control appearance via `onFollowAircraft` callback, unfollow click clears it, auto-unfollow when followed hex disappears from ADS-B), URL focus (`?aircraft=HEX` triggers flyTo after onLoad, case-insensitive hex match, no-match no-op, auto-follow side effect), zoom freeze (`onViewStateChange` freezes `displayedAircraft` during zoom and unfreezes after 200 ms cooldown). Real Zustand stores retained; only the heavy MapLibre tree (`MapComponent`, `MapControls`, `MapLegend`, `AircraftList`) and Socket.IO service are mocked. Pattern note: `vi.hoisted()` required for spies referenced inside `vi.mock()` factories; helper wrappers `fireMapLoad`/`fireFollow`/`fireZoom`/`seedAircraft` wrap state-mutating callbacks in `act()` so React flushes effects before assertions run. |
-| TEST-GAP-FE (Map subsystem)   | Bundle 1 ✅ — 4 pure-React Map components, 45 tests across 4 new files: `MapControlButton` (7 tests: aria-label tooltip, active modifier, extra className, click, disabled, hover tooltip show/hide), `MapContextMenu` (10 tests: pause/resume label gate, follow-aware item, click handlers, item ordering, plus a regression pin that documents NIT-09 — the double-`onClose` smell where `ContextMenu` already auto-closes on item click), `MapLegend` (10 tests: toggle open/close via toggle + close button, colorByDecoder branch, per-decoder swatches, ground altitude threshold interpolation), `GeoJSONOverlayButton` (18 tests: trigger active modifier + badge count, dropdown open/close via trigger, click-outside, Escape (Escape-only — other keys don't close), category checkbox tri-state including DOM `indeterminate` property, individual overlay toggles isolating siblings; uses a module-level `vi.mock` of `../../../config/geojsonOverlays` because Vite's `?url` import suffix doesn't resolve in Vitest, mock also wires through `getOverlaysByCategory` since the settings store imports it from the same module). Remaining bundles: bundle 2 (`AircraftContextMenu`, `AircraftMessagesModal`, `AnimatedSprite`, `MapControls` — 4 pure-React components, ~808 LOC), bundle 3 (7 Leaflet-dependent components: `AircraftMarkers`, `HeyWhatsThatOverlay`, `NexradOverlay`, `OpenAIPOverlay`, `RainViewerOverlay`, `RangeRings`, `StationMarker` — needs reusable react-leaflet test harness).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| TEST-GAP-FE (Map subsystem)   | Bundle 1 ✅ — 4 pure-React Map components, 45 tests across 4 new files: `MapControlButton` (7 tests: aria-label tooltip, active modifier, extra className, click, disabled, hover tooltip show/hide), `MapContextMenu` (10 tests: pause/resume label gate, follow-aware item, click handlers, item ordering, plus a regression pin that documents NIT-09 — the double-`onClose` smell where `ContextMenu` already auto-closes on item click), `MapLegend` (10 tests: toggle open/close via toggle + close button, colorByDecoder branch, per-decoder swatches, ground altitude threshold interpolation), `GeoJSONOverlayButton` (18 tests: trigger active modifier + badge count, dropdown open/close via trigger, click-outside, Escape (Escape-only — other keys don't close), category checkbox tri-state including DOM `indeterminate` property, individual overlay toggles isolating siblings; uses a module-level `vi.mock` of `../../../config/geojsonOverlays` because Vite's `?url` import suffix doesn't resolve in Vitest, mock also wires through `getOverlaysByCategory` since the settings store imports it from the same module). ✅ Bundle 2 DONE (merge `27ddf67a`, 82 tests): `AircraftContextMenu`, `AircraftMessagesModal`, `AnimatedSprite`, `MapControls`. ✅ Bundle 3 DONE (merge `25b313b1`, 73 tests): all 7 react-map-gl integrations (`AircraftMarkers`, `HeyWhatsThatOverlay`, `NexradOverlay`, `OpenAIPOverlay`, `RainViewerOverlay`, `RangeRings`, `StationMarker`). Cumulative: 15 of 15 Map components covered, 200 tests. This row was stale for a while after bundles 2-3 actually landed — see the full breakdown in the TEST-GAP-FE finding write-up above, which stayed current while this table row did not.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | TEST-GAP-FE (charts)          | ✅ ALL DONE — merge `1502309b` (commit `f9290954`), 27 tests across 3 files: `ChartContainer` (8 tests covering conditional header rendering for title/subtitle/both/neither, className pass-through, canvas/children slot wiring), `MessageCountChart` (10 tests covering data/empty variant toggle, good = total - errors math, no-data fallback for null + zero-total, title text per variant, three-color palette ordering, and a regression that empty variant must not read `non_empty_*` fields even when those dominate), `SignalLevelChart` (9 tests covering the legacy whole-number filter / acarsdec spike workaround, ascending x-axis sort, per-decoder dataset construction with 0-fill for missing levels, unknown decoder color fallback, empty-after-filter case). All three follow the established chart pattern: inline `vi.mock` of `react-chartjs-2` capturing `data`/`options` props, plus minimal `useSettingsStore` mock returning `theme: 'mocha'` — no canvas rendering required.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| TEST-GAP-FE (everything else) | ✅ ALL DONE — 9 parts merged, 164 tests total: `ConnectionStatus` merge `ba8c4a31` (7 tests); `ThemeSwitcher` merge `a810acd9` (10 tests); `useThemeAwareMapProvider` merge `842d8a97` (7 tests); `AlertSoundManager` merge `84928036`/`57228c4a` (13 tests); `ContextMenu` merge `a33e76a2`/`4a9eae02` (22 tests); `mapProviders` config merge `8ebec597`/`5d6e62c6` (25 tests); `geojsonOverlays` config merge `31169ee4`/`1e149451` (20 tests); `MessageFilters` merge `8f70262d`/`3642030b` (31 tests); `Navigation` merge `2eaa04ca` (29 tests, also clears 2 pre-existing non-null assertions in `ContextMenu.test.tsx`). `LogsViewer` deferred to a future pass — it's a heavyweight virtualized component with its own state machine and worth a dedicated bundle.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| TEST-GAP-FE (everything else) | ✅ ALL DONE — 9 parts merged, 164 tests total: `ConnectionStatus` merge `ba8c4a31` (7 tests); `ThemeSwitcher` merge `a810acd9` (10 tests); `useThemeAwareMapProvider` merge `842d8a97` (7 tests); `AlertSoundManager` merge `84928036`/`57228c4a` (13 tests); `ContextMenu` merge `a33e76a2`/`4a9eae02` (22 tests); `mapProviders` config merge `8ebec597`/`5d6e62c6` (25 tests); `geojsonOverlays` config merge `31169ee4`/`1e149451` (20 tests); `MessageFilters` merge `8f70262d`/`3642030b` (31 tests); `Navigation` merge `2eaa04ca` (29 tests, also clears 2 pre-existing non-null assertions in `ContextMenu.test.tsx`). `LogsViewer` — originally deferred (heavyweight virtualized component, worth a dedicated bundle) — closed via NIT-10, commit `8cf6f063`: 28 new tests (35 total in the file), 98.24% stmt / 96.29% branch / 100% funcs / 100% lines.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | TEST-GAP-BE (the rest)        | ✅ `db/migrate.ts` 97.31% stmt / 87.30% br / 100% func — 4 parts merged: orchestrator (`8e4ffde5`→`444f0928`), initial-state-negatives (`06038113`→`e592f17a`), per-migration-edges (`8e4ffde5`→merge), worker-fallback (`ff53ba48`→merge). `startup-state.ts` already covered. `db/schema.ts` smoke deferred — Drizzle schema indirectly exercised by `helpers.test.ts` + ingestion integration test. Remaining uncovered migrate.ts lines (225-226, 417, 664-665, 1582, 1595) documented unreachable-from-userland guards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | TEST-MISSING-A11Y             | ✅ DONE — merge `97d78627` (commit `3900b752`). Wired axe-core (already installed at 4.11.4) directly via a `src/test/a11y.ts` helper exporting `runAxe()` + `expectNoA11yViolations()`. The original plan called for `vitest-axe` but that package is at 0.1.0 and stale; the direct-axe approach has zero new install surface and uses the same engine as the Playwright E2E sweep. Coverage: 14 tests in `formPrimitives.a11y.test.tsx` across 9 design-system primitives — Button (default/disabled/danger), Card, Toggle (checked/unchecked/with helpText), Select (with label/with helpText), RadioGroup, TabSwitcher (with `scrollIntoView` stub), Modal (scanned via `document.body` to catch the portalled dialog), Toast, ToastContainer (empty + populated with `clearAllToasts()` reset between cases). All primitives pass WCAG 2.1 AA today; future regressions caught at unit-test speed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
