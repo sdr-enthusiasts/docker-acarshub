@@ -19,8 +19,10 @@
 
 .map-control-button {
   position: relative;
-  width: 32px;
-  height: 32px;
+  // Mobile-first.
+  width: 44px;
+  height: 44px;
+  font-size: 1.125rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -30,8 +32,13 @@
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 1rem;
   padding: 0;
+
+  @include breakpoint(md) {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
   touch-action: manipulation; // Prevent double-tap zoom on mobile Safari
   -webkit-tap-highlight-color: transparent; // Remove tap highlight on iOS
   user-select: none; // Prevent text selection on mobile Safari
@@ -74,6 +81,9 @@
 
   // Tooltip styling
   &__tooltip {
+    // Hidden by default (mobile-first): tooltips don't make sense on touch
+    // devices with no hover state. Shown from the tablet breakpoint up.
+    display: none;
     position: absolute;
     right: 100%;
     top: 50%;
@@ -89,6 +99,10 @@
     pointer-events: none;
     z-index: 10000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+    @include breakpoint(md) {
+      display: unset;
+    }
 
     // Tooltip arrow pointing right
     &::before {
@@ -110,20 +124,6 @@
       margin-left: 1px;
       border: 4px solid transparent;
       border-left-color: var(--color-surface0);
-    }
-  }
-}
-
-// Mobile adjustments
-@include breakpoint-max(md) {
-  .map-control-button {
-    width: 44px;
-    height: 44px;
-    font-size: 1.125rem;
-
-    &__tooltip {
-      // Hide tooltips on mobile (touch devices)
-      display: none;
     }
   }
 }
