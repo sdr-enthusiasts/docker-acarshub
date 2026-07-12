@@ -31,11 +31,15 @@
  */
 
 .migration-status {
-  padding: $spacing-md $spacing-lg;
+  padding: $spacing-sm $spacing-md; // mobile-first
   background-color: var(--color-surface0);
   color: var(--color-text);
   border-bottom: 2px solid var(--color-accent-sapphire);
   font-size: $font-size-sm;
+
+  @include breakpoint(md) {
+    padding: $spacing-md $spacing-lg;
+  }
 }
 
 .migration-status__content {
@@ -43,7 +47,11 @@
 
   display: flex;
   align-items: center;
-  gap: $spacing-md;
+  gap: $spacing-sm; // mobile-first
+
+  @include breakpoint(md) {
+    gap: $spacing-md;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -53,12 +61,17 @@
 .migration-status__spinner {
   flex-shrink: 0;
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: 16px; // mobile-first
+  height: 16px;
   border: 2px solid var(--color-overlay1);
   border-top-color: var(--color-accent-sapphire);
   border-radius: 50%;
   animation: migration-spin 0.9s linear infinite;
+
+  @include breakpoint(md) {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 @keyframes migration-spin {
@@ -91,29 +104,11 @@
 }
 
 .migration-status__detail {
+  display: none; // mobile-first
   font-size: $font-size-xs;
   color: var(--color-subtext1);
-}
 
-// ---------------------------------------------------------------------------
-// Mobile
-// ---------------------------------------------------------------------------
-
-@media (max-width: #{$breakpoint-md - 1px}) {
-  .migration-status {
-    padding: $spacing-sm $spacing-md;
-  }
-
-  .migration-status__content {
-    gap: $spacing-sm;
-  }
-
-  .migration-status__spinner {
-    width: 16px;
-    height: 16px;
-  }
-
-  .migration-status__detail {
-    display: none;
+  @include breakpoint(md) {
+    display: unset;
   }
 }
