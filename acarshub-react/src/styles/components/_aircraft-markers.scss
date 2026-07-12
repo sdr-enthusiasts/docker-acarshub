@@ -343,10 +343,14 @@
     border-radius: 6px;
     padding: 6px 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    min-width: 160px;
+    min-width: 150px; // mobile-first
     font-size: 12px;
     line-height: 1.4;
     white-space: nowrap;
+
+    @include breakpoint(sm) {
+      min-width: 160px;
+    }
 
     // Smooth fade-in animation
     animation: tooltip-fade-in 0.15s ease-out;
@@ -437,29 +441,6 @@
   }
   to {
     opacity: 1;
-  }
-}
-
-// Mobile responsive tooltip
-@include breakpoint-max(sm) {
-  .aircraft-tooltip {
-    &__content {
-      min-width: 150px;
-      font-size: 12px;
-      padding: 6px 10px;
-    }
-
-    &__header {
-      font-size: 13px;
-    }
-
-    &__label {
-      font-size: 10px;
-    }
-
-    &__value {
-      font-size: 12px;
-    }
   }
 }
 
