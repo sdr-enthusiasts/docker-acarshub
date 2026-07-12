@@ -19,11 +19,12 @@
 
 .map-filters-menu {
   position: relative;
-  display: none; // Hidden by default (desktop), shown on mobile
+  display: block; // Mobile-first: shown by default
 
-  // Show on mobile only
-  @include breakpoint-max(md) {
-    display: block;
+  // Hidden on desktop -- individual filter buttons are shown instead (see
+  // .map-controls__filter--desktop in _map-controls.scss).
+  @include breakpoint(md) {
+    display: none;
   }
 
   &__button {
