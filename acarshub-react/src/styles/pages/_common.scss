@@ -24,18 +24,25 @@
  */
 
 .page {
-  margin-top: $spacing-lg;
-  margin-bottom: $spacing-lg;
+  // Mobile-first.
+  margin-top: $spacing-sm;
+  margin-bottom: $spacing-sm;
+  border-radius: $radius-md;
   background-color: var(--color-card-body);
-  border-radius: $radius-xl;
   overflow: clip;
   overflow-anchor: none; // Prevent scroll anchoring
 
   @include fade-in($transition-base);
+
+  @include breakpoint(md) {
+    margin-top: $spacing-lg;
+    margin-bottom: $spacing-lg;
+    border-radius: $radius-xl;
+  }
 }
 
 .page__header {
-  padding: $card-padding;
+  padding: $card-padding-sm; // mobile-first
   background-color: var(--color-card-header);
   border-bottom: 1px solid var(--color-overlay0);
   display: flex;
@@ -44,20 +51,32 @@
   flex-wrap: wrap;
   gap: $spacing-lg;
   border-radius: $radius-xl $radius-xl 0 0;
+
+  @include breakpoint(md) {
+    padding: $card-padding;
+  }
 }
 
 .page__title {
   margin: 0;
-  font-size: $font-size-3xl;
+  font-size: $font-size-2xl; // mobile-first
   font-weight: $font-weight-semibold;
   color: var(--color-text);
+
+  @include breakpoint(md) {
+    font-size: $font-size-3xl;
+  }
 }
 
 .page__subtitle {
   margin: $spacing-sm 0 0;
-  font-size: $font-size-base;
+  font-size: $font-size-sm; // mobile-first
   font-weight: $font-weight-normal;
   color: var(--color-subtext1);
+
+  @include breakpoint(md) {
+    font-size: $font-size-base;
+  }
 }
 
 .page__actions {
@@ -69,9 +88,16 @@
 
 .page__stats {
   display: flex;
-  gap: $spacing-xl;
+  // Mobile-first.
+  gap: $spacing-md;
+  width: 100%;
   flex-wrap: wrap;
   align-items: center;
+
+  @include breakpoint(md) {
+    gap: $spacing-xl;
+    width: auto;
+  }
 }
 
 .stat-separator {
@@ -84,6 +110,14 @@
   display: flex;
   flex-direction: column;
   gap: $spacing-xs;
+  // Mobile-first.
+  flex: 1;
+  min-width: 100px;
+
+  @include breakpoint(md) {
+    flex: unset;
+    min-width: unset;
+  }
 }
 
 .page__stat-label {
@@ -93,13 +127,21 @@
 }
 
 .page__stat-value {
-  font-size: $font-size-2xl;
+  font-size: $font-size-xl; // mobile-first
   font-weight: $font-weight-semibold;
   color: var(--color-text);
+
+  @include breakpoint(md) {
+    font-size: $font-size-2xl;
+  }
 }
 
 .page__content {
-  padding: $card-padding;
+  padding: $card-padding-sm; // mobile-first
+
+  @include breakpoint(md) {
+    padding: $card-padding;
+  }
 }
 
 /**
@@ -108,8 +150,12 @@
 
 .placeholder {
   text-align: center;
-  padding: $spacing-3xl $spacing-xl;
+  padding: $spacing-2xl $spacing-md; // mobile-first
   color: var(--color-subtext1);
+
+  @include breakpoint(md) {
+    padding: $spacing-3xl $spacing-xl;
+  }
 }
 
 .placeholder__icon {
@@ -124,10 +170,14 @@
 }
 
 .placeholder__title {
-  font-size: $font-size-2xl;
+  font-size: $font-size-xl; // mobile-first
   font-weight: $font-weight-semibold;
   color: var(--color-text);
   margin-bottom: $spacing-md;
+
+  @include breakpoint(md) {
+    font-size: $font-size-2xl;
+  }
 }
 
 .placeholder__description {
@@ -164,11 +214,17 @@
  */
 
 .info-box {
-  margin-top: $spacing-xl;
-  padding: $card-padding;
+  // Mobile-first.
+  margin-top: $spacing-lg;
+  padding: $card-padding-sm;
   background-color: var(--color-surface1);
   border-radius: $radius-lg;
   border-left: 4px solid var(--color-info);
+
+  @include breakpoint(md) {
+    margin-top: $spacing-xl;
+    padding: $card-padding;
+  }
 }
 
 .info-box--warning {
@@ -252,61 +308,6 @@
 @media (max-height: 820px) {
   .navigation .logo-image {
     display: none;
-  }
-}
-
-/**
- * Mobile optimizations
- */
-
-@media (max-width: #{$breakpoint-md - 1px}) {
-  .page {
-    margin-top: $spacing-sm;
-    margin-bottom: $spacing-sm;
-    border-radius: $radius-md;
-  }
-
-  .page__header {
-    padding: $card-padding-sm;
-  }
-
-  .page__title {
-    font-size: $font-size-2xl;
-  }
-
-  .page__subtitle {
-    font-size: $font-size-sm;
-  }
-
-  .page__stats {
-    gap: $spacing-md;
-    width: 100%;
-  }
-
-  .page__stat {
-    flex: 1;
-    min-width: 100px;
-  }
-
-  .page__stat-value {
-    font-size: $font-size-xl;
-  }
-
-  .page__content {
-    padding: $card-padding-sm;
-  }
-
-  .placeholder {
-    padding: $spacing-2xl $spacing-md;
-  }
-
-  .placeholder__title {
-    font-size: $font-size-xl;
-  }
-
-  .info-box {
-    margin-top: $spacing-lg;
-    padding: $card-padding-sm;
   }
 }
 
