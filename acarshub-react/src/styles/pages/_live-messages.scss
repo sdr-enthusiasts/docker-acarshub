@@ -498,20 +498,20 @@
   height: var(--virtual-list-height, 100%);
   overflow-y: auto;
   overflow-x: hidden;
-  // Horizontal padding keeps cards away from the viewport edges.
+  // Mobile-first: no horizontal padding, so message cards span the full
+  // viewport width. Combined with `.message-group__content { padding: 0 }`
+  // and `.message-card`'s own padding, this gives cards full-bleed alignment
+  // with the page edges — critical at 320-375px where every pixel counts.
+  padding: 0;
+  box-sizing: border-box;
+
+  // Desktop: horizontal padding keeps cards away from the viewport edges.
   // No top/bottom padding: top padding would create a visible dead-zone
   // between the filter bar and the first message card (messages would scroll
   // out of view one padding-height earlier than expected). Bottom spacing is
   // provided by .message-list__item's padding-bottom instead.
-  padding: 0 var(--spacing-lg);
-  box-sizing: border-box;
-
-  // On mobile drop horizontal padding too so message cards span the full
-  // viewport width. Combined with `.message-group__content { padding: 0 }`
-  // and `.message-card`'s own padding, this gives cards full-bleed alignment
-  // with the page edges — critical at 320–375px where every pixel counts.
-  @media (max-width: 768px) {
-    padding: 0;
+  @include breakpoint(md) {
+    padding: 0 var(--spacing-lg);
   }
 }
 
@@ -529,10 +529,13 @@
 
 // Message Content Modifiers (page-specific overrides)
 .message-content {
-  // Hide non-decoded text on small screens when decoded text exists
+  // Hide non-decoded text on small screens when decoded text exists.
+  // Mobile-first: hidden by default, shown again from the sm breakpoint up.
   &--hide-small {
-    @include breakpoint-max(sm) {
-      display: none;
+    display: none;
+
+    @include breakpoint(sm) {
+      display: block;
     }
   }
 
