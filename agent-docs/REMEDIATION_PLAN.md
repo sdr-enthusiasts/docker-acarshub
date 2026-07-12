@@ -1651,7 +1651,7 @@ plan-updates) applies.
 These IDs are deliberately scheduled in their own phase (Phase 8) so they
 neither delay the correctness-focused phases nor get absorbed into them.
 
-### FEAT-MARKER-SIZE — User-configurable aircraft marker size — **FEATURE**
+### FEAT-MARKER-SIZE — User-configurable aircraft marker size — **FEATURE** — ✅ DONE
 
 **Motivation.** Map readability varies by display density and user preference:
 desktop users with high-DPI screens want larger markers for at-a-glance
@@ -1686,6 +1686,86 @@ smaller markers to reduce visual overlap. Currently marker size is hardcoded.
 
 **Effort:** Medium. Net-new feature, straightforward but touches store,
 modal UI, map rendering, SCSS, and tests.
+
+**Resolution.** `MarkerSize = "small" | "medium" | "large"` added to
+`MapSettings`, default `"medium"` (unchanged rendering), settings-store
+version bumped 9 -> 10 with a migration backfilling the field on every
+older-version path. `RadioGroup` control added to `MapTab.tsx`'s existing
+"Map Display" card, matching the `AppearanceTab`/`RegionalTab` convention.
+
+**Deviated from the plan's literal `--aircraft-marker-scale` CSS
+transform/calc() suggestion** after investigation surfaced two correctness
+problems with a pure-CSS approach: (1) sprite-atlas cropping —
+`background-position`/`background-size` are exact pixel offsets into a
+shared spritesheet image, so scaling only the box via `calc()` without
+recomputing the crop offset/size from the same factor would misalign the
+visible sprite; (2) touch-target/transform composition — `transform:
+scale()` applies after layout, so it would shrink a box that already has a
+`min-width`/`min-height` touch-target floor, defeating the floor at
+"small". Instead, `utils/markerSize.ts`'s `getMarkerSizeScale()` multiplier
+is baked into the _generation_ math for both rendering paths:
+`spriteLoader.getSpritePosition()` (now accepts a `scale` param, default
+0.6 preserved for backward compatibility) and `getCSSBackgroundSize()`, and
+the SVG path's `svgShapeToURI()` scale factor. The 44px floor is then a
+plain SCSS `min-width`/`min-height` (`touch-target(44px, auto)` — 44px
+mobile, no floor on desktop so the "small" setting's visual-density benefit
+isn't defeated for mouse users), which composes correctly with an explicit
+smaller `width` since both resolve in the same layout pass.
+
+**Decoupled the clickable hit target from the visual icon** (new
+`.aircraft-marker-hit` wrapper button in `_aircraft-markers.scss`,
+replacing the previous design where the `<button>` itself was sized to the
+visual icon): the visual sprite/SVG lives on a purely decorative
+(`aria-hidden`) inner `<span>` inside the hit-target button. This was
+necessary because growing the _visual_ sprite box for touch-target
+purposes (rather than a separate wrapper) would have revealed neighbouring
+atlas art at the edges — cropping math is exact-pixel, not
+`background-size: contain`-safe. `AnimatedSprite.tsx` (multi-frame/animated
+sprites) got the same wrapper split, plus a new `scale` prop (default 0.6,
+backward compatible) forwarded from `AircraftMarkers.tsx`.
+
+**Two real bugs found and fixed during interactive verification** (not
+caught by unit tests, since both are pure-CSS-cascade / prop-wiring issues
+invisible to jsdom):
+
+1. A second, parallel stylesheet (`AircraftSprite.scss`, imported _after_
+   `_aircraft-markers.scss` in `AircraftMarkers.tsx`) hardcoded
+   `width: 43.2px; height: 43.2px;` on `.aircraft-sprite` — a leftover from
+   before this rework that happened to silently match the dynamic value at
+   the only scale ever used (0.6), until FEAT-MARKER-SIZE introduced other
+   scales and exposed the conflict: the later-imported rule won the
+   cascade, freezing the visual box size while `background-position`/
+   `background-size` kept scaling — visually, "small" revealed a sliver of
+   the neighbouring sprite in the atlas and "large" clipped the icon. Fixed
+   by removing the hardcoded values (with an explanatory comment marking
+   them do-not-reintroduce) and a stray `cursor: pointer` + dead
+   `:focus-visible` rule left over from before `.aircraft-sprite` became
+   non-interactive.
+2. `AircraftMarkers.tsx`'s `<AnimatedSprite>` JSX call site never actually
+   passed the new `scale` prop (the prop was added to `AnimatedSprite.tsx`
+   itself and its internal spriteLoader calls, but the parent forgot to
+   pass it) — every animated (multi-frame, e.g. rotating-propeller)
+   aircraft silently rendered at the default 0.6 scale regardless of the
+   setting, while single-frame static sprites scaled correctly, making
+   small propeller aircraft appear relatively larger than jets at the
+   "small"/"large" settings. Fixed by passing `scale={0.6 *
+markerSizeScale}`; pinned by a regression test in
+   `AircraftMarkers.test.tsx` that fails (prop is `undefined`) without the
+   fix and passes with it (verified via `git stash`).
+
+**Tests:** unit tests across `markerSize.test.ts` (pure scale-lookup),
+`spriteLoader.test.ts` (new `scale` param on `getSpritePosition`),
+`AnimatedSprite.test.tsx` (hit-target/visual split, `scale` prop
+threading), `AircraftMarkers.test.tsx` (SVG-path and sprite-path scale
+threading, the AnimatedSprite-prop regression above), `useSettingsStore.test.ts`
+(default, setter, full migration-chain coverage), `MapTab.test.tsx`
+(RadioGroup wiring). E2E: new `e2e/marker-size.spec.ts` — visible resize
+(small < medium < large, measured on the real rendered marker, Chromium/
+Mobile Chrome/Mobile Safari; Firefox skipped with a documented reason —
+its headless WebGL implementation does not reliably render the MapLibre
+canvas at all in this environment, verified via screenshot, unrelated to
+this feature) and the 44px touch-target floor holding at every size on
+mobile viewports (`Mobile Chrome`/`Mobile Safari`).
 
 ### PERF-BUNDLE — Bundle analysis & code-splitting for faster cold loads — **FEATURE / PERFORMANCE**
 
@@ -1928,7 +2008,7 @@ extracted hooks) are in place before new feature surface lands on them.
 
 | ID               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| FEAT-MARKER-SIZE | User-configurable aircraft marker size on the map                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| FEAT-MARKER-SIZE | ✅ DONE — see full write-up in §15. `MarkerSize` setting (small/medium/large, default medium) with store migration v9→v10, `RadioGroup` in `MapTab.tsx`. Scale baked into sprite/SVG generation math (not CSS transform, to avoid atlas-crop misalignment and touch-target/transform composition bugs); new `.aircraft-marker-hit` 44px-floored wrapper decouples the clickable area from the visual icon so sprite crops never bleed. Two real bugs found and fixed during verification: a stale parallel stylesheet hardcoding `.aircraft-sprite` width/height froze the visual box while the crop kept scaling (atlas bleed at "small", clipping at "large"); `AnimatedSprite`'s `scale` prop was never actually passed at its JSX call site, freezing all animated (propeller) aircraft at the default scale — both pinned by regression tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | FEAT-RANGE-RINGS | Dynamic range-ring sizing on the map — investigate clipping buffer and/or dynamic 4th+ ring                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | FE-MODAL-A11Y    | `acarshub-react/src/components/Modal.tsx` accessibility fixes (flagged during Phase 4 TEST-GAP-FE work). DONE `c8e3f790`: (1) new `hooks/useFocusTrap.ts` hook traps Tab/Shift+Tab within the dialog while open (wraps at both boundaries, falls back to focusing the container itself via `tabIndex={-1}` when there are no focusable descendants) and restores focus to whatever triggered the modal on close/unmount — closes the WCAG 2.1 AA violation where Tab could walk focus out of an open modal into the underlying page. (2) `role="dialog"`/`aria-modal`/`aria-labelledby`/`tabIndex={-1}` moved off the backdrop `<div>` onto the inner `.modal` element (matching the WAI-ARIA APG "Dialog (Modal)" pattern and the existing `Map/AircraftMessagesModal.tsx` precedent); the backdrop's dead `onKeyDown`-for-Enter handler (unreachable — it had no `tabIndex` so a real user could never focus it to trigger it) was removed outright rather than fixed, since Escape (already implemented, already tested) is the documented working keyboard equivalent to backdrop-click dismissal. 16 new unit tests in `hooks/__tests__/useFocusTrap.test.tsx` (pure-function `getFocusableElements` DOM-order/disabled/tabindex/aria-hidden coverage, plus full trap behavior including wrap-around both directions and focus restoration); `Modal.test.tsx` gained a "focus trap" describe block pinning the same "focus returns to trigger after close" contract that `e2e/accessibility.spec.ts`'s "Focus Management" tests check in a real browser — confirmed via a rebuilt Dockerized-Playwright image that those two pre-existing e2e tests now pass for a genuine reason (a real trap) rather than the coincidental DOM-order luck they were passing on before. Verified via `git stash`: 7 tests fail against the pre-fix code, all pass with the fix restored. |
