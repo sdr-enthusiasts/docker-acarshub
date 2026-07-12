@@ -25,10 +25,13 @@
 
 .toast {
   position: fixed;
-  bottom: $spacing-lg;
-  right: $spacing-lg;
-  min-width: 300px;
-  max-width: 400px;
+  // Mobile-first: full-width bottom bar (see the breakpoint(sm) override
+  // below for the desktop-style bottom-right corner box).
+  left: $spacing-md;
+  right: $spacing-md;
+  bottom: $spacing-md;
+  min-width: auto;
+  max-width: none;
   background-color: var(--color-surface0);
   border: 2px solid var(--color-danger);
   border-radius: $radius-lg;
@@ -40,6 +43,14 @@
     transform $transition-slow;
   z-index: $z-index-toast;
   overflow: hidden;
+
+  @include breakpoint(sm) {
+    left: unset;
+    right: $spacing-lg;
+    bottom: $spacing-lg;
+    min-width: 300px;
+    max-width: 400px;
+  }
 
   // Visible state
   &--visible {
@@ -120,21 +131,21 @@
 .toast__close {
   @include button-reset;
   @include flex-center;
-  // SCSS-TOUCH: toast dismiss is mobile-critical accessibility (toasts are
-  // ARIA-live announcements; dismissing them must be reachable by touch).
-  // 28×28 was below WCAG 2.1 AA. Mobile grows to 44, desktop keeps 28 for
-  // density inside the toast tray.
-  width: 28px;
-  height: 28px;
+  // SCSS-TOUCH mobile-first: toast dismiss is mobile-critical accessibility
+  // (toasts are ARIA-live announcements; dismissing them must be reachable
+  // by touch). 28×28 was below WCAG 2.1 AA. Mobile-first default is 44,
+  // desktop shrinks to 28 for density inside the toast tray.
+  width: 44px;
+  height: 44px;
   border-radius: $radius-md;
   color: var(--color-text);
   background-color: transparent;
   transition: background-color $transition-fast;
   cursor: pointer;
 
-  @media (max-width: #{$breakpoint-md - 1px}) {
-    width: 44px;
-    height: 44px;
+  @include breakpoint(md) {
+    width: 28px;
+    height: 28px;
   }
 
   &:hover {
@@ -216,37 +227,26 @@
  */
 .toast-container {
   position: fixed;
-  bottom: $spacing-lg;
-  right: $spacing-lg;
+  // Mobile-first: full-width bottom bar, matching .toast above.
+  left: $spacing-md;
+  right: $spacing-md;
+  bottom: $spacing-md;
   display: flex;
   flex-direction: column-reverse;
   gap: $spacing-md;
   z-index: $z-index-toast;
   pointer-events: none;
 
+  @include breakpoint(sm) {
+    left: unset;
+    right: $spacing-lg;
+    bottom: $spacing-lg;
+  }
+
   .toast {
     position: relative;
     bottom: auto;
     right: auto;
     pointer-events: auto;
-  }
-}
-
-/**
- * Mobile Responsive
- */
-@media (max-width: #{$breakpoint-sm - 1px}) {
-  .toast {
-    left: $spacing-md;
-    right: $spacing-md;
-    bottom: $spacing-md;
-    min-width: auto;
-    max-width: none;
-  }
-
-  .toast-container {
-    left: $spacing-md;
-    right: $spacing-md;
-    bottom: $spacing-md;
   }
 }
