@@ -82,9 +82,19 @@ const config: ServerConfig = {
 };
 
 /**
- * Create and configure Fastify server
+ * Create and configure Fastify server.
+ *
+ * Exported (TEST-GAP-BE) so tests can exercise every route via Fastify's
+ * built-in `.inject()` helper without a real network listener. This is the
+ * only piece of `server.ts` unit-tested directly — the `main()` startup
+ * orchestration (migration sequencing, background-service wiring, signal
+ * handlers) remains covered by the E2E/Docker-Compose full-stack suite only,
+ * since faithfully unit-testing it would mean mocking every one of a dozen
+ * service modules with no meaningful assertion left to make beyond "the
+ * mocks were called in order" — the E2E suite already proves the real
+ * sequence boots correctly end-to-end.
  */
-function createServer() {
+export function createServer() {
   const fastify = Fastify({
     logger: false, // Use Pino logger instead
     trustProxy: true,
@@ -523,11 +533,21 @@ async function main(): Promise<void> {
   }
 }
 
-// Start the server
-main().catch((error) => {
-  logger.fatal("Fatal error", {
-    error: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined,
+// Start the server — but only when this file is the actual process entry
+// point (`tsx watch src/server.ts` in dev, `node server.bundle.mjs` in
+// production), not when it is imported as a module (TEST-GAP-BE:
+// server.test.ts imports `createServer` for route-level testing via
+// Fastify's `.inject()`, and must not trigger a real startup sequence —
+// migrations, background services, socket server, process.exit — as a
+// side effect of the import). Standard ESM equivalent of Python's
+// `if __name__ == "__main__":` / Node's CJS `require.main === module`.
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+  main().catch((error) => {
+    logger.fatal("Fatal error", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    process.exit(1);
   });
-  process.exit(1);
-});
+}
