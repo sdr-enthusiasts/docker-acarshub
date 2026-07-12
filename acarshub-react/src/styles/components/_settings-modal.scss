@@ -196,6 +196,16 @@
   }
 }
 
+// PERF-BUNDLE Phase B: Suspense fallback shown while a lazily-loaded
+// settings tab's chunk is fetching. Reuses `.loading`/`.loading__spinner`
+// from _common.scss (DESIGN_LANGUAGE.md — no bespoke spinner), but at a
+// smaller footprint than the full-page `PageLoader` variant since this
+// renders inside a modal tabpanel, not a whole page.
+.settings-tab-loading {
+  min-height: 200px;
+  padding: $spacing-xl;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

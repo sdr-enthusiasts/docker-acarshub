@@ -25,6 +25,7 @@
 // ----------------------------------------------------------------------------
 
 import { useCallback, useState } from "react";
+import { socketService } from "../../services/socket";
 import { useAppStore } from "../../store/useAppStore";
 import { Button } from "../Button";
 import { Card } from "../Card";
@@ -103,10 +104,7 @@ export function AlertsTab({
     setAlertTerms(newTerms);
 
     // Emit to backend via Socket.IO
-    import("../../services/socket").then((socketModule) => {
-      const socket = socketModule.socketService.getSocket();
-      socket?.emit("update_alerts", newTerms);
-    });
+    socketService.getSocket()?.emit("update_alerts", newTerms);
 
     alert(
       `Added ${newTermsToAdd.length} default alert term${newTermsToAdd.length !== 1 ? "s" : ""}.`,
@@ -132,10 +130,7 @@ export function AlertsTab({
       setNewAlertTerm("");
 
       // Emit to backend via Socket.IO
-      import("../../services/socket").then((socketModule) => {
-        const socket = socketModule.socketService.getSocket();
-        socket?.emit("update_alerts", newTerms);
-      });
+      socketService.getSocket()?.emit("update_alerts", newTerms);
     }
   }, [newAlertTerm, alertTerms, setAlertTerms]);
 
@@ -148,10 +143,7 @@ export function AlertsTab({
       setAlertTerms(newTerms);
 
       // Emit to backend via Socket.IO
-      import("../../services/socket").then((socketModule) => {
-        const socket = socketModule.socketService.getSocket();
-        socket?.emit("update_alerts", newTerms);
-      });
+      socketService.getSocket()?.emit("update_alerts", newTerms);
     },
     [alertTerms, setAlertTerms],
   );
@@ -185,10 +177,7 @@ export function AlertsTab({
       setNewIgnoreTerm("");
 
       // Emit to backend via Socket.IO
-      import("../../services/socket").then((socketModule) => {
-        const socket = socketModule.socketService.getSocket();
-        socket?.emit("update_alerts", newTerms);
-      });
+      socketService.getSocket()?.emit("update_alerts", newTerms);
     }
   }, [newIgnoreTerm, alertTerms, setAlertTerms]);
 
@@ -201,10 +190,7 @@ export function AlertsTab({
       setAlertTerms(newTerms);
 
       // Emit to backend via Socket.IO
-      import("../../services/socket").then((socketModule) => {
-        const socket = socketModule.socketService.getSocket();
-        socket?.emit("update_alerts", newTerms);
-      });
+      socketService.getSocket()?.emit("update_alerts", newTerms);
     },
     [alertTerms, setAlertTerms],
   );

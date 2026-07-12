@@ -31,19 +31,68 @@
 // (isRegenerating, onRegenerateClick).
 // ----------------------------------------------------------------------------
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
 import { uiLogger } from "../utils/logger";
 import { Button } from "./Button";
 import { Modal } from "./Modal";
-import { AdvancedTab } from "./settings/AdvancedTab";
-import { AlertsTab } from "./settings/AlertsTab";
-import { AppearanceTab } from "./settings/AppearanceTab";
-import { DataTab } from "./settings/DataTab";
-import { MapTab } from "./settings/MapTab";
-import { NotificationsTab } from "./settings/NotificationsTab";
-import { RegionalTab } from "./settings/RegionalTab";
+
+// ---------------------------------------------------------------------------
+// PERF-BUNDLE Phase B (see agent-docs/REMEDIATION_PLAN.md §15): the Settings
+// modal is mounted unconditionally in App.tsx (so it can open instantly from
+// any page), which previously meant every user downloaded all 7 tabs' code
+// — including AdvancedTab's LogsViewer — on every page load, whether or not
+// they ever open Settings. Each tab is now its own lazily-loaded chunk,
+// fetched only the first time its tab is actually selected. `TabLoader`
+// reuses the same `.loading`/`.loading__spinner` markup as `App.tsx`'s
+// `PageLoader` (DESIGN_LANGUAGE.md — no bespoke spinner), just without the
+// full-page `min-height` since this renders inside a modal tabpanel.
+// ---------------------------------------------------------------------------
+const AppearanceTab = lazy(() =>
+  import("./settings/AppearanceTab").then((m) => ({
+    default: m.AppearanceTab,
+  })),
+);
+const RegionalTab = lazy(() =>
+  import("./settings/RegionalTab").then((m) => ({ default: m.RegionalTab })),
+);
+const AlertsTab = lazy(() =>
+  import("./settings/AlertsTab").then((m) => ({ default: m.AlertsTab })),
+);
+const NotificationsTab = lazy(() =>
+  import("./settings/NotificationsTab").then((m) => ({
+    default: m.NotificationsTab,
+  })),
+);
+const DataTab = lazy(() =>
+  import("./settings/DataTab").then((m) => ({ default: m.DataTab })),
+);
+const MapTab = lazy(() =>
+  import("./settings/MapTab").then((m) => ({ default: m.MapTab })),
+);
+const AdvancedTab = lazy(() =>
+  import("./settings/AdvancedTab").then((m) => ({ default: m.AdvancedTab })),
+);
+
+function TabLoader() {
+  return (
+    <output
+      className="loading settings-tab-loading"
+      aria-label="Loading settings tab"
+    >
+      <div className="loading__spinner" />
+    </output>
+  );
+}
 
 /**
  * Ordered list of settings tab identifiers.
@@ -145,52 +194,49 @@ export const SettingsModal = () => {
     setShowRegenerateConfirm(false);
     setIsRegenerating(true);
 
-    // Import socket service and trigger regeneration
-    import("../services/socket").then((socketModule) => {
-      const socket = socketModule.socketService.getSocket();
+    const socket = socketService.getSocket();
 
-      // Set up event listeners for started/completion/error
-      const handleStarted = (data: { message: string }) => {
-        // Regeneration has started in background thread
-        uiLogger.info("Alert regeneration started", { message: data.message });
+    // Set up event listeners for started/completion/error
+    const handleStarted = (data: { message: string }) => {
+      // Regeneration has started in background thread
+      uiLogger.info("Alert regeneration started", { message: data.message });
+    };
+
+    const handleComplete = (data: {
+      success: boolean;
+      stats: {
+        total_messages: number;
+        matched_messages: number;
+        total_matches: number;
       };
+    }) => {
+      setIsRegenerating(false);
+      alert(
+        `Alert match regeneration complete!\n\n` +
+          `• Messages processed: ${data.stats.total_messages.toLocaleString()}\n` +
+          `• Matched messages: ${data.stats.matched_messages.toLocaleString()}\n` +
+          `• Total matches created: ${data.stats.total_matches.toLocaleString()}\n\n` +
+          `The page will now reload to show updated results.`,
+      );
+      // Reload page to fetch fresh data from backend
+      window.location.reload();
+    };
 
-      const handleComplete = (data: {
-        success: boolean;
-        stats: {
-          total_messages: number;
-          matched_messages: number;
-          total_matches: number;
-        };
-      }) => {
-        setIsRegenerating(false);
-        alert(
-          `Alert match regeneration complete!\n\n` +
-            `• Messages processed: ${data.stats.total_messages.toLocaleString()}\n` +
-            `• Matched messages: ${data.stats.matched_messages.toLocaleString()}\n` +
-            `• Total matches created: ${data.stats.total_matches.toLocaleString()}\n\n` +
-            `The page will now reload to show updated results.`,
-        );
-        // Reload page to fetch fresh data from backend
-        window.location.reload();
-      };
+    const handleError = (data: { error: string }) => {
+      setIsRegenerating(false);
+      alert(
+        `Error regenerating alert matches:\n\n${data.error}\n\n` +
+          `Please check the server logs and try again.`,
+      );
+    };
 
-      const handleError = (data: { error: string }) => {
-        setIsRegenerating(false);
-        alert(
-          `Error regenerating alert matches:\n\n${data.error}\n\n` +
-            `Please check the server logs and try again.`,
-        );
-      };
+    // Register one-time listeners for all events
+    socket.once("regenerate_alert_matches_started", handleStarted);
+    socket.once("regenerate_alert_matches_complete", handleComplete);
+    socket.once("regenerate_alert_matches_error", handleError);
 
-      // Register one-time listeners for all events
-      socket.once("regenerate_alert_matches_started", handleStarted);
-      socket.once("regenerate_alert_matches_complete", handleComplete);
-      socket.once("regenerate_alert_matches_error", handleError);
-
-      // Trigger regeneration (runs in background thread)
-      socketModule.socketService.regenerateAlertMatches();
-    });
+    // Trigger regeneration (runs in background thread)
+    socketService.regenerateAlertMatches();
   }, []);
 
   const handleCancelRegenerate = useCallback(() => {
@@ -385,18 +431,20 @@ export const SettingsModal = () => {
           </button>
         </div>
 
-        {activeTab === "appearance" && <AppearanceTab />}
-        {activeTab === "regional" && <RegionalTab />}
-        {activeTab === "alerts" && (
-          <AlertsTab
-            isRegenerating={isRegenerating}
-            onRegenerateClick={handleRegenerateAlertMatches}
-          />
-        )}
-        {activeTab === "notifications" && <NotificationsTab />}
-        {activeTab === "data" && <DataTab />}
-        {activeTab === "map" && <MapTab />}
-        {activeTab === "advanced" && <AdvancedTab />}
+        <Suspense fallback={<TabLoader />}>
+          {activeTab === "appearance" && <AppearanceTab />}
+          {activeTab === "regional" && <RegionalTab />}
+          {activeTab === "alerts" && (
+            <AlertsTab
+              isRegenerating={isRegenerating}
+              onRegenerateClick={handleRegenerateAlertMatches}
+            />
+          )}
+          {activeTab === "notifications" && <NotificationsTab />}
+          {activeTab === "data" && <DataTab />}
+          {activeTab === "map" && <MapTab />}
+          {activeTab === "advanced" && <AdvancedTab />}
+        </Suspense>
 
         {/* Actions Footer */}
         <footer className="settings-footer">

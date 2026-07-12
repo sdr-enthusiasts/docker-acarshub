@@ -2023,6 +2023,149 @@ smaller win (~10.4 KB/route), needs Suspense wiring and test updates.
 (5) The `react-map-gl` shim `manualChunks` nit — free, do it opportunistically
 alongside (1).
 
+**Phase B implementation (this session — all five items landed, none
+deferred).**
+
+**1 + 5 (build.modulePreload + react-map-gl shim nit).** Both applied
+directly to `vite.config.ts`. The `resolveDependencies` filter strips
+`map-`/`charts-` from `hostType: "html"` preloads only (leaves
+`hostType: "js"` alone, so navigating into `/adsb` or `/status` still
+correctly preloads its own vendor chunk the moment the route's own
+`import()` fires). The `react-map-gl` shim now matches an explicit
+`node_modules/react-map-gl/` clause.
+
+**A materially bigger, previously-undiscovered root cause surfaced
+while verifying finding 1: the eager preload `<link>` tags were only
+a symptom.** Inspecting the built entry chunk's own `import` statements
+(not just `index.html`'s `<link>` tags) showed the eagerly-loaded entry
+chunk contained a **hard, unconditional static `import` of both
+`map-*.js` and `charts-*.js`** — meaning the browser had no choice but
+to fetch and execute both 1 MB+253 KB vendor chunks on every single
+page load, regardless of `modulePreload` configuration, since ES module
+semantics require a fully-imported chunk's entire file before its
+exports can be used. Root-caused via the file-size-sensitive nature of
+the bug (isolated by testing without `manualChunks`'s "react" bucket,
+which changed but didn't fix it) and confirmed as a **currently open,
+actively-tracked upstream Rolldown bug**
+(rolldown/rolldown#6083, #9291, #9331, #9407, #9441 — several distinct
+GitHub issues describing the exact same underlying chunk-optimizer
+defect: when a module — most often a CJS-interop wrapper for packages
+like `react`/`react-dom`, which are themselves CJS-only with no ESM
+entry point — is needed by more than one manually-named chunk group,
+Rolldown's optimizer assigns the single shared instance to whichever
+chunk claims it _first_ and forces every other consumer, including the
+eagerly-loaded entry, to statically import it back out). Confirmed the
+documented workaround from rolldown/rolldown#9291 applies here too: the
+classic `rollupOptions.output.manualChunks` callback form (equivalent
+to Rolldown's `codeSplitting.groups[].name()` under the hood) hits the
+bug; the native `codeSplitting.groups[].test` regex-matcher form does
+not. Migrated `vite.config.ts` off `manualChunks` entirely onto
+`rollupOptions.output.codeSplitting.groups` with `test` regex patterns
+for `react`, `charts`, `map`, and `socketio`. This fixed the
+react/react-dom half of the problem immediately, but surfaced one more
+instance of the _same_ bug for a different shared module: Vite's own
+internal `vite/preload-helper.js` runtime (the `__vitePreload` helper
+used by every dynamic `import()` call, both `App.tsx`'s route-level
+ones and an internal one inside `maplibre-gl`/`@vis.gl/react-maplibre`)
+was landing inside the `map` chunk and being statically imported back
+by the entry for the exact same reason. Added an explicit
+`vite-runtime-helpers` group (matching classic Vite/Rollup's own
+documented list of shared-helper ids prone to this, per
+vitejs/vite#5189) to claim it. After all three groups were in place,
+the entry chunk's own `import` list dropped to only
+`rolldown-runtime`, `vite-runtime-helpers`, `react`, `socket`,
+`useAppStore`, and `dateUtils` — no more `map`/`charts` — verified both
+by inspecting the built chunk's literal `import` statements and by a
+real-browser network trace (Docker Playwright): Live Messages/Search/
+Alerts/About routes now load zero bytes of `map-*`/`charts-*`; `/adsb`
+loads `map-*` but not `charts-*`; `/status` loads `charts-*` but not
+`map-*`.
+
+**2 (map-\*.css eager stylesheet).** `modulePreload.resolveDependencies`
+only governs `<link rel="modulepreload">` script hints, not CSS asset
+linking, which Vite handles through a separate, non-configurable code
+path — the static `import "maplibre-gl/dist/maplibre-gl.css";` at the
+top of `Map.tsx` was still landing in the unconditionally-linked
+`map-*.css` asset regardless of the JS-side fixes above. Resolved by
+moving the CSS import out of `Map.tsx` into `App.tsx`'s `LiveMapPage`
+lazy factory, fetched in parallel with the page's own JS chunk
+(`Promise.all([import(page), import(css)])`) so the chunk becomes
+genuinely async instead of tied to a manually-named vendor group; a
+second, small `transformIndexHtml` build plugin
+(`strip-eager-route-only-css`) strips the resulting `<link
+rel="stylesheet" href=".../map-*.css">` from the generated `index.html`
+(build-mode only). Verified no FOUC on `/adsb` itself (Suspense keeps
+`PageLoader` visible until both promises settle — the same fallback
+window that already existed while only the JS chunk was fetching) via
+a Docker Playwright screenshot showing fully-styled MapLibre controls
+on first paint.
+
+**3 (dead `socket.ts` dynamic-import removal).** `SettingsModal.tsx`'s
+`handleConfirmRegenerate` and all 5 call sites in `AlertsTab.tsx`
+replaced `import("../services/socket").then((m) => ...)` with a
+top-level `import { socketService } from "../services/socket"` plus a
+direct call — `useSocketIO.ts` (called unconditionally in the eager
+`App.tsx`) already statically imports `socket.ts`, so the dynamic
+wrapper never deferred any bytes; it was pure dead-weight promise
+indirection.
+
+**4 (Settings-tab lazy loading).** All 7 tab components
+(`AppearanceTab`, `RegionalTab`, `AlertsTab`, `NotificationsTab`,
+`DataTab`, `MapTab`, `AdvancedTab`) converted to `React.lazy()`, wrapped
+in a `<Suspense fallback={<TabLoader />}>` around the tab-panel render
+block (footer/Import/Export/Reset buttons stay outside the boundary —
+they don't depend on any tab's code). `TabLoader` reuses
+`App.tsx`'s `PageLoader` markup (`.loading`/`.loading__spinner` from
+`_common.scss`) with a new `.settings-tab-loading` modifier
+(`min-height: 200px` instead of the full-page `300px`) since it renders
+inside a modal tabpanel, not a page — no bespoke spinner introduced.
+Confirmed the real byte saving: `index-*.js` dropped from 180.02 KB to
+146.33 KB (gzip 53.43 KB → 45.36 KB, ~8.1 KB), each tab now its own
+tiny chunk (1.3 KB `AppearanceTab` up to 7.3 KB `AdvancedTab`
+pre-gzip) — smaller than the Phase A ~10.4 KB estimate but directionally
+confirming it; the estimate was based on pre-minification proportional
+scaling and is inherently approximate.
+
+**Test fallout from lazy-loading tabs — a real, verified, order-dependent
+flake, not just a one-off assertion fix.** `SettingsModal.test.tsx`'s 50
+tests mostly query tab content immediately after a synchronous
+`user.click(tab)` or right after `render()` (Appearance is the default
+tab, now also lazy). Since `React.lazy()` caches its resolved payload
+per component instance for the lifetime of the test _file_ (not
+per-test), whichever test happens to be first-in-execution-order to
+touch a given tab races the Suspense boundary and fails, while every
+later test touching the same tab passes "by accident" once the module
+is warm — confirmed by running the file with `--sequence.shuffle`
+across 15 seeds pre-fix: different tests failed on almost every seed (3
+to 7 failures, never the same set twice). Fixed by (a) a `beforeAll`
+that pre-imports all 7 tab modules directly (reduces perceived latency,
+alone insufficient — Suspense still needs one resolve-then-rerender
+pass even against an already-resolved promise) and, the actually
+load-bearing fix, (b) converting every first `getBy*`/`getAllBy*` query
+immediately following a tab switch (or initial mount, for Appearance)
+to `findBy*`/`findAllBy*` across the file (~35 call sites; two
+previously-synchronous tests promoted to `async`). Re-verified stable
+across the same 15 shuffle seeds post-fix: 50/50 every time.
+
+**Full verification.** `just ci` green. Full frontend suite: 2343/2343.
+Full Playwright E2E suite (chromium project): 109 passed, 18 skipped
+(pre-existing viewport/browser-specific skip conditions), 5 failed —
+confirmed via a `git stash` round-trip that all 5 failures
+(4 in `accessibility.spec.ts`'s `finishAnimations()` helper hitting
+`InvalidStateError: Cannot finish Animation with an infinite target
+effect end`, 1 flaky `settings-sound-alerts.spec.ts` autoplay test) are
+**pre-existing on the unmodified baseline**, not introduced by this
+work — identical failure set and count before and after. Not
+investigated further this session (out of scope for PERF-BUNDLE); worth
+a dedicated flaky-tests-are-bugs session.
+
+**Not investigated this session:** the `experimental.strictExecutionOrder`
+Rolldown option some of the referenced upstream issues mention as an
+alternative/complementary workaround — the `codeSplitting.groups` +
+explicit-group approach fully resolved the observed symptom without
+needing it, and `strictExecutionOrder` trades bundle size for the
+guarantee, which would work against this exact effort's goal.
+
 ---
 
 ### FEAT-RANGE-RINGS — Dynamic range-ring sizing on the map — **FEATURE**
@@ -2440,7 +2583,7 @@ extracted hooks) are in place before new feature surface lands on them.
 | ID               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | FEAT-MARKER-SIZE | ✅ DONE — see full write-up in §15. `MarkerSize` setting (small/medium/large, default medium) with store migration v9→v10, `RadioGroup` in `MapTab.tsx`. Scale baked into sprite/SVG generation math (not CSS transform, to avoid atlas-crop misalignment and touch-target/transform composition bugs); new `.aircraft-marker-hit` 44px-floored wrapper decouples the clickable area from the visual icon so sprite crops never bleed. Two real bugs found and fixed during verification: a stale parallel stylesheet hardcoding `.aircraft-sprite` width/height froze the visual box while the crop kept scaling (atlas bleed at "small", clipping at "large"); `AnimatedSprite`'s `scale` prop was never actually passed at its JSX call site, freezing all animated (propeller) aircraft at the default scale — both pinned by regression tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| PERF-BUNDLE      | Phase A audit DONE (this session, see full write-up in §15) — route-level lazy-loading and vendor chunking already existed pre-audit (`dc8a5c5e`); the actual live problem is Vite's default `modulePreload` + eager CSS linking defeating that split by preloading the 1MB `map` and 253KB `charts` vendor chunks (plus a render-blocking `map-*.css`) on every route regardless of need — quantified at 373.71 KB gzip wasted per non-map/non-stats route (70% of total payload), verified via a reverted scratch edit to `vite.config.ts`. **Phase B (implementation) awaiting review before starting.**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| PERF-BUNDLE      | ✅ DONE — see full write-up in §15. Phase A found the real problem was worse than the plan assumed: beyond eager `modulePreload` hints, a confirmed-open upstream Rolldown bug (rolldown/rolldown#6083 et al.) was forcing the eagerly-loaded entry chunk to statically import the entire 1MB `map` and 253KB `charts` vendor chunks on every route, regardless of `modulePreload` config. Phase B fixed all 5 identified items: migrated `vite.config.ts` off `manualChunks` onto `codeSplitting.groups` with regex `test` matchers (the documented workaround) plus an explicit `vite-runtime-helpers` group; moved `maplibre-gl.css` into the `LiveMapPage` lazy factory + a `transformIndexHtml` plugin to kill the render-blocking `map-*.css` link; removed dead `socket.ts` dynamic-import wrapping; lazy-loaded all 7 Settings-modal tabs. Verified via Docker Playwright network traces (each route now loads exactly its own vendor chunks, zero cross-contamination) and a real order-dependent test flake in `SettingsModal.test.tsx` found and fixed (stable across 15 shuffle seeds). `just ci` green; full E2E suite matches pre-existing baseline pass/fail counts exactly (5 pre-existing, unrelated failures confirmed via `git stash`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | FEAT-RANGE-RINGS | ✅ DONE — see full write-up in §15. Phase A confirmed `minEdgeDistance * 0.7` (short-axis-only, no-clipping-allowed design) as the root cause; Phase B implemented strategy (c) (`getMaxRingCount` 3-5 by container width, `calculateRangeRingRadii` corner-based buffer with an edge-based no-clip floor). A second, more fundamental defect surfaced during live verification: ring size was computed from `station -> edge/corner distance` rather than `viewport-center -> edge/corner distance`, so panning the map (with the station now off-center) made rings visibly shrink/change count/nearly vanish with no zoom change at all. Fixed by keying the size calculation off the map's own center instead of the station; rings are still drawn anchored at the station's real coordinates. Both defects pinned by regression tests (verified failing pre-fix, passing post-fix via a temporary revert).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | FE-MODAL-A11Y    | `acarshub-react/src/components/Modal.tsx` accessibility fixes (flagged during Phase 4 TEST-GAP-FE work). DONE `c8e3f790`: (1) new `hooks/useFocusTrap.ts` hook traps Tab/Shift+Tab within the dialog while open (wraps at both boundaries, falls back to focusing the container itself via `tabIndex={-1}` when there are no focusable descendants) and restores focus to whatever triggered the modal on close/unmount — closes the WCAG 2.1 AA violation where Tab could walk focus out of an open modal into the underlying page. (2) `role="dialog"`/`aria-modal`/`aria-labelledby`/`tabIndex={-1}` moved off the backdrop `<div>` onto the inner `.modal` element (matching the WAI-ARIA APG "Dialog (Modal)" pattern and the existing `Map/AircraftMessagesModal.tsx` precedent); the backdrop's dead `onKeyDown`-for-Enter handler (unreachable — it had no `tabIndex` so a real user could never focus it to trigger it) was removed outright rather than fixed, since Escape (already implemented, already tested) is the documented working keyboard equivalent to backdrop-click dismissal. 16 new unit tests in `hooks/__tests__/useFocusTrap.test.tsx` (pure-function `getFocusableElements` DOM-order/disabled/tabindex/aria-hidden coverage, plus full trap behavior including wrap-around both directions and focus restoration); `Modal.test.tsx` gained a "focus trap" describe block pinning the same "focus returns to trigger after close" contract that `e2e/accessibility.spec.ts`'s "Focus Management" tests check in a real browser — confirmed via a rebuilt Dockerized-Playwright image that those two pre-existing e2e tests now pass for a genuine reason (a real trap) rather than the coincidental DOM-order luck they were passing on before. Verified via `git stash`: 7 tests fail against the pre-fix code, all pass with the fix restored. |
 
