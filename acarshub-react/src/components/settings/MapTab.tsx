@@ -21,9 +21,10 @@
 
 import { ALL_PROVIDERS } from "../../config/mapProviders";
 import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
-import type { MapProvider } from "../../types";
+import type { MapProvider, MarkerSize } from "../../types";
 import { Button } from "../Button";
 import { Card } from "../Card";
+import { RadioGroup } from "../RadioGroup";
 import { Select } from "../Select";
 
 export function MapTab() {
@@ -41,6 +42,7 @@ export function MapTab() {
   const setGroundAltitudeThreshold = useSettingsStore(
     (state) => state.setGroundAltitudeThreshold,
   );
+  const setMarkerSize = useSettingsStore((state) => state.setMarkerSize);
 
   return (
     <div
@@ -228,6 +230,34 @@ export function MapTab() {
               will be displayed in gray. Adjust this based on your local terrain
               elevation. Default: 500 ft MSL.
             </p>
+          </div>
+
+          <div className="settings-form-field">
+            <RadioGroup
+              name="marker-size"
+              label="Aircraft Marker Size"
+              value={settings.map.markerSize}
+              options={[
+                {
+                  value: "small",
+                  label: "Small",
+                  description:
+                    "Compact markers, more map visible — useful near busy airports",
+                },
+                {
+                  value: "medium",
+                  label: "Medium",
+                  description: "Default marker size",
+                },
+                {
+                  value: "large",
+                  label: "Large",
+                  description: "Larger markers, easier to tap on mobile",
+                },
+              ]}
+              onChange={(value) => setMarkerSize(value as MarkerSize)}
+              helpText="Adjust the size of aircraft icons on the map. The tap/click area always meets the 44px accessibility minimum on mobile regardless of this setting."
+            />
           </div>
         </div>
       </Card>

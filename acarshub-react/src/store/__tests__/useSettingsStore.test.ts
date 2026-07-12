@@ -95,7 +95,8 @@ describe("useSettingsStore", () => {
       expect(settings.map.mapSidebarWidth).toBe(408);
       expect(settings.map.mapSidebarCollapsed).toBe(false);
       expect(settings.map.showHeyWhatsThat).toBe(true);
-      expect(settings.version).toBe(9);
+      expect(settings.map.markerSize).toBe("medium");
+      expect(settings.version).toBe(10);
       expect(settings.updatedAt).toBeGreaterThan(0);
     });
 
@@ -472,6 +473,35 @@ describe("useSettingsStore", () => {
       expect(settings.map.showRangeRings).toBe(false);
     });
 
+    // FEAT-MARKER-SIZE
+    it("should default markerSize to 'medium'", () => {
+      const { settings } = useSettingsStore.getState();
+      expect(settings.map.markerSize).toBe("medium");
+    });
+
+    it.each(["small", "medium", "large"] as const)(
+      "should update markerSize to '%s'",
+      (size) => {
+        const { setMarkerSize } = useSettingsStore.getState();
+
+        setMarkerSize(size);
+
+        const { settings } = useSettingsStore.getState();
+        expect(settings.map.markerSize).toBe(size);
+      },
+    );
+
+    it("should persist markerSize across setMarkerSize calls (updatedAt bumped)", () => {
+      const { setMarkerSize } = useSettingsStore.getState();
+      const before = useSettingsStore.getState().settings.updatedAt;
+
+      setMarkerSize("large");
+
+      const { settings } = useSettingsStore.getState();
+      expect(settings.map.markerSize).toBe("large");
+      expect(settings.updatedAt).toBeGreaterThanOrEqual(before);
+    });
+
     it("should batch update map settings", () => {
       const { updateMapSettings } = useSettingsStore.getState();
 
@@ -564,7 +594,7 @@ describe("useSettingsStore", () => {
       expect(typeof exported).toBe("string");
       const parsed = JSON.parse(exported) as UserSettings;
       expect(parsed.appearance.theme).toBe("latte");
-      expect(parsed.version).toBe(9);
+      expect(parsed.version).toBe(10);
     });
 
     it("should import valid settings JSON", () => {
@@ -619,6 +649,7 @@ describe("useSettingsStore", () => {
           showHeyWhatsThat: true,
           useSprites: true,
           colorByDecoder: false,
+          markerSize: "medium",
           groundAltitudeThreshold: 5000,
           enabledGeoJSONOverlays: [],
           mapSidebarWidth: 408,
@@ -724,6 +755,7 @@ describe("useSettingsStore", () => {
           showHeyWhatsThat: true,
           useSprites: true,
           colorByDecoder: false,
+          markerSize: "medium",
           groundAltitudeThreshold: 5000,
           enabledGeoJSONOverlays: [],
           mapSidebarWidth: 408,
@@ -802,9 +834,10 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(oldState, 0);
 
-      expect(migrated.settings.version).toBe(9);
+      expect(migrated.settings.version).toBe(10);
       expect(migrated.settings.appearance.theme).toBe("mocha"); // Reset to default
       expect(migrated.settings.map).toBeDefined();
+      expect(migrated.settings.map.markerSize).toBe("medium");
       expect(migrated.settings.advanced).toBeDefined();
     });
 
@@ -845,10 +878,11 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v1State, 1);
 
-      expect(migrated.settings.version).toBe(9);
+      expect(migrated.settings.version).toBe(10);
       expect(migrated.settings.map.mapSidebarWidth).toBe(408);
       expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
       expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
+      expect(migrated.settings.map.markerSize).toBe("medium");
       // Existing settings preserved
       expect(migrated.settings.appearance.theme).toBe("latte");
       expect(migrated.settings.regional.timeFormat).toBe("24h");
@@ -920,7 +954,7 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v3State, 3);
-      expect(migrated.settings.version).toBe(9);
+      expect(migrated.settings.version).toBe(10);
       // Existing settings preserved
       expect(migrated.settings.map.showNexrad).toBe(false);
       expect(migrated.settings.map.showOnlyMilitary).toBe(false);
@@ -929,6 +963,7 @@ describe("useSettingsStore", () => {
       expect(migrated.settings.map.showOpenAIP).toBe(false);
       expect(migrated.settings.map.showRainViewer).toBe(false);
       expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
+      expect(migrated.settings.map.markerSize).toBe("medium");
     });
 
     it("should migrate from version 4 to version 6 (add groundAltitudeThreshold)", () => {
@@ -994,7 +1029,7 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v4State, 4);
-      expect(migrated.settings.version).toBe(9);
+      expect(migrated.settings.version).toBe(10);
       // Existing settings preserved
       expect(migrated.settings.map.showOpenAIP).toBe(false);
       expect(migrated.settings.map.showRainViewer).toBe(false);
@@ -1002,6 +1037,27 @@ describe("useSettingsStore", () => {
       expect(migrated.settings.map.groundAltitudeThreshold).toBe(500);
       // showHeyWhatsThat defaults to true (show overlay when configured)
       expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
+      expect(migrated.settings.map.markerSize).toBe("medium");
+    });
+
+    // FEAT-MARKER-SIZE
+    it("should migrate from version 9 to version 10 (add markerSize)", () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
+      const { migrate } = (useSettingsStore as any).persist.getOptions();
+
+      const v9State = {
+        settings: {
+          ...useSettingsStore.getState().settings,
+          version: 9,
+        },
+      };
+      // biome-ignore lint/suspicious/noExplicitAny: simulating a pre-FEAT-MARKER-SIZE persisted shape
+      delete (v9State.settings.map as any).markerSize;
+
+      const migrated = migrate(v9State, 9);
+
+      expect(migrated.settings.version).toBe(10);
+      expect(migrated.settings.map.markerSize).toBe("medium");
     });
 
     it("should return unchanged state for current version", () => {
@@ -1012,8 +1068,8 @@ describe("useSettingsStore", () => {
         settings: useSettingsStore.getState().settings,
       };
 
-      // Version 9 is the current version; migrate should return the state unchanged
-      const migrated = migrate(currentState, 9);
+      // Version 10 is the current version; migrate should return the state unchanged
+      const migrated = migrate(currentState, 10);
 
       expect(migrated).toEqual(currentState);
     });
@@ -1085,13 +1141,14 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v7State, 7);
-      expect(migrated.settings.version).toBe(9);
+      expect(migrated.settings.version).toBe(10);
       // Existing settings preserved
       expect(migrated.settings.map.mapSidebarWidth).toBe(450);
       expect(migrated.settings.appearance.theme).toBe("mocha");
       // New fields added with defaults
       expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
       expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
+      expect(migrated.settings.map.markerSize).toBe("medium");
     });
 
     it("regression: should migrate from version 8 to version 9 (add showHeyWhatsThat)", () => {
@@ -1163,13 +1220,14 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v8State, 8);
-      expect(migrated.settings.version).toBe(9);
+      expect(migrated.settings.version).toBe(10);
       // Existing settings preserved
       expect(migrated.settings.map.mapSidebarWidth).toBe(408);
       expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
       expect(migrated.settings.appearance.theme).toBe("mocha");
       // New field added: showHeyWhatsThat defaults to true (show when configured)
       expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
+      expect(migrated.settings.map.markerSize).toBe("medium");
     });
   });
 
@@ -1301,7 +1359,7 @@ describe("useSettingsStore", () => {
       if (!stored) throw new Error("Expected stored to be truthy");
       const parsed = JSON.parse(stored);
 
-      expect(parsed.version).toBe(9);
+      expect(parsed.version).toBe(10);
     });
   });
 

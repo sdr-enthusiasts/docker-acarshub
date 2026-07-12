@@ -182,4 +182,42 @@ describe("MapTab", () => {
       ).toBe(500);
     });
   });
+
+  describe("marker size (FEAT-MARKER-SIZE)", () => {
+    // Accessible name includes the option's description text (the <label>
+    // wraps both), so queries use a leading-anchor regex rather than an
+    // exact string match — see components/__tests__/RadioGroup.test.tsx
+    // for the same convention.
+
+    it("defaults to 'medium' selected", () => {
+      render(<MapTab />);
+      const mediumRadio = screen.getByRole("radio", {
+        name: /^Medium/,
+      }) as HTMLInputElement;
+      expect(mediumRadio.checked).toBe(true);
+    });
+
+    it.each([
+      ["small", /^Small/],
+      ["medium", /^Medium/],
+      ["large", /^Large/],
+    ] as const)("selecting '%s' updates the store", async (size, pattern) => {
+      const user = userEvent.setup();
+      render(<MapTab />);
+
+      await user.click(screen.getByRole("radio", { name: pattern }));
+
+      expect(useSettingsStore.getState().settings.map.markerSize).toBe(size);
+    });
+
+    it("reflects the current store value when it is not the default", () => {
+      useSettingsStore.getState().setMarkerSize("large");
+      render(<MapTab />);
+
+      const largeRadio = screen.getByRole("radio", {
+        name: /^Large/,
+      }) as HTMLInputElement;
+      expect(largeRadio.checked).toBe(true);
+    });
+  });
 });

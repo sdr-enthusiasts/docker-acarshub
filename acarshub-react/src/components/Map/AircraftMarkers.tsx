@@ -40,6 +40,7 @@ import {
   pairADSBWithACARSMessages,
 } from "../../utils/aircraftPairing";
 import { mapLogger } from "../../utils/logger";
+import { getMarkerSizeScale } from "../../utils/markerSize";
 import { getSpriteLoader } from "../../utils/spriteLoader";
 import { AircraftContextMenu } from "./AircraftContextMenu";
 import { AircraftMessagesModal } from "./AircraftMessagesModal";
@@ -403,6 +404,13 @@ export function AircraftMarkers({
     readMessageUids,
   ]);
 
+  // FEAT-MARKER-SIZE: single scale multiplier derived from the user's
+  // marker-size setting, applied to BOTH rendering paths' generation math
+  // (SVG data-URI dimensions and sprite-atlas crop) so x/y/width/height
+  // stay proportionally correct — see utils/markerSize.ts for why this
+  // can't be a CSS-only transform/calc().
+  const markerSizeScale = getMarkerSizeScale(mapSettings.markerSize);
+
   // Prepare marker data using useMemo to avoid infinite loops
   const aircraftMarkers = useMemo(() => {
     const markers: AircraftMarkerData[] = [];
@@ -415,6 +423,7 @@ export function AircraftMarkers({
       spriteLoaderPresent: spriteLoader !== null,
       spriteLoaderReady: spriteLoader?.isLoaded() ?? false,
       totalAircraft: filteredPairedAircraft.length,
+      markerSizeScale,
     });
 
     for (const aircraft of filteredPairedAircraft) {
@@ -453,7 +462,12 @@ export function AircraftMarkers({
       );
 
       // Generate SVG icon (always generate as fallback)
-      const iconData = svgShapeToURI(shapeName, 0.5, scale * 1.5, color);
+      const iconData = svgShapeToURI(
+        shapeName,
+        0.5,
+        scale * 1.5 * markerSizeScale,
+        color,
+      );
 
       // Sprite data (if using sprites)
       let spriteName: string | undefined;
@@ -496,6 +510,7 @@ export function AircraftMarkers({
           const position = spriteLoader.getSpritePosition(
             spriteResult.spriteName,
             0,
+            0.6 * markerSizeScale,
           );
 
           if (position) {
@@ -505,7 +520,8 @@ export function AircraftMarkers({
               width: position.width,
               height: position.height,
               backgroundSize:
-                spriteLoader.getCSSBackgroundSize() ?? "345.6px 1468.8px",
+                spriteLoader.getCSSBackgroundSize(0.6 * markerSizeScale) ??
+                "345.6px 1468.8px",
             };
             spriteFrames = position.frames;
             spriteFrameTime = position.frameTime;
@@ -608,6 +624,7 @@ export function AircraftMarkers({
     colorByDecoder,
     groundAltitudeThreshold,
     spriteLoadError,
+    markerSizeScale,
   ]);
 
   // Filter aircraft markers to only those currently visible in the viewport.
@@ -758,30 +775,21 @@ export function AircraftMarkers({
                     cursorStyle={
                       markerData.aircraft.hasMessages ? "pointer" : "default"
                     }
+                    scale={0.6 * markerSizeScale}
                   />
                 ) : (
+                  // FEAT-MARKER-SIZE: the clickable element is a
+                  // 44px-floored hit-target wrapper (.aircraft-marker-hit);
+                  // the visual sprite lives on a decorative inner <span> so
+                  // growing the hit target never distorts the atlas crop
+                  // (see the comment in utils/markerSize.ts).
                   <button
                     type="button"
-                    className={`aircraft-sprite ${markerData.spriteClass || ""} ${
-                      hoveredAircraftHex === markerData.hex
-                        ? "aircraft-marker--hovered"
-                        : ""
-                    } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
-                      followedAircraftHex === markerData.hex
-                        ? "aircraft-marker--followed"
-                        : ""
-                    }`}
+                    className="aircraft-marker-hit"
                     aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                     style={
                       {
-                        "--sprite-x": `-${markerData.spritePosition.x}px`,
-                        "--sprite-y": `-${markerData.spritePosition.y}px`,
-                        "--sprite-bg-size":
-                          markerData.spritePosition.backgroundSize,
-                        "--sprite-width": `${markerData.spritePosition.width}px`,
-                        "--sprite-height": `${markerData.spritePosition.height}px`,
-                        "--sprite-rotation": `${markerData.rotation}deg`,
-                        "--sprite-cursor": markerData.aircraft.hasMessages
+                        "--marker-cursor": markerData.aircraft.hasMessages
                           ? "pointer"
                           : "default",
                       } as React.CSSProperties
@@ -792,27 +800,46 @@ export function AircraftMarkers({
                     }
                     onMouseEnter={handleTooltipMouseEnter(markerData.hex)}
                     onMouseLeave={handleTooltipMouseLeave}
-                  />
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`aircraft-sprite ${markerData.spriteClass || ""} ${
+                        hoveredAircraftHex === markerData.hex
+                          ? "aircraft-marker--hovered"
+                          : ""
+                      } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
+                        followedAircraftHex === markerData.hex
+                          ? "aircraft-marker--followed"
+                          : ""
+                      }`}
+                      style={
+                        {
+                          "--sprite-x": `-${markerData.spritePosition.x}px`,
+                          "--sprite-y": `-${markerData.spritePosition.y}px`,
+                          "--sprite-bg-size":
+                            markerData.spritePosition.backgroundSize,
+                          "--sprite-width": `${markerData.spritePosition.width}px`,
+                          "--sprite-height": `${markerData.spritePosition.height}px`,
+                          "--sprite-rotation": `${markerData.rotation}deg`,
+                        } as React.CSSProperties
+                      }
+                    />
+                  </button>
                 )
               ) : (
-                // SVG rendering (fallback or when sprites disabled)
+                // SVG rendering (fallback or when sprites disabled).
+                // Same hit-target/visual split as the sprite branch above —
+                // here it's mainly for a uniform hit-target model across
+                // both render paths (an SVG <img> stretches safely inside
+                // a bigger box, so it didn't strictly need decoupling, but
+                // sharing one wrapper class keeps the touch-target
+                // guarantee in one place instead of two).
                 <button
                   type="button"
-                  className={`aircraft-marker ${
-                    hoveredAircraftHex === markerData.hex
-                      ? "aircraft-marker--hovered"
-                      : ""
-                  } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
-                    followedAircraftHex === markerData.hex
-                      ? "aircraft-marker--followed"
-                      : ""
-                  }`}
+                  className="aircraft-marker-hit"
                   aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
                   style={
                     {
-                      "--marker-width": `${markerData.width}px`,
-                      "--marker-height": `${markerData.height}px`,
-                      "--marker-rotation": `${markerData.rotation}deg`,
                       "--marker-cursor": markerData.aircraft.hasMessages
                         ? "pointer"
                         : "default",
@@ -825,10 +852,30 @@ export function AircraftMarkers({
                   onMouseEnter={handleTooltipMouseEnter(markerData.hex)}
                   onMouseLeave={handleTooltipMouseLeave}
                 >
-                  <img
-                    src={markerData.iconHtml}
-                    alt={`Aircraft ${markerData.hex}`}
-                  />
+                  <span
+                    aria-hidden="true"
+                    className={`aircraft-marker ${
+                      hoveredAircraftHex === markerData.hex
+                        ? "aircraft-marker--hovered"
+                        : ""
+                    } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
+                      followedAircraftHex === markerData.hex
+                        ? "aircraft-marker--followed"
+                        : ""
+                    }`}
+                    style={
+                      {
+                        "--marker-width": `${markerData.width}px`,
+                        "--marker-height": `${markerData.height}px`,
+                        "--marker-rotation": `${markerData.rotation}deg`,
+                      } as React.CSSProperties
+                    }
+                  >
+                    {/* Decorative: the accessible name lives on the
+                        outer button's aria-label above; this span is
+                        already aria-hidden. */}
+                    <img src={markerData.iconHtml} alt="" />
+                  </span>
                 </button>
               )}
               {/* Tooltip outside rotated button */}

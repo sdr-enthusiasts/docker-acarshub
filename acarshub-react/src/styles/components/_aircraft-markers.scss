@@ -60,16 +60,23 @@
   z-index: var(--marker-z, 10);
 }
 
-.aircraft-marker {
-  // Runtime sizing/rotation/cursor driven from AircraftMarkers.tsx via
-  // CSS custom properties — see STYLE-INLINE-DYNAMIC. Static fallbacks
-  // keep rendering sane if a marker mounts before the inline vars are
-  // applied.
-  width: var(--marker-width, 32px);
-  height: var(--marker-height, 32px);
-  transform: rotate(var(--marker-rotation, 0deg));
-  transform-origin: center center;
-  cursor: var(--marker-cursor, pointer);
+// Clickable hit-target wrapper for both rendering paths (SVG icon and
+// sprite). FEAT-MARKER-SIZE: floored at 44px (WCAG 2.1 AA touch target) on
+// mobile via touch-target(), relaxed on desktop (mouse users have finer
+// pointer precision, and a dense map with many "small"-setting markers
+// needs the visual-density win the setting exists for — see MapTab's
+// marker-size control). Decoupled from the *visual* icon/sprite, which
+// lives on a purely decorative inner <span> (.aircraft-marker /
+// .aircraft-sprite below) — growing THIS wrapper never touches the visual
+// element's own width/height/background-position, so sprite-atlas crops
+// never misalign even when the wrapper's floor is bigger than the visual.
+.aircraft-marker-hit {
+  @include touch-target(44px, auto);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 
   // Button reset styles
   background: none;
@@ -80,21 +87,15 @@
   color: inherit;
   outline: none;
 
-  // Position and transform
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  // Disable transform transitions to prevent rotation glitches during hover
-  // Aircraft positions update frequently enough that smooth transitions aren't needed
-  transition: none;
-
-  // Cursor indicates clickable
-  cursor: pointer;
+  cursor: var(--marker-cursor, pointer);
 
   // Ensure markers render above map tiles
   z-index: 10;
+
+  // Disable transform transitions to prevent rotation glitches during hover.
+  // Aircraft positions update frequently enough that smooth transitions
+  // aren't needed.
+  transition: none;
 
   // Remove default button focus outline, we'll add our own
   &:focus-visible {
@@ -102,6 +103,49 @@
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  // Hover effect - slight scale up (but no pulsing glow). Keyed off the
+  // wrapper (not the inner visual span) since the wrapper is what actually
+  // receives pointer events; this also means the glow shows across the
+  // full 44px hit area, not just the (possibly smaller) visual icon.
+  &:hover {
+    z-index: 100;
+
+    .aircraft-marker:not(.aircraft-marker--hovered) img {
+      filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .aircraft-marker img {
+        filter: none;
+      }
+    }
+  }
+
+  // Active/clicked state
+  &:active {
+    .aircraft-marker img {
+      filter: brightness(1.2) drop-shadow(0 0 6px rgba(0, 0, 0, 1));
+    }
+  }
+}
+
+// Visual aircraft icon (SVG-fallback rendering path). Purely decorative
+// (aria-hidden) — sizing, rotation, and click handling all live on the
+// enclosing .aircraft-marker-hit button. See STYLE-INLINE-DYNAMIC for the
+// --marker-* custom-property wiring.
+.aircraft-marker {
+  // Runtime sizing/rotation driven from AircraftMarkers.tsx via CSS custom
+  // properties — see STYLE-INLINE-DYNAMIC. Static fallbacks keep rendering
+  // sane if a marker mounts before the inline vars are applied.
+  width: var(--marker-width, 32px);
+  height: var(--marker-height, 32px);
+  transform: rotate(var(--marker-rotation, 0deg));
+  transform-origin: center center;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   // Image inside marker
   // STYLE-INLINE-STATIC: was inline `style={{ width: "100%", height: "100%",
@@ -115,20 +159,11 @@
     -webkit-user-drag: none;
   }
 
-  // Hover effect - slight scale up (but no pulsing glow)
-  &:hover:not(.aircraft-marker--hovered) {
-    z-index: 100;
-    transform-origin: center center;
-
-    img {
-      filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
-    }
-  }
-
-  // Hovered from list - pulsing glow effect
+  // Hovered from list - pulsing glow effect. Unlike the plain :hover state
+  // above (mouse-driven, keyed off .aircraft-marker-hit), this is a state
+  // modifier class applied directly by React (list-hover, not pointer
+  // position), so it stays on this element.
   &--hovered {
-    z-index: 150;
-
     img {
       filter: drop-shadow(0 0 12px var(--color-blue))
         drop-shadow(0 0 6px var(--color-blue));
@@ -141,22 +176,6 @@
           drop-shadow(0 0 6px var(--color-blue));
         animation: none;
       }
-    }
-  }
-
-  // Active/clicked state
-  &:active {
-    img {
-      filter: brightness(1.2) drop-shadow(0 0 6px rgba(0, 0, 0, 1));
-    }
-  }
-
-  // Disable animations if user prefers reduced motion
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-
-    &:hover img {
-      filter: none;
     }
   }
 }
@@ -237,22 +256,16 @@
   }
 }
 
-// CSS-sprite-based aircraft marker (multi-frame animation).
+// CSS-sprite-based aircraft marker visual (multi-frame animation and
+// static single-frame both use this class).
 //
 // Rendered by AnimatedSprite.tsx and by the sprite branch of
-// AircraftMarkers.tsx. The runtime-varying fields (sprite atlas
-// position, dimensions, rotation, cursor) are supplied via the
+// AircraftMarkers.tsx as a purely decorative (aria-hidden) <span> inside
+// the enclosing .aircraft-marker-hit button — sizing, rotation, and click
+// handling all live on that wrapper (FEAT-MARKER-SIZE). The runtime-varying
+// fields (sprite atlas position, dimensions, rotation) are supplied via the
 // --sprite-* custom properties — see STYLE-INLINE-DYNAMIC.
 .aircraft-sprite {
-  // Button reset
-  background-color: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  color: inherit;
-  outline: none;
-
   background-repeat: no-repeat;
   background-position: var(--sprite-x) var(--sprite-y);
   background-size: var(--sprite-bg-size);
@@ -260,21 +273,11 @@
   height: var(--sprite-height);
   transform: rotate(var(--sprite-rotation));
   transform-origin: center center;
-  cursor: var(--sprite-cursor);
-
-  // Disable transitions to prevent rotation glitches during hover.
-  transition: none;
-
-  &:focus-visible {
-    outline: 2px solid var(--color-focus);
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
 }
 
 // Print styles - hide markers when printing
 @media print {
-  .aircraft-marker {
+  .aircraft-marker-hit {
     display: none;
   }
 }

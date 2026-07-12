@@ -101,8 +101,15 @@ vi.mock("../AircraftContextMenu", () => ({
   }) => <div data-testid="context-menu" data-hex={aircraft.hex} />,
 }));
 
+const { capturedAnimatedSpriteProps } = vi.hoisted(() => ({
+  capturedAnimatedSpriteProps: [] as Array<Record<string, unknown>>,
+}));
+
 vi.mock("../AnimatedSprite", () => ({
-  AnimatedSprite: () => <div data-testid="animated-sprite" />,
+  AnimatedSprite: (props: Record<string, unknown>) => {
+    capturedAnimatedSpriteProps.push(props);
+    return <div data-testid="animated-sprite" />;
+  },
 }));
 
 // ---------------------------------------------------------------------------
@@ -110,29 +117,57 @@ vi.mock("../AnimatedSprite", () => ({
 // need to exercise full SVG generation in unit tests)
 // ---------------------------------------------------------------------------
 
-vi.mock("../../../utils/aircraftIcons", () => ({
-  getBaseMarker: () => ({ name: "jet_swept", scale: 1.0 }),
-  getAircraftColor: () => "#ffffff",
-  svgShapeToURI: () => ({
+const { svgShapeToURI } = vi.hoisted(() => ({
+  svgShapeToURI: vi.fn(() => ({
     svg: "data:image/svg+xml;base64,FAKE",
     width: 24,
     height: 24,
-  }),
+  })),
+}));
+
+vi.mock("../../../utils/aircraftIcons", () => ({
+  getBaseMarker: () => ({ name: "jet_swept", scale: 1.0 }),
+  getAircraftColor: () => "#ffffff",
+  svgShapeToURI,
   shouldRotate: () => true,
 }));
 
 // ---------------------------------------------------------------------------
-// Mock — spriteLoader (we run all tests with useSprites=false so this is
-// only loaded once on mount; stub the singleton to a no-op)
+// Mock — spriteLoader (most tests run with useSprites=false, so this is a
+// no-op stub for them; the "marker size (FEAT-MARKER-SIZE)" describe block
+// below overrides these to non-null returns for its sprite-mode scale test).
 // ---------------------------------------------------------------------------
+
+const { getSpritePosition, getCSSBackgroundSize, getSprite } = vi.hoisted(
+  () => ({
+    getSpritePosition: vi.fn(
+      () =>
+        null as null | {
+          x: number;
+          y: number;
+          width: number;
+          height: number;
+          anchor: { x: number; y: number };
+          scale: number;
+          shouldRotate: boolean;
+          frames?: number[];
+          frameTime?: number;
+        },
+    ),
+    getCSSBackgroundSize: vi.fn(() => null as string | null),
+    getSprite: vi.fn(
+      () => null as null | { spriteName: string; matchType: string },
+    ),
+  }),
+);
 
 vi.mock("../../../utils/spriteLoader", () => ({
   getSpriteLoader: () => ({
-    isLoaded: () => false,
+    isLoaded: () => true,
     load: () => Promise.resolve(),
-    getSprite: () => null,
-    getSpritePosition: () => null,
-    getCSSBackgroundSize: () => null,
+    getSprite,
+    getSpritePosition,
+    getCSSBackgroundSize,
   }),
 }));
 
@@ -254,6 +289,7 @@ describe("AircraftMarkers", () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     capturedMarkers.length = 0;
+    capturedAnimatedSpriteProps.length = 0;
     useMapResult.current = null;
 
     // Reset stores
@@ -272,6 +308,7 @@ describe("AircraftMarkers", () => {
         map: {
           ...current.map,
           useSprites: false,
+          markerSize: "medium",
           showOnlyAcars: false,
           showOnlyUnread: false,
           showOnlyMilitary: false,
@@ -381,8 +418,178 @@ describe("AircraftMarkers", () => {
       );
       flushRAF();
 
-      // The SVG branch puts an <img alt="Aircraft ABC123"> inside the button
-      expect(screen.getByAltText(/Aircraft ABC123/i)).toBeTruthy();
+      // FEAT-MARKER-SIZE: the accessible name lives on the outer
+      // .aircraft-marker-hit button (aria-label); the <img> inside the
+      // decorative inner span is alt="" since it's no longer the
+      // accessibility-tree entry point.
+      const button = screen.getByRole("button", { name: /Aircraft ABC123/i });
+      expect(button.querySelector("img")).toBeTruthy();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // FEAT-MARKER-SIZE
+  // -------------------------------------------------------------------------
+
+  describe("marker size (FEAT-MARKER-SIZE)", () => {
+    function setMarkerSize(size: "small" | "medium" | "large"): void {
+      const current = useSettingsStore.getState().settings;
+      useSettingsStore.setState({
+        settings: {
+          ...current,
+          map: { ...current.map, markerSize: size },
+        },
+      });
+    }
+
+    beforeEach(() => {
+      svgShapeToURI.mockClear();
+    });
+
+    afterEach(() => {
+      getSprite.mockReset();
+      getSpritePosition.mockReset();
+      getCSSBackgroundSize.mockReset();
+    });
+
+    it("passes the unscaled factor (1.5x airframe scale) to svgShapeToURI at the default 'medium' setting", () => {
+      renderWithMap(
+        makeFakeMap(WORLD_BOUNDS),
+        <AircraftMarkers aircraft={[makePairedAircraft()]} />,
+      );
+      flushRAF();
+
+      // getBaseMarker is mocked to return scale=1.0; medium multiplier is 1,
+      // so the final factor is 1.0 * 1.5 * 1 = 1.5.
+      expect(svgShapeToURI).toHaveBeenCalledWith(
+        "jet_swept",
+        0.5,
+        expect.closeTo(1.5, 10),
+        "#ffffff",
+      );
+    });
+
+    it("scales the svgShapeToURI factor down for 'small'", () => {
+      setMarkerSize("small");
+      renderWithMap(
+        makeFakeMap(WORLD_BOUNDS),
+        <AircraftMarkers aircraft={[makePairedAircraft()]} />,
+      );
+      flushRAF();
+
+      // 1.0 * 1.5 * 0.8 (small multiplier) = 1.2
+      expect(svgShapeToURI).toHaveBeenCalledWith(
+        "jet_swept",
+        0.5,
+        expect.closeTo(1.2, 10),
+        "#ffffff",
+      );
+    });
+
+    it("scales the svgShapeToURI factor up for 'large'", () => {
+      setMarkerSize("large");
+      renderWithMap(
+        makeFakeMap(WORLD_BOUNDS),
+        <AircraftMarkers aircraft={[makePairedAircraft()]} />,
+      );
+      flushRAF();
+
+      // 1.0 * 1.5 * 1.25 (large multiplier) = 1.875
+      expect(svgShapeToURI).toHaveBeenCalledWith(
+        "jet_swept",
+        0.5,
+        expect.closeTo(1.875, 10),
+        "#ffffff",
+      );
+    });
+
+    it("threads the same scale multiplier into the sprite-atlas lookup calls", () => {
+      getSprite.mockReturnValue({
+        spriteName: "boeing-737",
+        matchType: "airframe",
+      });
+      getSpritePosition.mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 43.2,
+        height: 43.2,
+        anchor: { x: 0, y: 0 },
+        scale: 1,
+        shouldRotate: true,
+      });
+      getCSSBackgroundSize.mockReturnValue("345.6px 1468.8px");
+
+      const current = useSettingsStore.getState().settings;
+      useSettingsStore.setState({
+        settings: {
+          ...current,
+          map: { ...current.map, useSprites: true, markerSize: "small" },
+        },
+      });
+
+      renderWithMap(
+        makeFakeMap(WORLD_BOUNDS),
+        <AircraftMarkers aircraft={[makePairedAircraft()]} />,
+      );
+      flushRAF();
+
+      // base sprite scale 0.6 * "small" multiplier 0.8 = 0.48
+      expect(getSpritePosition).toHaveBeenCalledWith(
+        "boeing-737",
+        0,
+        expect.closeTo(0.48, 10),
+      );
+      expect(getCSSBackgroundSize).toHaveBeenCalledWith(
+        expect.closeTo(0.48, 10),
+      );
+    });
+
+    // Regression: AnimatedSprite.tsx (used for multi-frame sprites, e.g.
+    // rotating-propeller aircraft) independently calls the spriteLoader and
+    // needs its own `scale` prop threaded from AircraftMarkers.tsx — it was
+    // initially wired into AnimatedSprite's own implementation but the
+    // actual <AnimatedSprite scale={...}> prop at the JSX call site in
+    // AircraftMarkers.tsx was forgotten, so every animated sprite silently
+    // rendered at the default 0.6 scale regardless of the marker-size
+    // setting while single-frame (static) sprites scaled correctly —
+    // visually, animated aircraft (many light/prop aircraft) appeared
+    // "stuck" at their normal size while jets and other static-sprite
+    // aircraft grew/shrank with the setting.
+    it("passes the same scale multiplier as a prop to AnimatedSprite for multi-frame sprites", () => {
+      getSprite.mockReturnValue({
+        spriteName: "animated-rotor",
+        matchType: "airframe",
+      });
+      getSpritePosition.mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 43.2,
+        height: 43.2,
+        anchor: { x: 0, y: 0 },
+        scale: 1,
+        shouldRotate: true,
+        frames: [0, 1, 2],
+        frameTime: 100,
+      });
+      getCSSBackgroundSize.mockReturnValue("345.6px 1468.8px");
+
+      const current = useSettingsStore.getState().settings;
+      useSettingsStore.setState({
+        settings: {
+          ...current,
+          map: { ...current.map, useSprites: true, markerSize: "large" },
+        },
+      });
+
+      renderWithMap(
+        makeFakeMap(WORLD_BOUNDS),
+        <AircraftMarkers aircraft={[makePairedAircraft()]} />,
+      );
+      flushRAF();
+
+      expect(capturedAnimatedSpriteProps).toHaveLength(1);
+      // base sprite scale 0.6 * "large" multiplier 1.25 = 0.75
+      expect(capturedAnimatedSpriteProps[0].scale).toBeCloseTo(0.75, 10);
     });
   });
 

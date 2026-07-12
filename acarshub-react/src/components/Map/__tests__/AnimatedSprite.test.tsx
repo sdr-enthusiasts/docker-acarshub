@@ -77,15 +77,33 @@ describe("AnimatedSprite", () => {
       ).toBeInTheDocument();
     });
 
-    it("applies the spriteClass to the button", () => {
+    // FEAT-MARKER-SIZE: the button is now a 44px-floored hit-target wrapper
+    // (.aircraft-marker-hit); the visual sprite lives on a decorative inner
+    // <span> so growing the hit target never distorts the atlas crop.
+    it("wraps the visual sprite in a 44px hit-target button", () => {
+      render(<AnimatedSprite {...defaultProps()} />);
+      expect(
+        screen.getByRole("button", { name: "Aircraft UAL123" }),
+      ).toHaveClass("aircraft-marker-hit");
+    });
+
+    it("marks the inner visual span as aria-hidden (decorative)", () => {
+      render(<AnimatedSprite {...defaultProps()} />);
+      const button = screen.getByRole("button", { name: "Aircraft UAL123" });
+      const visual = button.querySelector(".aircraft-sprite");
+      expect(visual).toHaveAttribute("aria-hidden", "true");
+    });
+
+    it("applies the spriteClass to the inner visual span", () => {
       render(
         <AnimatedSprite
           {...defaultProps({ spriteClass: "aircraft-sprite--small" })}
         />,
       );
-      expect(
-        screen.getByRole("button", { name: "Aircraft UAL123" }),
-      ).toHaveClass("aircraft-sprite--small");
+      const button = screen.getByRole("button", { name: "Aircraft UAL123" });
+      expect(button.querySelector(".aircraft-sprite")).toHaveClass(
+        "aircraft-sprite--small",
+      );
     });
 
     it("returns null when the loader cannot resolve the sprite position", () => {
@@ -97,57 +115,84 @@ describe("AnimatedSprite", () => {
     it("falls back to default background size when loader returns null", () => {
       getCSSBackgroundSize.mockReturnValueOnce(null);
       render(<AnimatedSprite {...defaultProps()} />);
-      const button = screen.getByRole("button");
-      expect(button.getAttribute("style")).toContain(
+      const visual = screen
+        .getByRole("button")
+        .querySelector(".aircraft-sprite");
+      expect(visual?.getAttribute("style")).toContain(
         "--sprite-bg-size: 345.6px 1468.8px",
       );
     });
   });
 
   describe("CSS variables wiring", () => {
-    it("propagates position, rotation, and cursor as CSS custom properties", () => {
-      render(
-        <AnimatedSprite
-          {...defaultProps({ rotation: 180, cursorStyle: "default" })}
-        />,
-      );
+    it("propagates position and rotation as CSS custom properties on the inner visual span", () => {
+      render(<AnimatedSprite {...defaultProps({ rotation: 180 })} />);
 
-      const style = screen.getByRole("button").getAttribute("style") ?? "";
+      const visual = screen
+        .getByRole("button")
+        .querySelector(".aircraft-sprite");
+      const style = visual?.getAttribute("style") ?? "";
       expect(style).toContain("--sprite-x: -10px");
       expect(style).toContain("--sprite-y: -20px");
       expect(style).toContain("--sprite-width: 48px");
       expect(style).toContain("--sprite-height: 48px");
       expect(style).toContain("--sprite-rotation: 180deg");
-      expect(style).toContain("--sprite-cursor: default");
+    });
+
+    it("propagates cursorStyle as --marker-cursor on the outer hit-target button", () => {
+      render(<AnimatedSprite {...defaultProps({ cursorStyle: "default" })} />);
+      const style = screen.getByRole("button").getAttribute("style") ?? "";
+      expect(style).toContain("--marker-cursor: default");
     });
   });
 
-  describe("State-based class modifiers", () => {
+  describe("State-based class modifiers (on the inner visual span)", () => {
     it("adds the hovered modifier when isHovered is true", () => {
       render(<AnimatedSprite {...defaultProps({ isHovered: true })} />);
-      expect(screen.getByRole("button")).toHaveClass(
-        "aircraft-marker--hovered",
-      );
+      const visual = screen
+        .getByRole("button")
+        .querySelector(".aircraft-sprite");
+      expect(visual).toHaveClass("aircraft-marker--hovered");
     });
 
     it("adds the unread modifier when hasUnreadMessages is true", () => {
       render(<AnimatedSprite {...defaultProps({ hasUnreadMessages: true })} />);
-      expect(screen.getByRole("button")).toHaveClass("aircraft-marker--unread");
+      const visual = screen
+        .getByRole("button")
+        .querySelector(".aircraft-sprite");
+      expect(visual).toHaveClass("aircraft-marker--unread");
     });
 
     it("adds the followed modifier when isFollowed is true", () => {
       render(<AnimatedSprite {...defaultProps({ isFollowed: true })} />);
-      expect(screen.getByRole("button")).toHaveClass(
-        "aircraft-marker--followed",
-      );
+      const visual = screen
+        .getByRole("button")
+        .querySelector(".aircraft-sprite");
+      expect(visual).toHaveClass("aircraft-marker--followed");
     });
 
     it("omits all state modifiers by default", () => {
       render(<AnimatedSprite {...defaultProps()} />);
-      const btn = screen.getByRole("button");
-      expect(btn).not.toHaveClass("aircraft-marker--hovered");
-      expect(btn).not.toHaveClass("aircraft-marker--unread");
-      expect(btn).not.toHaveClass("aircraft-marker--followed");
+      const visual = screen
+        .getByRole("button")
+        .querySelector(".aircraft-sprite");
+      expect(visual).not.toHaveClass("aircraft-marker--hovered");
+      expect(visual).not.toHaveClass("aircraft-marker--unread");
+      expect(visual).not.toHaveClass("aircraft-marker--followed");
+    });
+  });
+
+  describe("marker-size scale (FEAT-MARKER-SIZE)", () => {
+    it("defaults scale to 0.6 when the prop is omitted", () => {
+      render(<AnimatedSprite {...defaultProps()} />);
+      expect(getSpritePosition).toHaveBeenCalledWith("plane-medium", 0, 0.6);
+      expect(getCSSBackgroundSize).toHaveBeenCalledWith(0.6);
+    });
+
+    it("forwards a custom scale to both spriteLoader calls", () => {
+      render(<AnimatedSprite {...defaultProps({ scale: 0.48 })} />);
+      expect(getSpritePosition).toHaveBeenCalledWith("plane-medium", 0, 0.48);
+      expect(getCSSBackgroundSize).toHaveBeenCalledWith(0.48);
     });
   });
 
@@ -227,7 +272,7 @@ describe("AnimatedSprite", () => {
       );
 
       // Initial frame is 0 — getSpritePosition called with frameIndex 0
-      expect(getSpritePosition).toHaveBeenCalledWith("plane-medium", 0);
+      expect(getSpritePosition).toHaveBeenCalledWith("plane-medium", 0, 0.6);
 
       // Advance virtual time past frameTime and fire the RAF callback
       nowMs += 150;
@@ -236,7 +281,7 @@ describe("AnimatedSprite", () => {
       });
 
       // The component should have re-rendered with frame 1
-      expect(getSpritePosition).toHaveBeenCalledWith("plane-medium", 1);
+      expect(getSpritePosition).toHaveBeenCalledWith("plane-medium", 1, 0.6);
 
       dateSpy.mockRestore();
       rafSpy.mockRestore();

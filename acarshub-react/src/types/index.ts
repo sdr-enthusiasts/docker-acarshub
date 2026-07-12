@@ -115,6 +115,7 @@ export type {
   MapProviderCategory,
   MapProviderConfig,
   MapSettings,
+  MarkerSize,
   MessageComponentProps,
   MessageGroupComponentProps,
   ModalState,

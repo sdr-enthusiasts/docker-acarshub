@@ -33,6 +33,13 @@ interface AnimatedSpriteProps {
   hasUnreadMessages: boolean;
   ariaLabel: string;
   cursorStyle: "pointer" | "default";
+  /**
+   * Sprite-atlas display scale, forwarded to `getSpritePosition()`/
+   * `getCSSBackgroundSize()` (FEAT-MARKER-SIZE). Defaults to 0.6 — the
+   * pre-existing hardcoded value — so omitting this prop is fully
+   * backward compatible. Callers pass `0.6 * getMarkerSizeScale(size)`.
+   */
+  scale?: number;
 }
 
 /**
@@ -40,6 +47,16 @@ interface AnimatedSpriteProps {
  *
  * Renders an animated aircraft sprite with frame cycling.
  * Uses requestAnimationFrame for smooth 60fps animations.
+ *
+ * FE-MODAL-A11Y-adjacent note (FEAT-MARKER-SIZE): the rendered `<button>`
+ * is a 44px-floored hit target (`.aircraft-marker-hit`, see
+ * _aircraft-markers.scss) wrapping a purely decorative inner `<span>`
+ * that carries the actual sprite size/position. This keeps the clickable
+ * area WCAG-compliant even when the visual sprite itself is smaller than
+ * 44px (the "small" marker-size setting, or small airframe types at the
+ * default 0.6 base scale) — growing the *button* to 44px directly would
+ * instead have grown the background-image crop box and bled in
+ * neighbouring atlas art.
  */
 export function AnimatedSprite({
   spriteName,
@@ -56,6 +73,7 @@ export function AnimatedSprite({
   hasUnreadMessages,
   ariaLabel,
   cursorStyle,
+  scale = 0.6,
 }: AnimatedSpriteProps) {
   const [currentFrame, setCurrentFrame] = useState(0);
 
@@ -89,8 +107,9 @@ export function AnimatedSprite({
 
   // Get position for current frame
   const loader = getSpriteLoader();
-  const position = loader.getSpritePosition(spriteName, currentFrame);
-  const backgroundSize = loader.getCSSBackgroundSize() ?? "345.6px 1468.8px";
+  const position = loader.getSpritePosition(spriteName, currentFrame, scale);
+  const backgroundSize =
+    loader.getCSSBackgroundSize(scale) ?? "345.6px 1468.8px";
 
   if (!position) {
     return null;
@@ -99,27 +118,32 @@ export function AnimatedSprite({
   return (
     <button
       type="button"
-      className={`aircraft-sprite ${spriteClass} ${
-        isHovered ? "aircraft-marker--hovered" : ""
-      } ${hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
-        isFollowed ? "aircraft-marker--followed" : ""
-      }`}
+      className="aircraft-marker-hit"
       aria-label={ariaLabel}
-      style={
-        {
-          "--sprite-x": `-${position.x}px`,
-          "--sprite-y": `-${position.y}px`,
-          "--sprite-bg-size": backgroundSize,
-          "--sprite-width": `${position.width}px`,
-          "--sprite-height": `${position.height}px`,
-          "--sprite-rotation": `${rotation}deg`,
-          "--sprite-cursor": cursorStyle,
-        } as React.CSSProperties
-      }
+      style={{ "--marker-cursor": cursorStyle } as React.CSSProperties}
       onClick={onClick}
       onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-    />
+    >
+      <span
+        aria-hidden="true"
+        className={`aircraft-sprite ${spriteClass} ${
+          isHovered ? "aircraft-marker--hovered" : ""
+        } ${hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
+          isFollowed ? "aircraft-marker--followed" : ""
+        }`}
+        style={
+          {
+            "--sprite-x": `-${position.x}px`,
+            "--sprite-y": `-${position.y}px`,
+            "--sprite-bg-size": backgroundSize,
+            "--sprite-width": `${position.width}px`,
+            "--sprite-height": `${position.height}px`,
+            "--sprite-rotation": `${rotation}deg`,
+          } as React.CSSProperties
+        }
+      />
+    </button>
   );
 }

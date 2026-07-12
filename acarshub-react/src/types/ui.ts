@@ -353,6 +353,12 @@ export interface GeoJSONCategory {
 }
 
 /**
+ * User-configurable aircraft marker size on the map (FEAT-MARKER-SIZE).
+ * "medium" is the pre-existing default rendering size.
+ */
+export type MarkerSize = "small" | "medium" | "large";
+
+/**
  * Map settings
  */
 export interface MapSettings {
@@ -408,6 +414,8 @@ export interface MapSettings {
   showRainViewer: boolean;
   /** Show Hey What's That antenna coverage outline (when configured by backend) */
   showHeyWhatsThat: boolean;
+  /** Aircraft marker size on the map. Default: "medium" (unchanged rendering). */
+  markerSize: MarkerSize;
   /**
    * Sidebar width in pixels on the Live Map page (desktop only).
    * Persisted so the user's preferred width survives reloads.
@@ -534,6 +542,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     defaultZoom: 7,
     useSprites: true,
     colorByDecoder: false,
+    markerSize: "medium",
     groundAltitudeThreshold: 500,
     showOnlyAcars: false,
     showDatablocks: true,

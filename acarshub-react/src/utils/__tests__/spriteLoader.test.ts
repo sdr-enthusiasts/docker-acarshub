@@ -334,6 +334,34 @@ describe("spriteLoader", () => {
       expect(pos?.x).toBeCloseTo(5 * 72 * 0.6, 5);
       expect(pos?.y).toBeCloseTo(2 * 72 * 0.6, 5);
     });
+
+    // FEAT-MARKER-SIZE: x/y/width/height must all move together under a
+    // custom scale, or the sprite-atlas crop misaligns (see the comment in
+    // utils/markerSize.ts for why this can't be a CSS-only transform).
+    it("scales x/y/width/height proportionally when a custom scale is passed", async () => {
+      const { SpriteLoader } = await importFresh();
+      const loader = new SpriteLoader();
+      await loader.load();
+
+      // boeing-737 spriteId 10 -> col=2, row=1. Default scale 0.6 baseline
+      // asserted above; here scale=0.48 (0.6 * markerSize "small" 0.8).
+      const pos = loader.getSpritePosition("boeing-737", 0, 0.48);
+      expect(pos).not.toBeNull();
+      expect(pos?.x).toBeCloseTo(2 * 72 * 0.48, 5);
+      expect(pos?.y).toBeCloseTo(1 * 72 * 0.48, 5);
+      expect(pos?.width).toBeCloseTo(72 * 0.48, 5);
+      expect(pos?.height).toBeCloseTo(72 * 0.48, 5);
+    });
+
+    it("defaults to scale=0.6 when no scale argument is passed (backward compatible)", async () => {
+      const { SpriteLoader } = await importFresh();
+      const loader = new SpriteLoader();
+      await loader.load();
+
+      const withDefault = loader.getSpritePosition("boeing-737");
+      const withExplicit = loader.getSpritePosition("boeing-737", 0, 0.6);
+      expect(withDefault).toEqual(withExplicit);
+    });
   });
 
   describe("metadata + stats helpers", () => {

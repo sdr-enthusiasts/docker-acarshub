@@ -167,9 +167,18 @@ export class SpriteLoader {
    *
    * @param spriteName - Name of sprite to position
    * @param frameIndex - Frame index for animations (default: 0)
+   * @param scale - Display scale factor (default: 0.6). FEAT-MARKER-SIZE:
+   *   callers multiply this by the user's marker-size setting
+   *   (`getMarkerSizeScale()`) so x/y/width/height all move together —
+   *   see the comment in `utils/markerSize.ts` for why this must be done
+   *   here rather than via a CSS-only transform/calc().
    * @returns Sprite position data or null if not found
    */
-  getSpritePosition(spriteName: string, frameIndex = 0): SpritePosition | null {
+  getSpritePosition(
+    spriteName: string,
+    frameIndex = 0,
+    scale = 0.6,
+  ): SpritePosition | null {
     if (!this.data) {
       return null;
     }
@@ -196,9 +205,6 @@ export class SpriteLoader {
 
     const col = spriteId % spritesPerRow;
     const row = Math.floor(spriteId / spritesPerRow);
-
-    // Scale all positions and sizes to 60%
-    const scale = 0.6;
 
     return {
       x: col * spriteWidth * scale,

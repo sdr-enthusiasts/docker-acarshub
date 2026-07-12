@@ -134,7 +134,7 @@ describe("STYLE-INLINE-DYNAMIC: dynamic inline styles routed through CSS variabl
     });
   });
 
-  describe("AnimatedSprite.tsx — sprite sheet position/rotation/cursor", () => {
+  describe("AnimatedSprite.tsx — sprite sheet position/rotation + hit-target cursor", () => {
     const tsx = read("components/Map/AnimatedSprite.tsx");
     const scss = read("styles/components/_aircraft-markers.scss");
 
@@ -150,10 +150,18 @@ describe("STYLE-INLINE-DYNAMIC: dynamic inline styles routed through CSS variabl
       expect(tsx).toMatch(/"--sprite-width"\s*:/);
       expect(tsx).toMatch(/"--sprite-height"\s*:/);
       expect(tsx).toMatch(/"--sprite-rotation"\s*:/);
-      expect(tsx).toMatch(/"--sprite-cursor"\s*:/);
     });
 
-    it("defines .aircraft-sprite that consumes all sprite variables", () => {
+    // FEAT-MARKER-SIZE: cursor moved off the visual .aircraft-sprite span
+    // onto the enclosing .aircraft-marker-hit button (the actual
+    // interactive element after the hit-target/visual split), unified
+    // under one --marker-cursor variable shared by both rendering paths.
+    it("passes cursor through --marker-cursor on the hit-target button, not --sprite-cursor", () => {
+      expect(tsx).toMatch(/"--marker-cursor"\s*:/);
+      expect(tsx).not.toMatch(/"--sprite-cursor"\s*:/);
+    });
+
+    it("defines .aircraft-sprite that consumes the sprite position/size/rotation variables", () => {
       const rule = scss.match(/\.aircraft-sprite\s*\{([\s\S]*?)\n\}/);
       expect(rule).toBeTruthy();
       const body = rule?.[1] ?? "";
@@ -164,7 +172,14 @@ describe("STYLE-INLINE-DYNAMIC: dynamic inline styles routed through CSS variabl
       expect(body).toMatch(/width:\s*var\(--sprite-width/);
       expect(body).toMatch(/height:\s*var\(--sprite-height/);
       expect(body).toMatch(/transform:\s*rotate\(var\(--sprite-rotation/);
-      expect(body).toMatch(/cursor:\s*var\(--sprite-cursor/);
+    });
+
+    it("defines .aircraft-marker-hit as the 44px-floored hit target consuming --marker-cursor", () => {
+      const rule = scss.match(/\.aircraft-marker-hit\s*\{([\s\S]*?)\n\}/);
+      expect(rule).toBeTruthy();
+      const body = rule?.[1] ?? "";
+      expect(body).toMatch(/touch-target\(44px/);
+      expect(body).toMatch(/cursor:\s*var\(--marker-cursor/);
     });
   });
 
@@ -258,14 +273,25 @@ describe("STYLE-INLINE-DYNAMIC: dynamic inline styles routed through CSS variabl
       expect(tsx).toMatch(/"--marker-cursor"\s*:/);
     });
 
-    it("defines .aircraft-marker rule consuming the --marker-* variables", () => {
+    it("defines .aircraft-marker rule consuming the --marker-width/height/rotation variables", () => {
       const rule = scss.match(/\.aircraft-marker\s*\{([\s\S]*?)\n\}/);
       expect(rule).toBeTruthy();
       const body = rule?.[1] ?? "";
       expect(body).toMatch(/width:\s*var\(--marker-width/);
       expect(body).toMatch(/height:\s*var\(--marker-height/);
       expect(body).toMatch(/transform:\s*rotate\(var\(--marker-rotation/);
-      expect(body).toMatch(/cursor:\s*var\(--marker-cursor/);
+    });
+
+    // FEAT-MARKER-SIZE: cursor moved off the visual .aircraft-marker span
+    // onto the enclosing .aircraft-marker-hit button — see the
+    // AnimatedSprite describe block above for the matching assertion.
+    it("defines .aircraft-marker-hit consuming --marker-cursor (not the visual .aircraft-marker span)", () => {
+      const hitRule = scss.match(/\.aircraft-marker-hit\s*\{([\s\S]*?)\n\}/);
+      expect(hitRule).toBeTruthy();
+      expect(hitRule?.[1] ?? "").toMatch(/cursor:\s*var\(--marker-cursor/);
+
+      const visualRule = scss.match(/\n\.aircraft-marker\s*\{([\s\S]*?)\n\}/);
+      expect(visualRule?.[1] ?? "").not.toMatch(/cursor:/);
     });
 
     it("uses aircraft-tooltip--align-left/--align-right modifier classes instead of inline tooltip styles", () => {

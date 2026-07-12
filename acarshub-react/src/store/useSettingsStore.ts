@@ -26,6 +26,7 @@ import type {
   LogLevel,
   MapProvider,
   MapSettings,
+  MarkerSize,
   NotificationSettings,
   RegionalSettings,
   Theme,
@@ -89,6 +90,7 @@ export interface SettingsState {
   setShowHeyWhatsThat: (enabled: boolean) => void;
   setUseSprites: (enabled: boolean) => void;
   setColorByDecoder: (enabled: boolean) => void;
+  setMarkerSize: (size: MarkerSize) => void;
   setGroundAltitudeThreshold: (altitude: number) => void;
   setMapSidebarWidth: (width: number) => void;
   setMapSidebarCollapsed: (collapsed: boolean) => void;
@@ -157,6 +159,7 @@ const getDefaultSettings = (): UserSettings => {
       defaultZoom: 7,
       useSprites: true,
       colorByDecoder: false,
+      markerSize: "medium",
       groundAltitudeThreshold: 500,
       showOnlyAcars: false,
       showDatablocks: true,
@@ -180,7 +183,7 @@ const getDefaultSettings = (): UserSettings => {
       persistLogs: true,
     },
     updatedAt: Date.now(),
-    version: 9,
+    version: 10,
   };
   return defaults;
 };
@@ -541,6 +544,15 @@ export const useSettingsStore = create<SettingsState>()(
           },
         })),
 
+      setMarkerSize: (size) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, markerSize: size },
+            updatedAt: Date.now(),
+          },
+        })),
+
       setGroundAltitudeThreshold: (altitude) =>
         set((state) => ({
           settings: {
@@ -778,17 +790,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 9,
+      version: 10,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
 
-        // Version 0 -> 9: Reset to defaults
+        // Version 0 -> 10: Reset to defaults
         if (version === 0) {
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 9: Add map settings and advanced settings
+        // Version 1 -> 10: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -797,12 +809,12 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: defaults.map,
               advanced: defaults.advanced,
-              version: 9,
+              version: 10,
             },
           };
         }
 
-        // Version 2 -> 9: Add showOnlyMilitary and showOnlyInteresting to map settings
+        // Version 2 -> 10: Add showOnlyMilitary and showOnlyInteresting to map settings
         if (version === 2) {
           return {
             ...state,
@@ -817,15 +829,16 @@ export const useSettingsStore = create<SettingsState>()(
                 showOpenAIP: false,
                 showRainViewer: false,
                 showHeyWhatsThat: true,
+                markerSize: "medium",
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 9,
+              version: 10,
             },
           };
         }
 
-        // Version 3 -> 9: Add showOpenAIP and showRainViewer to map settings
+        // Version 3 -> 10: Add showOpenAIP and showRainViewer to map settings
         if (version === 3) {
           return {
             ...state,
@@ -836,15 +849,16 @@ export const useSettingsStore = create<SettingsState>()(
                 showOpenAIP: false,
                 showRainViewer: false,
                 showHeyWhatsThat: true,
+                markerSize: "medium",
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 9,
+              version: 10,
             },
           };
         }
 
-        // Version 4 -> 9: Add groundAltitudeThreshold to map settings
+        // Version 4 -> 10: Add groundAltitudeThreshold to map settings
         if (version === 4) {
           return {
             ...state,
@@ -855,15 +869,16 @@ export const useSettingsStore = create<SettingsState>()(
                 groundAltitudeThreshold: 500,
                 useSprites: true,
                 showHeyWhatsThat: true,
+                markerSize: "medium",
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 9,
+              version: 10,
             },
           };
         }
 
-        // Version 5 -> 9: Fix useSprites to default to true
+        // Version 5 -> 10: Fix useSprites to default to true
         if (version === 5) {
           return {
             ...state,
@@ -873,15 +888,16 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state.settings.map,
                 useSprites: true,
                 showHeyWhatsThat: true,
+                markerSize: "medium",
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 9,
+              version: 10,
             },
           };
         }
 
-        // Version 6 -> 9: Add mapSidebarWidth to map settings
+        // Version 6 -> 10: Add mapSidebarWidth to map settings
         if (version === 6) {
           return {
             ...state,
@@ -890,15 +906,16 @@ export const useSettingsStore = create<SettingsState>()(
               map: {
                 ...state.settings.map,
                 showHeyWhatsThat: true,
+                markerSize: "medium",
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 9,
+              version: 10,
             },
           };
         }
 
-        // Version 7 -> 9: Add mapSidebarCollapsed to map settings
+        // Version 7 -> 10: Add mapSidebarCollapsed to map settings
         if (version === 7) {
           return {
             ...state,
@@ -907,14 +924,15 @@ export const useSettingsStore = create<SettingsState>()(
               map: {
                 ...state.settings.map,
                 showHeyWhatsThat: true,
+                markerSize: "medium",
                 mapSidebarCollapsed: false,
               },
-              version: 9,
+              version: 10,
             },
           };
         }
 
-        // Version 8 -> 9: Add showHeyWhatsThat to map settings
+        // Version 8 -> 10: Add showHeyWhatsThat to map settings
         if (version === 8) {
           return {
             ...state,
@@ -923,8 +941,24 @@ export const useSettingsStore = create<SettingsState>()(
               map: {
                 ...state.settings.map,
                 showHeyWhatsThat: true,
+                markerSize: "medium",
               },
-              version: 9,
+              version: 10,
+            },
+          };
+        }
+
+        // Version 9 -> 10: Add markerSize to map settings (FEAT-MARKER-SIZE)
+        if (version === 9) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                markerSize: "medium",
+              },
+              version: 10,
             },
           };
         }

@@ -185,6 +185,7 @@ const makeSettings = (
     showHeyWhatsThat: true,
     useSprites: true,
     colorByDecoder: false,
+    markerSize: "medium",
     groundAltitudeThreshold: 5000,
     mapSidebarWidth: 408,
     mapSidebarCollapsed: false,
