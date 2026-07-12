@@ -18,13 +18,16 @@
  *  - Backdrop click closes only when the click target IS the backdrop
  *    (event.target === event.currentTarget). Clicks bubbling up from
  *    children must NOT close — this is a common modal-bug source.
- *  - closeOnBackdropClick=false disables both backdrop click + Enter.
+ *  - closeOnBackdropClick=false disables backdrop click.
  *  - aria-modal, role="dialog", aria-labelledby wiring for screen
- *    readers.
- *
- * NOTE: Modal does not currently implement a focus trap (Tab/Shift+Tab
- * containment). If that is added later, additional tests should pin
- * the trap behavior. The current contract is documented here as-is.
+ *    readers — carried by the inner .modal element (the dialog box),
+ *    not the .modal-backdrop overlay (FE-MODAL-A11Y).
+ *  - Focus trap (FE-MODAL-A11Y, via useFocusTrap): Tab/Shift+Tab cycle
+ *    only within the dialog while open, and focus returns to whatever
+ *    triggered the modal once it closes. The trap's containment logic
+ *    itself (wrap-around math, no-focusable-descendants fallback) is
+ *    unit-tested in hooks/__tests__/useFocusTrap.test.tsx; the tests
+ *    here only pin that Modal wires the hook correctly end-to-end.
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -250,47 +253,20 @@ describe("Modal", () => {
       expect(onClose).not.toHaveBeenCalled();
     });
 
-    it("closes on Enter pressed on the backdrop (keyboard equivalent)", () => {
+    it("does not carry a keydown handler on the backdrop (FE-MODAL-A11Y regression)", () => {
       const onClose = vi.fn();
       const { container } = render(
         <Modal isOpen={true} onClose={onClose} title="X">
           <p>x</p>
         </Modal>,
       );
-      // The backdrop has onKeyDown for Enter so keyboard-only users
-      // can dismiss the modal. The div is not natively focusable
-      // (no tabindex), so we fire the React synthetic event directly
-      // rather than going through user.keyboard which requires focus.
-      //
-      // FINDING (Phase-4 audit): the backdrop wires onKeyDown but
-      // does not set tabIndex, so in a real browser the user cannot
-      // actually focus the backdrop to trigger this handler. The
-      // Escape-key path on document.keydown is the working keyboard
-      // close affordance. Flagged for the Phase-4 remediation report;
-      // not fixed here to keep the test purely descriptive of the
-      // current behavior. Fix would be either:
-      //   - Remove the onKeyDown (dead code), OR
-      //   - Add tabIndex={-1} + visible focus indicator on backdrop
-      //     so AT users can tab to it.
-      const backdrop = container.querySelector(
-        ".modal-backdrop",
-      ) as HTMLElement;
-      fireEvent.keyDown(backdrop, { key: "Enter" });
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it("does not respond to Enter on backdrop when closeOnBackdropClick=false", () => {
-      const onClose = vi.fn();
-      const { container } = render(
-        <Modal
-          isOpen={true}
-          onClose={onClose}
-          title="X"
-          closeOnBackdropClick={false}
-        >
-          <p>x</p>
-        </Modal>,
-      );
+      // FE-MODAL-A11Y: the backdrop previously wired an onKeyDown for
+      // "Enter" but never set tabIndex, so a real browser user could
+      // never actually focus the backdrop to trigger it — dead,
+      // misleading code. It was removed outright: Escape (see the
+      // "Escape key" describe block above) is the documented, working
+      // keyboard equivalent to backdrop-click dismissal. Firing Enter
+      // on the backdrop must now be a no-op.
       const backdrop = container.querySelector(
         ".modal-backdrop",
       ) as HTMLElement;
@@ -371,16 +347,25 @@ describe("Modal", () => {
   });
 
   describe("accessibility wiring", () => {
-    it("sets role='dialog' and aria-modal='true' on the backdrop", () => {
-      render(
+    it("sets role='dialog' and aria-modal='true' on the .modal element, not the backdrop", () => {
+      const { container } = render(
         <Modal isOpen={true} onClose={vi.fn()} title="X">
           <p>x</p>
         </Modal>,
       );
       const dialog = screen.getByRole("dialog");
-      // aria-modal=true tells AT that content outside the dialog is
-      // inert (even without a focus trap implementation).
+      // aria-modal=true tells AT that content outside the dialog is inert;
+      // the focus trap (see "focus trap" describe block below) makes that
+      // true in practice, not just declaratively.
       expect(dialog.getAttribute("aria-modal")).toBe("true");
+      // FE-MODAL-A11Y: the dialog role lives on the visible .modal box,
+      // matching the WAI-ARIA APG "Dialog (Modal)" pattern — the backdrop
+      // overlay is decorative (role="presentation") and does not carry
+      // the dialog semantics itself.
+      expect(dialog.className).toContain("modal");
+      expect(
+        container.querySelector(".modal-backdrop")?.getAttribute("role"),
+      ).toBe("presentation");
     });
 
     it("links aria-labelledby to the title element via #modal-title", () => {
@@ -395,6 +380,102 @@ describe("Modal", () => {
       // label reference. Pin both ends of the link.
       const heading = screen.getByRole("heading", { name: "Settings" });
       expect(heading.getAttribute("id")).toBe("modal-title");
+    });
+
+    it("gives the dialog tabIndex=-1 so it is a valid focus target with no focusable descendants", () => {
+      render(
+        <Modal
+          isOpen={true}
+          onClose={vi.fn()}
+          title="X"
+          showCloseButton={false}
+        >
+          <p>plain text, no interactive content</p>
+        </Modal>,
+      );
+      const dialog = screen.getByRole("dialog");
+      expect(dialog.getAttribute("tabindex")).toBe("-1");
+    });
+  });
+
+  describe("focus trap (FE-MODAL-A11Y)", () => {
+    // The trap's own containment math (wrap-around, no-focusable-descendants
+    // fallback) is exhaustively unit-tested in
+    // hooks/__tests__/useFocusTrap.test.tsx. These tests only pin that Modal
+    // wires useFocusTrap correctly against its real header/body/footer DOM.
+
+    it("moves focus to the close button (first focusable element) on open", () => {
+      render(
+        <Modal isOpen={true} onClose={vi.fn()} title="X">
+          <p>x</p>
+        </Modal>,
+      );
+      expect(screen.getByRole("button", { name: "Close modal" })).toHaveFocus();
+    });
+
+    it("wraps Tab from the last footer button back to the close button", () => {
+      render(
+        <Modal
+          isOpen={true}
+          onClose={vi.fn()}
+          title="X"
+          footer={<button type="button">Save</button>}
+        >
+          <p>x</p>
+        </Modal>,
+      );
+      const saveButton = screen.getByRole("button", { name: "Save" });
+      saveButton.focus();
+
+      fireEvent.keyDown(saveButton, { key: "Tab" });
+
+      expect(screen.getByRole("button", { name: "Close modal" })).toHaveFocus();
+    });
+
+    it("wraps Shift+Tab from the close button to the last footer button", () => {
+      render(
+        <Modal
+          isOpen={true}
+          onClose={vi.fn()}
+          title="X"
+          footer={<button type="button">Save</button>}
+        >
+          <p>x</p>
+        </Modal>,
+      );
+      const closeButton = screen.getByRole("button", { name: "Close modal" });
+      closeButton.focus();
+
+      fireEvent.keyDown(closeButton, { key: "Tab", shiftKey: true });
+
+      expect(screen.getByRole("button", { name: "Save" })).toHaveFocus();
+    });
+
+    it("restores focus to the triggering element after the modal closes", () => {
+      const trigger = document.createElement("button");
+      trigger.textContent = "Open Settings";
+      document.body.appendChild(trigger);
+      trigger.focus();
+      expect(trigger).toHaveFocus();
+
+      const { rerender } = render(
+        <Modal isOpen={true} onClose={vi.fn()} title="X">
+          <p>x</p>
+        </Modal>,
+      );
+      expect(screen.getByRole("button", { name: "Close modal" })).toHaveFocus();
+
+      // This is the exact regression e2e/accessibility.spec.ts's "Focus
+      // should return to trigger after closing modal" test checks in a real
+      // browser; pinned here deterministically at the unit level.
+      rerender(
+        <Modal isOpen={false} onClose={vi.fn()} title="X">
+          <p>x</p>
+        </Modal>,
+      );
+      expect(trigger).toHaveFocus();
+
+      document.body.removeChild(trigger);
     });
   });
 });

@@ -15,7 +15,8 @@
  * along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 import { IconXmark } from "./icons";
 
 /**
@@ -54,7 +55,10 @@ export interface ModalProps {
  * Modal Component
  *
  * Accessible modal dialog with backdrop
- * Handles keyboard events (Escape to close) and focus management
+ * Handles keyboard events (Escape to close) and focus management,
+ * including a full keyboard focus trap (see FE-MODAL-A11Y): Tab/Shift+Tab
+ * cycle only through the dialog's own focusable content while it is open,
+ * and focus returns to whatever triggered the modal once it closes.
  *
  * @example
  * ```tsx
@@ -84,6 +88,12 @@ export function Modal({
   closeOnBackdropClick = true,
   className = "",
 }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // WCAG 2.1 AA focus trap: contain Tab/Shift+Tab within the dialog while
+  // open, and restore focus to the triggering element on close.
+  useFocusTrap(dialogRef, isOpen);
+
   // Handle Escape key to close modal
   useEffect(() => {
     if (!isOpen) return;
@@ -119,28 +129,30 @@ export function Modal({
     }
   };
 
-  const handleBackdropKeyDown = (
-    event: React.KeyboardEvent<HTMLDivElement>,
-  ) => {
-    if (closeOnBackdropClick && event.key === "Enter") {
-      onClose();
-    }
-  };
-
   const modalClasses = ["modal", size !== "md" && `modal--${size}`, className]
     .filter(Boolean)
     .join(" ");
 
   return (
+    // FE-MODAL-A11Y: click-outside-to-dismiss is a mouse-only convenience —
+    // Escape (handled above) is the documented keyboard equivalent, and the
+    // dialog role/focus trap live on the inner .modal element below (the
+    // WAI-ARIA APG "Dialog (Modal)" pattern treats the backdrop as a
+    // decorative overlay, not part of the dialog's accessible tree).
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click-to-close is a standard modal UX pattern; Escape is the keyboard equivalent
     <div
       className="modal-backdrop"
       onClick={handleBackdropClick}
-      onKeyDown={handleBackdropKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
+      role="presentation"
     >
-      <div className={modalClasses}>
+      <div
+        ref={dialogRef}
+        className={modalClasses}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        tabIndex={-1}
+      >
         <div className="modal__header">
           <h2 id="modal-title" className="modal__title">
             {title}
