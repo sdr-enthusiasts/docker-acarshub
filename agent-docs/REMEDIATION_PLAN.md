@@ -2031,6 +2031,95 @@ rule, and whether "at least one ring always fully visible" should key off
 are implementation details appropriately resolved when Phase B is
 actually scoped, not audit findings.
 
+**Phase B implementation (this session).** Strategy (c) implemented in
+`RangeRings.tsx`:
+
+- New exported `getMaxRingCount(containerWidthPx)`: `< 400px` -> 3 rings,
+  `400-899px` -> 4, `>= 900px` -> 5 (read via `map.getContainer().clientWidth`,
+  a real MapLibre API). Mobile viewports keep the original fixed-3
+  behavior; wider containers get more reference rings.
+- New exported `calculateRangeRingRadii(minEdgeDistance,
+minCornerDistance, maxRingCount, roundFn)`: outer-ring target is
+  `max(minCornerDistance * 0.9, minEdgeDistance * 0.7)` — the corner-based
+  term dominates in virtually every real aspect ratio (a rectangle's
+  corner distance is always >= its shortest edge distance by the
+  Pythagorean relationship), so the outer ring now reaches toward the
+  true visible diagonal instead of being capped at 70% of the shortest
+  edge. The loop tries `maxRingCount` down to 3, picking the largest
+  count whose nice-interval step still keeps the _innermost_ ring `<=
+minEdgeDistance` (the one invariant preserved from the original
+  algorithm — the innermost ring is never clipped). A final fallback
+  (only reachable on near-square aspect ratios where rounding pushes
+  every candidate step just over `minEdgeDistance`) reverts to the
+  original edge-only formula.
+- Pulled both functions out of the component as pure, directly
+  unit-testable functions (previously the whole calculation was inlined
+  in a single `useMemo`).
+
+**Regression found and fixed during implementation (live-verification,
+not caught by the unit tests above until added afterward).** The pure
+functions above only fixed the buffer/count logic; a second, more
+fundamental defect surfaced through manual testing in a real browser
+after the first pass: **ring size was being computed as
+`station -> viewport edge/corner distance`, not `viewport center ->
+edge/corner distance`.** Since the ground station is a fixed real-world
+point but the map's visible frame moves independently as the user pans,
+any pan that left the station off-center caused `minEdgeDistance` to
+collapse toward the (now short) station-to-nearest-edge distance —
+producing rings that visibly shrank, changed count, or nearly vanished
+from panning alone, with no zoom change at all. This is a strictly worse
+regression than the original Phase A finding, since it made ring
+behavior actively unstable during normal map interaction rather than
+just conservatively small.
+
+**Fix:** the edge/corner distances that determine ring _size_ are now
+measured from the map's own current center (`viewState.latitude`/
+`viewState.longitude`), completely decoupled from the station's
+position. The rings are still _drawn_ centered on the station's
+real-world coordinates (`createCircle`/`createLabelPoints` unchanged) —
+only the size calculation moved off the station. This makes ring
+size/count depend only on zoom (+ the smooth, latitude-dependent
+Mercator scale factor), stable under any pure pan, and correct
+regardless of where the station happens to sit within the current view.
+
+Verified via a temporary revert (swapping the two `viewState.latitude/
+longitude` reads back to `stationLat/stationLon`, matching the pre-fix
+code) that two new regression tests fail without the fix and pass with
+it restored:
+
+- `"ring size/count is identical regardless of where the station sits
+within a fixed viewport"` — same bounds/viewState, station moved from
+  centered to near a corner; pre-fix produced `[5, 10, 15]` vs. the
+  centered case's `[50, 100, 150]` (nearly 10x smaller), post-fix
+  produces identical rings in both cases.
+- `"ring size/count is unaffected by a pure pan (same zoom, viewport
+translated east)"` — same station, bounds/viewState translated 10° of
+  longitude east (a pure pan at constant latitude, so the great-circle
+  geometry is exactly congruent); pre-fix produced `[100, 200, 300]`
+  before the pan and `[50, 100, 150]` after (rings changed purely from
+  panning, zero zoom change); post-fix produces identical rings before
+  and after.
+
+Also re-verified live in a rebuilt Docker Playwright image (same
+`mcr.microsoft.com/playwright:v1.61.1-noble` setup as Phase A):
+screenshots before a pan, after a moderate pan, and after panning far
+enough that the station marker leaves the visible frame entirely all
+show the identical ring set (`50/100/150/200/250 NM` in the tested
+scenario) — only the portion of each ring visible within the frame
+changes, never the ring radii themselves.
+
+**Tests:** `RangeRings.test.tsx` grew from 13 to 24 tests. New coverage:
+`getMaxRingCount` (all three width bands + `undefined`), `calculateRangeRingRadii`
+(count-selection boundary, no-clip invariant across near-square and
+elongated ratios, the fallback path using the real 768px-tablet-portrait
+fixture from Phase A, and a before/after numeric proof that the new
+outer ring reaches materially farther than the pre-Phase-B formula on
+the same fixture), plus the two pan/off-center-station regression tests
+above. All 13 pre-existing tests pass unchanged (same fixtures where
+`viewState` center coincides with the station, so the size-basis change
+is a no-op for those cases). Full frontend suite (2343 tests) and
+`just ci` green.
+
 ---
 
 ## 16. Suggested execution order
@@ -2157,7 +2246,7 @@ extracted hooks) are in place before new feature surface lands on them.
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | FEAT-MARKER-SIZE | ✅ DONE — see full write-up in §15. `MarkerSize` setting (small/medium/large, default medium) with store migration v9→v10, `RadioGroup` in `MapTab.tsx`. Scale baked into sprite/SVG generation math (not CSS transform, to avoid atlas-crop misalignment and touch-target/transform composition bugs); new `.aircraft-marker-hit` 44px-floored wrapper decouples the clickable area from the visual icon so sprite crops never bleed. Two real bugs found and fixed during verification: a stale parallel stylesheet hardcoding `.aircraft-sprite` width/height froze the visual box while the crop kept scaling (atlas bleed at "small", clipping at "large"); `AnimatedSprite`'s `scale` prop was never actually passed at its JSX call site, freezing all animated (propeller) aircraft at the default scale — both pinned by regression tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | PERF-BUNDLE      | Bundle audit + code-splitting for cold-load reduction                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| FEAT-RANGE-RINGS | Phase A audit DONE (this session, see full write-up in §15) — confirmed `minEdgeDistance * 0.7` (short-axis-only, no-clipping-allowed design) is the root cause, cross-validated against real Docker-Playwright screenshots at 320/768/1024/1920px; recommended strategy (c) — relax the buffer toward the corner distance and let ring count grow 3-5. **Phase B (implementation) awaiting review before starting**, per the plan's investigate-first/implement-second structure.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| FEAT-RANGE-RINGS | ✅ DONE — see full write-up in §15. Phase A confirmed `minEdgeDistance * 0.7` (short-axis-only, no-clipping-allowed design) as the root cause; Phase B implemented strategy (c) (`getMaxRingCount` 3-5 by container width, `calculateRangeRingRadii` corner-based buffer with an edge-based no-clip floor). A second, more fundamental defect surfaced during live verification: ring size was computed from `station -> edge/corner distance` rather than `viewport-center -> edge/corner distance`, so panning the map (with the station now off-center) made rings visibly shrink/change count/nearly vanish with no zoom change at all. Fixed by keying the size calculation off the map's own center instead of the station; rings are still drawn anchored at the station's real coordinates. Both defects pinned by regression tests (verified failing pre-fix, passing post-fix via a temporary revert).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | FE-MODAL-A11Y    | `acarshub-react/src/components/Modal.tsx` accessibility fixes (flagged during Phase 4 TEST-GAP-FE work). DONE `c8e3f790`: (1) new `hooks/useFocusTrap.ts` hook traps Tab/Shift+Tab within the dialog while open (wraps at both boundaries, falls back to focusing the container itself via `tabIndex={-1}` when there are no focusable descendants) and restores focus to whatever triggered the modal on close/unmount — closes the WCAG 2.1 AA violation where Tab could walk focus out of an open modal into the underlying page. (2) `role="dialog"`/`aria-modal`/`aria-labelledby`/`tabIndex={-1}` moved off the backdrop `<div>` onto the inner `.modal` element (matching the WAI-ARIA APG "Dialog (Modal)" pattern and the existing `Map/AircraftMessagesModal.tsx` precedent); the backdrop's dead `onKeyDown`-for-Enter handler (unreachable — it had no `tabIndex` so a real user could never focus it to trigger it) was removed outright rather than fixed, since Escape (already implemented, already tested) is the documented working keyboard equivalent to backdrop-click dismissal. 16 new unit tests in `hooks/__tests__/useFocusTrap.test.tsx` (pure-function `getFocusableElements` DOM-order/disabled/tabindex/aria-hidden coverage, plus full trap behavior including wrap-around both directions and focus restoration); `Modal.test.tsx` gained a "focus trap" describe block pinning the same "focus returns to trigger after close" contract that `e2e/accessibility.spec.ts`'s "Focus Management" tests check in a real browser — confirmed via a rebuilt Dockerized-Playwright image that those two pre-existing e2e tests now pass for a genuine reason (a real trap) rather than the coincidental DOM-order luck they were passing on before. Verified via `git stash`: 7 tests fail against the pre-fix code, all pass with the fix restored. |
 
 ### Phase 9 — Cleanup

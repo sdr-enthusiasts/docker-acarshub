@@ -42,7 +42,11 @@ vi.mock("react-map-gl/maplibre", () => ({
 // SUT
 // ---------------------------------------------------------------------------
 
-import { RangeRings } from "../RangeRings";
+import {
+  calculateRangeRingRadii,
+  getMaxRingCount,
+  RangeRings,
+} from "../RangeRings";
 
 function makeDecoders(overrides: Partial<Decoders["adsb"]> = {}): Decoders {
   return {
@@ -70,13 +74,31 @@ function makeDecoders(overrides: Partial<Decoders["adsb"]> = {}): Decoders {
 function makeFakeMap(opts: {
   ne: { lat: number; lng: number };
   sw: { lat: number; lng: number };
-}): { getBounds: () => unknown } {
+  /** Optional — omitted mirrors real usage where `getContainer` may be
+   * absent on older mocks; `getMaxRingCount(undefined)` falls back to 3. */
+  containerWidth?: number;
+}): { getBounds: () => unknown; getContainer?: () => { clientWidth: number } } {
   return {
     getBounds: () => ({
       getNorthEast: () => ({ lat: opts.ne.lat, lng: opts.ne.lng }),
       getSouthWest: () => ({ lat: opts.sw.lat, lng: opts.sw.lng }),
     }),
+    ...(opts.containerWidth !== undefined
+      ? { getContainer: () => ({ clientWidth: opts.containerWidth as number }) }
+      : {}),
   };
+}
+
+/** Nice-interval rounding, mirroring `RangeRings.tsx`'s private helper —
+ * duplicated here (not imported) since it's intentionally an internal
+ * `useCallback`, not part of the module's public/testable surface. */
+function roundToNiceInterval(distance: number): number {
+  if (distance <= 0) return 10;
+  const magnitude = 10 ** Math.floor(Math.log10(distance));
+  const intervals = [magnitude * 1, magnitude * 2, magnitude * 5];
+  return intervals.reduce((prev, curr) =>
+    Math.abs(curr - distance) < Math.abs(prev - distance) ? curr : prev,
+  );
 }
 
 beforeEach(() => {
@@ -217,6 +239,86 @@ describe("RangeRings", () => {
         100, 200, 300,
       ]);
     });
+
+    /**
+     * REGRESSION (user-reported, post-Phase-B): ring size/count used to be
+     * computed from the STATION's distance to the viewport edges/corners.
+     * Panning the map moves the station off-center within the visible
+     * frame without changing zoom at all, which made `minEdgeDistance`
+     * collapse toward zero as the station approached any edge — rings
+     * would shrink, change count, or nearly disappear purely from
+     * panning. The fix moves the size calculation onto the *viewport's
+     * own center* (`viewState`), independent of where the station sits
+     * within the frame.
+     */
+    function radiiFor(
+      station: { lat: number; lon: number },
+      bounds: {
+        ne: { lat: number; lng: number };
+        sw: { lat: number; lng: number };
+      },
+      viewState: { longitude: number; latitude: number; zoom: number },
+    ): number[] {
+      useSettingsStore.getState().setStationLocation(station.lat, station.lon);
+      useMapResult.current = makeFakeMap(bounds);
+      // capturedSources/capturedLayers are shared module-level buffers —
+      // clear them before each render within this helper so multiple
+      // calls in a single test don't accumulate matches from prior calls.
+      capturedSources.length = 0;
+      capturedLayers.length = 0;
+      const { unmount } = render(<RangeRings viewState={viewState} />);
+      const ringSource = capturedSources.find((s) => s.id === "range-rings");
+      const fc = ringSource?.data as {
+        features: Array<{ properties: { radius: number } }>;
+      };
+      const radii = fc.features.map((f) => f.properties.radius);
+      unmount();
+      return radii;
+    }
+
+    it("ring size/count is identical regardless of where the station sits within a fixed viewport", () => {
+      const bounds = {
+        ne: { lat: 42, lng: -73 },
+        sw: { lat: 38, lng: -77 },
+      };
+      const viewState = { longitude: -75, latitude: 40, zoom: 8 };
+
+      // Station exactly at the viewport center (the "default camera"
+      // case).
+      const centered = radiiFor({ lat: 40, lon: -75 }, bounds, viewState);
+
+      // Same viewport, but the station has drifted close to the NE
+      // corner — simulating the user having panned the map so the
+      // station is no longer centered, without changing zoom.
+      const offCenterNearEdge = radiiFor(
+        { lat: 41.8, lon: -73.2 },
+        bounds,
+        viewState,
+      );
+
+      expect(offCenterNearEdge).toEqual(centered);
+    });
+
+    it("ring size/count is unaffected by a pure pan (same zoom, viewport translated east)", () => {
+      const station = { lat: 40, lon: -75 };
+
+      const before = radiiFor(
+        station,
+        { ne: { lat: 42, lng: -73 }, sw: { lat: 38, lng: -77 } },
+        { longitude: -75, latitude: 40, zoom: 8 },
+      );
+
+      // Pan 10° of longitude east, same latitude (so the great-circle
+      // geometry is exactly congruent, just translated) — the station's
+      // real-world location doesn't move; only the visible frame does.
+      const afterPan = radiiFor(
+        station,
+        { ne: { lat: 42, lng: -63 }, sw: { lat: 38, lng: -67 } },
+        { longitude: -65, latitude: 40, zoom: 8 },
+      );
+
+      expect(afterPan).toEqual(before);
+    });
   });
 
   describe("GeoJSON shape", () => {
@@ -296,6 +398,125 @@ describe("RangeRings", () => {
       const labelPaint = labelLayer?.paint as Record<string, unknown>;
       expect(labelPaint["text-color"]).toBe("#4c4f69");
       expect(labelPaint["text-halo-color"]).toBe("#eff1f5");
+    });
+  });
+
+  describe("FEAT-RANGE-RINGS Phase B: getMaxRingCount", () => {
+    it("returns 3 (MIN_RING_COUNT) when containerWidthPx is undefined", () => {
+      expect(getMaxRingCount(undefined)).toBe(3);
+    });
+
+    it("returns 3 below the mobile breakpoint (400px)", () => {
+      expect(getMaxRingCount(0)).toBe(3);
+      expect(getMaxRingCount(320)).toBe(3);
+      expect(getMaxRingCount(399)).toBe(3);
+    });
+
+    it("returns 4 between the mobile and tablet breakpoints (400-899px)", () => {
+      expect(getMaxRingCount(400)).toBe(4);
+      expect(getMaxRingCount(631)).toBe(4);
+      expect(getMaxRingCount(899)).toBe(4);
+    });
+
+    it("returns 5 (MAX_RING_COUNT) at or above the tablet breakpoint (900px+)", () => {
+      expect(getMaxRingCount(900)).toBe(5);
+      expect(getMaxRingCount(1527)).toBe(5);
+      expect(getMaxRingCount(1_000_000)).toBe(5);
+    });
+  });
+
+  describe("FEAT-RANGE-RINGS Phase B: calculateRangeRingRadii", () => {
+    it("never produces a ring count below 3 or above the requested maxRingCount", () => {
+      for (const maxRingCount of [3, 4, 5]) {
+        const radii = calculateRangeRingRadii(
+          100,
+          250,
+          maxRingCount,
+          roundToNiceInterval,
+        );
+        expect(radii.length).toBeGreaterThanOrEqual(3);
+        expect(radii.length).toBeLessThanOrEqual(maxRingCount);
+      }
+    });
+
+    it("the innermost ring never exceeds minEdgeDistance (no-clip invariant)", () => {
+      // A wide range of edge/corner ratios, including near-square (edge ≈
+      // corner) and very elongated (corner >> edge) viewports.
+      const cases: Array<[number, number]> = [
+        [40.4, 79.1], // 320w mobile fixture from Phase A
+        [118.9, 224.1], // 1920w desktop fixture from Phase A
+        [100, 101], // near-square: corner barely exceeds edge
+        [50, 500], // extremely elongated
+      ];
+      for (const [minEdge, minCorner] of cases) {
+        for (const maxRingCount of [3, 4, 5]) {
+          const radii = calculateRangeRingRadii(
+            minEdge,
+            minCorner,
+            maxRingCount,
+            roundToNiceInterval,
+          );
+          expect(radii[0]).toBeLessThanOrEqual(minEdge);
+        }
+      }
+    });
+
+    it("picks the largest ring count whose nice-interval step still fits minEdgeDistance", () => {
+      // minEdge=118.9, minCorner=224.1 (1920w desktop fixture) — outerTarget
+      // = max(224.1*0.9, 118.9*0.7) = 201.69. At maxRingCount=5:
+      // step = niceInterval(201.69/5=40.3) = 50; 50 <= 118.9 -> fits.
+      const radii = calculateRangeRingRadii(
+        118.9,
+        224.1,
+        5,
+        roundToNiceInterval,
+      );
+      expect(radii).toEqual([50, 100, 150, 200, 250]);
+    });
+
+    it("falls back to the edge-only formula when even MIN_RING_COUNT clips the innermost ring", () => {
+      // Real Phase A fixture (768w tablet-portrait canvas, 375x899):
+      // minEdge=47.4, minCorner=121.3, maxRingCount=3 (narrow-viewport
+      // cap). outerTarget = max(121.3*0.9, 47.4*0.7) = 109.17; at the only
+      // count tried (3), niceInterval(109.17/3=36.39) = 50, which exceeds
+      // minEdgeDistance (47.4) — the corner-based target doesn't fit even
+      // at the minimum count, so this falls all the way back to the
+      // edge-only formula.
+      const radii = calculateRangeRingRadii(
+        47.4,
+        121.3,
+        3,
+        roundToNiceInterval,
+      );
+      // Fallback formula: niceInterval((47.4*0.7)/3) = niceInterval(11.06) = 10
+      expect(radii).toEqual([10, 20, 30]);
+      expect(radii[0]).toBeLessThanOrEqual(47.4);
+    });
+
+    it("REGRESSION: outer ring reaches materially farther than the pre-Phase-B formula on a landscape viewport", () => {
+      // Same fixture as Phase A's screenshot cross-check (1024w laptop,
+      // canvas 631x661): minEdge=79.7, minCorner=114.3.
+      const minEdge = 79.7;
+      const minCorner = 114.3;
+
+      // Pre-Phase-B formula: outer = niceInterval((minEdge*0.7)/3) * 3.
+      const oldStep = roundToNiceInterval((minEdge * 0.7) / 3);
+      const oldOuter = oldStep * 3;
+
+      const newRadii = calculateRangeRingRadii(
+        minEdge,
+        minCorner,
+        getMaxRingCount(631),
+        roundToNiceInterval,
+      );
+      const newOuter = newRadii[newRadii.length - 1];
+
+      // This is the numeric proof the Phase A audit's "outer/minCorner:
+      // 37.3%" (old) vs the new formula's improved reach requires: the new
+      // outer ring must be strictly larger, and closer to minCorner as a
+      // fraction, than the old one.
+      expect(newOuter).toBeGreaterThan(oldOuter);
+      expect(newOuter / minCorner).toBeGreaterThan(oldOuter / minCorner);
     });
   });
 
