@@ -211,3 +211,14 @@
 body.modal-open {
   overflow: hidden;
 }
+
+// Respect the user's "disable animations" appearance setting (data-animations
+// is set on <html> by App.tsx). Without this the modal's entrance fade/slide
+// ran regardless of the setting, and the exit transition could still be in
+// flight immediately after close — a race that intercepts nav-link clicks.
+[data-animations="false"] {
+  .modal-backdrop,
+  .modal {
+    animation: none;
+  }
+}

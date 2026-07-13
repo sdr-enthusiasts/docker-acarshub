@@ -60,6 +60,28 @@ async function injectDecoderState(page: Page): Promise<boolean> {
  * This must be called after the modal/tab is visible but before AxeBuilder
  * analyzes the page.
  */
+/**
+ * Force the app's own "animations disabled" mode by setting
+ * `data-animations="false"` on <html> (the same attribute App.tsx toggles
+ * from the Appearance setting). This disables the `.settings-panel` fadeIn and
+ * every other [data-animations="false"]-guarded animation.
+ *
+ * Why this is needed on top of finishAnimations(): a tab `.click()` waits for
+ * the target to be *stable* (not animating) before acting. On loaded CI
+ * runners — WebKit especially — the 0.2s settings-panel fadeIn that replays on
+ * every tab switch keeps the tab region moving long enough that the click's
+ * stability wait can exceed the 30s test timeout. Disabling the animation up
+ * front makes tab switching deterministic regardless of runner speed.
+ *
+ * Uses addInitScript so the attribute is present before first paint on this
+ * and any subsequent navigation within the test.
+ */
+async function disableAnimations(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    document.documentElement.setAttribute("data-animations", "false");
+  });
+}
+
 async function finishAnimations(page: Page): Promise<void> {
   await page.evaluate(() => {
     for (const animation of document.getAnimations()) {
@@ -236,6 +258,10 @@ test.describe("Accessibility - Core Pages", () => {
 
 test.describe("Accessibility - Settings Modal", () => {
   test.beforeEach(async ({ page }) => {
+    // Disable animations before first paint so tab-switch clicks don't race the
+    // settings-panel fadeIn (see disableAnimations() for the full rationale).
+    await disableAnimations(page);
+
     await page.goto("/");
     // Wait for app to load — header.navigation is always present (desktop + mobile)
     await expect(page.locator("header.navigation")).toBeVisible();
@@ -569,6 +595,10 @@ test.describe("Accessibility - Color Contrast", () => {
 
 test.describe("Accessibility - Form Controls", () => {
   test.beforeEach(async ({ page }) => {
+    // Disable animations before first paint so the settings-modal fadeIn does
+    // not race axe/clicks (see disableAnimations() for the full rationale).
+    await disableAnimations(page);
+
     await page.goto("/");
     // Wait for app to load — header.navigation is always present (desktop + mobile)
     await expect(page.locator("header.navigation")).toBeVisible();

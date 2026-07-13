@@ -86,6 +86,22 @@ async function injectMessage(
  * On mobile the Settings button is inside the hamburger menu; this helper
  * opens the menu first so the button is reachable on all viewport sizes.
  */
+/**
+ * Force the app's "animations disabled" mode by setting
+ * `data-animations="false"` on <html> before first paint (the same attribute
+ * App.tsx toggles from the Appearance setting). The message-card timestamp is
+ * rendered in a virtualized list; on WebKit the settings-modal open/close
+ * transitions plus the compositor's ResizeObserver cadence can delay the
+ * reactive re-render/repaint just long enough that a timestamp assertion polls
+ * a stale value. Removing the modal transitions makes the reformatted
+ * timestamp settle promptly and deterministically across engines.
+ */
+async function disableAnimations(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    document.documentElement.setAttribute("data-animations", "false");
+  });
+}
+
 async function openSettings(page: Page): Promise<void> {
   const mobileMenu = page.locator("details.small_nav");
   if (await mobileMenu.isVisible()) {
@@ -177,6 +193,10 @@ function firstTimestamp(page: Page): Locator {
 
 test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
   test.beforeEach(async ({ page }) => {
+    // Disable animations before first paint so settings-modal transitions
+    // don't delay the reactive timestamp re-render (see disableAnimations()).
+    await disableAnimations(page);
+
     await page.goto("/live-messages");
     await expect(page.locator("header.navigation")).toBeVisible();
   });
