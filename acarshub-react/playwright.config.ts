@@ -79,7 +79,19 @@ export default defineConfig({
           },
           {
             name: "webkit",
-            use: { ...devices["Desktop Safari"] },
+            // reducedMotion mirrors the Mobile Safari project below. WebKit
+            // flushes CSS transitions and ResizeObserver (used by the
+            // virtualized message list's measureElement) on a different
+            // cadence than Chromium/Firefox, so the settings-modal open/close
+            // and tab-switch transitions race Playwright's post-close reads —
+            // e.g. the reformatted message-card timestamp occasionally isn't
+            // painted when the first assertion polls. Disabling transitions
+            // removes that engine-specific jitter. Must be a direct property
+            // of `use`, not nested in contextOptions (silently ignored).
+            use: {
+              ...devices["Desktop Safari"],
+              reducedMotion: "reduce" as const,
+            },
           },
           {
             name: "Mobile Chrome",

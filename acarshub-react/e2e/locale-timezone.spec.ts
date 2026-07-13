@@ -451,8 +451,9 @@ test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
 
       const ts = firstTimestamp(page);
       await expect(ts).toBeVisible();
-      // "2024-02-01, HH:MM:SS"
-      await expect(ts).toContainText("2024-02-01");
+      // "2024-02-01, HH:MM:SS" — regex/toHaveText auto-retries against the
+      // pinned node, tolerating WebKit's late virtual-list remeasure/paint.
+      await expect(ts).toHaveText(/2024-02-01/);
     });
 
     test("mdy format shows US date (MM/DD/YYYY)", async ({ page }) => {
@@ -476,8 +477,9 @@ test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
 
       const ts = firstTimestamp(page);
       await expect(ts).toBeVisible();
-      // "02/01/2024, HH:MM:SS"
-      await expect(ts).toContainText("02/01/2024");
+      // "02/01/2024, HH:MM:SS" — regex/toHaveText auto-retries against the
+      // pinned node, tolerating WebKit's late virtual-list remeasure/paint.
+      await expect(ts).toHaveText(/02\/01\/2024/);
     });
 
     test("dmy format shows European date (DD/MM/YYYY)", async ({ page }) => {
@@ -501,8 +503,9 @@ test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
 
       const ts = firstTimestamp(page);
       await expect(ts).toBeVisible();
-      // "01/02/2024, HH:MM:SS"
-      await expect(ts).toContainText("01/02/2024");
+      // "01/02/2024, HH:MM:SS" — regex/toHaveText auto-retries against the
+      // pinned node, tolerating WebKit's late virtual-list remeasure/paint.
+      await expect(ts).toHaveText(/01\/02\/2024/);
     });
 
     test("switching date format immediately updates displayed timestamp", async ({
@@ -529,14 +532,17 @@ test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
 
       const ts = firstTimestamp(page);
       await expect(ts).toBeVisible();
-      await expect(ts).toContainText("2024-02-01");
+      await expect(ts).toHaveText(/2024-02-01/);
 
       // Switch to US (mdy) — should update reactively
       await openSettingsRegional(page);
       await setDateFormat(page, "mdy");
       await closeSettings(page);
 
-      await expect(ts).toContainText("02/01/2024");
+      // toHaveText auto-retries until the reactive reformat lands, so this
+      // also implicitly waits out the ISO->US transition before the negative
+      // assertion below.
+      await expect(ts).toHaveText(/02\/01\/2024/);
 
       // ISO format must no longer be visible
       const text = await ts.textContent();
