@@ -317,9 +317,11 @@ test.describe("Accessibility - Settings Modal", () => {
 
     // Actual tab labels in SettingsModal.tsx paired with the id of the
     // tabpanel each one lazily mounts. Panels are code-split (PERF-BUNDLE), so
-    // after clicking a tab we must wait for its specific panel to enter the
+    // after selecting a tab we must wait for its specific panel to enter the
     // DOM before scanning — a fixed timeout would be flaky (chunk-load time is
     // machine dependent) and would race the dangling-`aria-controls` window.
+    // Appearance is the default-active tab, so its panel is already mounting
+    // when the modal opens.
     const tabs: ReadonlyArray<{ name: string; panelId: string }> = [
       { name: "Appearance", panelId: "appearance-panel" },
       { name: "Regional & Time", panelId: "regional-panel" },
@@ -329,9 +331,25 @@ test.describe("Accessibility - Settings Modal", () => {
       { name: "Advanced", panelId: "advanced-panel" },
     ];
 
+    // Wait for the modal to fully settle before interacting: the default
+    // Appearance panel's lazy chunk must mount (and its content reflow the
+    // modal body) before any tab button has a stable bounding box. Clicking a
+    // tab while the modal is still reflowing fails Playwright's actionability
+    // "stable" check — the flake we saw on loaded WebKit CI runners.
+    await expect(page.locator("#appearance-panel")).toBeVisible({
+      timeout: 10_000,
+    });
+
     for (const { name: tabName, panelId } of tabs) {
-      // Click the tab using role-based selector
-      await page.getByRole("tab", { name: tabName }).click();
+      const tab = page.getByRole("tab", { name: tabName });
+
+      // Skip the redundant re-click of the already-active tab (Appearance on
+      // the first iteration): clicking the active tab is a no-op that still
+      // waits for stability, which is exactly where the flake bit.
+      if ((await tab.getAttribute("aria-selected")) !== "true") {
+        await tab.click();
+      }
+
       // Wait for the lazily-loaded panel to actually render.
       await expect(page.locator(`#${panelId}`)).toBeVisible({
         timeout: 10_000,
