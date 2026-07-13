@@ -195,6 +195,40 @@ describe("SettingsModal", () => {
       );
     });
 
+    it("only the active tab exposes aria-controls, pointing at a panel in the DOM", async () => {
+      // Regression: tab panels are lazily rendered (only the active tab's
+      // panel is in the DOM). A static `aria-controls="<x>-panel"` on every
+      // tab therefore referenced non-existent elements for the six inactive
+      // tabs, which axe flags as a critical "Invalid ARIA attribute value"
+      // violation. `aria-controls` must only be present when the referenced
+      // panel actually exists.
+      const user = userEvent.setup();
+      render(<SettingsModal />);
+
+      const appearanceTab = screen.getByRole("tab", { name: "Appearance" });
+      const mapTab = screen.getByRole("tab", { name: "Map" });
+
+      // Default active tab (Appearance) controls a panel that is in the DOM.
+      await screen.findByText("Theme", { selector: "legend" });
+      const appearanceControls = appearanceTab.getAttribute("aria-controls");
+      expect(appearanceControls).toBe("appearance-panel");
+      expect(
+        document.getElementById(appearanceControls as string),
+      ).not.toBeNull();
+
+      // Inactive tab exposes no dangling aria-controls reference.
+      expect(mapTab.getAttribute("aria-controls")).toBeNull();
+
+      // After switching, the invariant holds for the newly active tab and the
+      // now-inactive one drops its aria-controls.
+      await user.click(mapTab);
+      await screen.findByText("Aircraft Marker Size", { selector: "legend" });
+      const mapControls = mapTab.getAttribute("aria-controls");
+      expect(mapControls).toBe("map-panel");
+      expect(document.getElementById(mapControls as string)).not.toBeNull();
+      expect(appearanceTab.getAttribute("aria-controls")).toBeNull();
+    });
+
     it("should display correct content for each tab", async () => {
       const user = userEvent.setup();
       render(<SettingsModal />);

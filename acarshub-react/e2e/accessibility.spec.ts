@@ -63,7 +63,24 @@ async function injectDecoderState(page: Page): Promise<boolean> {
 async function finishAnimations(page: Page): Promise<void> {
   await page.evaluate(() => {
     for (const animation of document.getAnimations()) {
-      animation.finish();
+      // `Animation.finish()` throws `InvalidStateError` for animations with an
+      // infinite effect end (e.g. loading spinners / pulses declared with
+      // `animation-iteration-count: infinite`). Those never "finish" and are
+      // irrelevant to the finite fade-in transitions this helper exists to
+      // snap forward, so skip any animation whose computed end time isn't a
+      // finite number. Guard each call individually so one pathological
+      // animation can't abort the whole loop.
+      const endTime = animation.effect?.getComputedTiming().endTime;
+      if (typeof endTime !== "number" || !Number.isFinite(endTime)) {
+        continue;
+      }
+      try {
+        animation.finish();
+      } catch {
+        // Best-effort: an animation may still reject finish() (e.g. it was
+        // cancelled between the check and the call). Leaving it un-finished
+        // is harmless for the axe scan.
+      }
     }
   });
 }
@@ -243,6 +260,16 @@ test.describe("Accessibility - Settings Modal", () => {
     await page.getByRole("button", { name: /settings/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
+    // Tab panels are lazily code-split (PERF-BUNDLE): the active panel only
+    // enters the DOM once its chunk resolves, until then a Suspense fallback
+    // is shown. Scanning before the panel mounts sees the active tab's
+    // `aria-controls` pointing at a not-yet-rendered `#…-panel` (a dangling,
+    // axe-critical reference) and misses the panel's own content. Wait for the
+    // real panel before scanning so axe sees the settled, valid DOM.
+    await expect(page.locator("#appearance-panel")).toBeVisible({
+      timeout: 10_000,
+    });
+
     // The initial Appearance tab panel plays a 0.2s fadeIn animation.  Axe
     // running mid-animation sees composited (blended) colours at partial opacity
     // that fail contrast checks even though the final colours are accessible.
@@ -262,21 +289,27 @@ test.describe("Accessibility - Settings Modal", () => {
     await page.getByRole("button", { name: /settings/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    // Actual tab labels in SettingsModal.tsx (in order):
-    // Appearance | Regional & Time | Notifications | Data | Map | Advanced
-    const tabs = [
-      "Appearance",
-      "Regional & Time",
-      "Notifications",
-      "Data",
-      "Map",
-      "Advanced",
+    // Actual tab labels in SettingsModal.tsx paired with the id of the
+    // tabpanel each one lazily mounts. Panels are code-split (PERF-BUNDLE), so
+    // after clicking a tab we must wait for its specific panel to enter the
+    // DOM before scanning — a fixed timeout would be flaky (chunk-load time is
+    // machine dependent) and would race the dangling-`aria-controls` window.
+    const tabs: ReadonlyArray<{ name: string; panelId: string }> = [
+      { name: "Appearance", panelId: "appearance-panel" },
+      { name: "Regional & Time", panelId: "regional-panel" },
+      { name: "Notifications", panelId: "notifications-panel" },
+      { name: "Data", panelId: "data-panel" },
+      { name: "Map", panelId: "map-panel" },
+      { name: "Advanced", panelId: "advanced-panel" },
     ];
 
-    for (const tabName of tabs) {
+    for (const { name: tabName, panelId } of tabs) {
       // Click the tab using role-based selector
       await page.getByRole("tab", { name: tabName }).click();
-      await page.waitForTimeout(300); // Wait for tab content to render
+      // Wait for the lazily-loaded panel to actually render.
+      await expect(page.locator(`#${panelId}`)).toBeVisible({
+        timeout: 10_000,
+      });
       // Each tab switch replays the fadeIn animation; finish it before scanning.
       await finishAnimations(page);
 
@@ -573,6 +606,12 @@ test.describe("Accessibility - Form Controls", () => {
     // Open Settings — button has text "Settings", no aria-label attribute
     await page.getByRole("button", { name: /settings/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
+
+    // Wait for the lazily code-split panel to mount before scanning (see the
+    // "Settings modal should not have accessibility violations" test for why).
+    await expect(page.locator("#appearance-panel")).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Finish the fadeIn animation on the initial panel before axe scans.
     await finishAnimations(page);

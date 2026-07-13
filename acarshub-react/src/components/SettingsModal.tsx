@@ -325,7 +325,9 @@ export const SettingsModal = () => {
             id="appearance-tab"
             role="tab"
             aria-selected={activeTab === "appearance"}
-            aria-controls="appearance-panel"
+            aria-controls={
+              activeTab === "appearance" ? "appearance-panel" : undefined
+            }
             tabIndex={activeTab === "appearance" ? 0 : -1}
             className={`settings-tab ${activeTab === "appearance" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("appearance")}
@@ -341,7 +343,9 @@ export const SettingsModal = () => {
             id="regional-tab"
             role="tab"
             aria-selected={activeTab === "regional"}
-            aria-controls="regional-panel"
+            aria-controls={
+              activeTab === "regional" ? "regional-panel" : undefined
+            }
             tabIndex={activeTab === "regional" ? 0 : -1}
             className={`settings-tab ${activeTab === "regional" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("regional")}
@@ -357,7 +361,7 @@ export const SettingsModal = () => {
             id="alerts-tab"
             role="tab"
             aria-selected={activeTab === "alerts"}
-            aria-controls="alerts-panel"
+            aria-controls={activeTab === "alerts" ? "alerts-panel" : undefined}
             tabIndex={activeTab === "alerts" ? 0 : -1}
             className={`settings-tab ${activeTab === "alerts" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("alerts")}
@@ -373,7 +377,9 @@ export const SettingsModal = () => {
             id="notifications-tab"
             role="tab"
             aria-selected={activeTab === "notifications"}
-            aria-controls="notifications-panel"
+            aria-controls={
+              activeTab === "notifications" ? "notifications-panel" : undefined
+            }
             tabIndex={activeTab === "notifications" ? 0 : -1}
             className={`settings-tab ${activeTab === "notifications" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("notifications")}
@@ -389,7 +395,7 @@ export const SettingsModal = () => {
             id="data-tab"
             role="tab"
             aria-selected={activeTab === "data"}
-            aria-controls="data-panel"
+            aria-controls={activeTab === "data" ? "data-panel" : undefined}
             tabIndex={activeTab === "data" ? 0 : -1}
             className={`settings-tab ${activeTab === "data" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("data")}
@@ -405,7 +411,7 @@ export const SettingsModal = () => {
             id="map-tab"
             role="tab"
             aria-selected={activeTab === "map"}
-            aria-controls="map-panel"
+            aria-controls={activeTab === "map" ? "map-panel" : undefined}
             tabIndex={activeTab === "map" ? 0 : -1}
             className={`settings-tab ${activeTab === "map" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("map")}
@@ -421,7 +427,9 @@ export const SettingsModal = () => {
             id="advanced-tab"
             role="tab"
             aria-selected={activeTab === "advanced"}
-            aria-controls="advanced-panel"
+            aria-controls={
+              activeTab === "advanced" ? "advanced-panel" : undefined
+            }
             tabIndex={activeTab === "advanced" ? 0 : -1}
             className={`settings-tab ${activeTab === "advanced" ? "settings-tab--active" : ""}`}
             onClick={() => setActiveTab("advanced")}
