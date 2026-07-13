@@ -219,7 +219,8 @@
 
 .settings-section-description {
   margin: 0 0 2rem 0;
-  font-size: 0.875rem;
+  // Shared settings help-text scale: 0.8125rem / 400, flat.
+  font-size: 0.8125rem;
   color: var(--color-subtext0);
   line-height: 1.5;
 }
@@ -237,10 +238,23 @@
 }
 
 .settings-label {
+  // Shared settings field-label scale: 0.875rem / 600, flat.
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text);
   margin: 0;
+}
+
+// Bare `<label>` inside a `.settings-form-field` (e.g. "Ground Altitude
+// Threshold", "Custom Tile URL"). Previously unstyled, so it inherited the
+// 1rem/400 body defaults and rendered visibly larger + lighter than every
+// other field label in the modal. Pin it to the shared field-label scale.
+.settings-form-field > label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.5rem 0;
 }
 
 .settings-label-row {
@@ -252,10 +266,45 @@
 }
 
 .settings-help-text {
+  // Shared settings help-text scale: 0.8125rem / 400, flat.
   font-size: 0.8125rem;
   color: var(--color-subtext0);
   margin: 0;
   line-height: 1.4;
+}
+
+// Card-scoped help + info paragraphs (MapTab). Previously unstyled, so they
+// inherited the 1rem body size and dwarfed every other help string. Align to
+// the shared help-text scale.
+.settings-card__help {
+  font-size: 0.8125rem;
+  color: var(--color-subtext0);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.5;
+}
+
+.settings-card__info {
+  font-size: 0.8125rem;
+  color: var(--color-subtext0);
+  line-height: 1.5;
+
+  p {
+    margin: 0 0 0.5rem 0;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Reference bullet list (MapTab "Map Provider Reference" card). Previously
+// unstyled -> inherited 1rem. Align to the shared help-text scale.
+.settings-list {
+  font-size: 0.8125rem;
+  color: var(--color-subtext0);
+  line-height: 1.5;
+  margin: 0 0 0.5rem 0;
+  padding-left: 1.25rem;
 }
 
 // STYLE-INLINE-STATIC: modifier and layout helpers that replace one-off

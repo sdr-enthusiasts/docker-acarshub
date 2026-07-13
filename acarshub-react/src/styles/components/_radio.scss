@@ -33,7 +33,11 @@
   }
 
   &__legend {
-    font-size: 0.8125rem;
+    // Shared settings field-label scale (see agent-docs/DESIGN_LANGUAGE.md):
+    // 0.875rem / 600, flat across breakpoints. Matches .select-label,
+    // .toggle-label, .settings-label and the bare `.settings-form-field`
+    // <label> so every field label in the settings modal reads at one size.
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--color-text);
     margin-bottom: 0.5rem;
@@ -45,7 +49,8 @@
   }
 
   &__help-text {
-    font-size: 0.75rem;
+    // Shared settings help-text scale: 0.8125rem / 400, flat.
+    font-size: 0.8125rem;
     color: var(--color-subtext0);
     margin: 0 0 0.5rem 0;
     line-height: 1.5;

@@ -44,15 +44,12 @@
 }
 
 .select-label {
-  // Mobile-first base: larger label text for readability at arm's length.
-  font-size: 0.9375rem;
-  font-weight: 500;
+  // Shared settings field-label scale: 0.875rem / 600, flat across
+  // breakpoints. See _radio.scss `.radio-group__legend` for the rationale.
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--color-text);
   margin: 0;
-
-  @include breakpoint(md) {
-    font-size: 0.8125rem;
-  }
 
   &__required {
     color: var(--color-red);
@@ -143,13 +140,9 @@
 }
 
 .select-help-text {
-  // Mobile-first base: larger help text for readability at arm's length.
-  font-size: 0.875rem;
+  // Shared settings help-text scale: 0.8125rem / 400, flat.
+  font-size: 0.8125rem;
   color: var(--color-subtext0);
   margin: 0;
   line-height: 1.4;
-
-  @include breakpoint(md) {
-    font-size: 0.75rem;
-  }
 }
