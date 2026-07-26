@@ -14,6 +14,16 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Settings Modal - Sound Alerts", () => {
   test.beforeEach(async ({ page }) => {
+    // Every path through NotificationsTab.handleTestSound() ends in a native
+    // window.alert() (success and both error branches). Without an explicit
+    // handler Playwright auto-dismisses dialogs asynchronously, which races
+    // test teardown and produces intermittent "locator.click: Test ended"
+    // failures. Register a deterministic dismisser so the blocking alert is
+    // handled synchronously the instant it opens.
+    page.on("dialog", (dialog) => {
+      void dialog.dismiss();
+    });
+
     // Navigate to the app
     await page.goto("/");
 
@@ -147,17 +157,68 @@ test.describe("Settings Modal - Sound Alerts", () => {
 
     // Now find the Test Sound button by text
     const testSoundButton = page.getByText("Test Sound", { exact: true });
+    await expect(testSoundButton).toBeVisible();
 
-    // Should not throw error even if autoplay blocked
-    await expect(async () => {
-      await testSoundButton.click();
-    }).not.toThrow();
+    // The click must resolve cleanly even when autoplay is blocked — the
+    // handler catches the rejection and surfaces it via a dialog (dismissed in
+    // beforeEach). Awaiting the click promise directly is the correct
+    // assertion; the previous `expect(async () => …).not.toThrow()` was a
+    // no-op (a sync matcher can never observe an async rejection) and left the
+    // click promise orphaned, which is what caused the "Test ended" flake.
+    await expect(testSoundButton.click()).resolves.toBeUndefined();
 
     // Check for error alert (optional - depends on implementation)
     const errorAlert = page.locator('[role="alert"]');
     if (await errorAlert.isVisible()) {
       await expect(errorAlert).toContainText(/autoplay|blocked|permission/i);
     }
+  });
+
+  test("deterministically surfaces a dialog when autoplay is blocked", async ({
+    page,
+  }) => {
+    // Regression (cross-browser, unlike the Chromium-only grantPermissions
+    // test above): force the AUTOPLAY_BLOCKED branch by stubbing
+    // HTMLMediaElement.prototype.play to reject with a NotAllowedError, which
+    // audioService.playAlertSound maps to `throw new Error("AUTOPLAY_BLOCKED")`
+    // and NotificationsTab.handleTestSound surfaces via window.alert(). This
+    // exercises the error path every run rather than relying on the browser's
+    // real, nondeterministic autoplay heuristics. The audio element is created
+    // lazily (new Audio() in audioService.getAudio()), so patching the
+    // prototype after load reliably intercepts it.
+    await page.evaluate(() => {
+      HTMLMediaElement.prototype.play = () =>
+        Promise.reject(
+          Object.assign(new Error("blocked by test"), {
+            name: "NotAllowedError",
+          }),
+        );
+    });
+
+    // Capture the dialog's message to prove the blocked branch ran. The
+    // beforeEach `page.on("dialog")` handler performs the actual dismiss —
+    // dismissing again here would throw ("dialog already handled"), so this
+    // listener only records the message.
+    const dialogPromise = page.waitForEvent("dialog");
+
+    const soundLabel = page.getByText("Sound Alerts", { exact: true });
+    await soundLabel.scrollIntoViewIfNeeded();
+    await soundLabel.click();
+
+    const modalBody = page.locator(".modal__body");
+    await modalBody.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    const testSoundButton = page.getByText("Test Sound", { exact: true });
+    await expect(testSoundButton).toBeVisible();
+
+    // The click resolves once the (blocking) dialog is dismissed by the
+    // beforeEach handler. Assert both the dialog message and clean resolution.
+    const clickPromise = testSoundButton.click();
+    const dialog = await dialogPromise;
+    expect(dialog.message()).toMatch(/blocked|autoplay|settings/i);
+    await expect(clickPromise).resolves.toBeUndefined();
   });
 
   test("should adjust volume with slider", async ({ page }) => {

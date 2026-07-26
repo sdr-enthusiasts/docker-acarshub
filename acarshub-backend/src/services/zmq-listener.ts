@@ -21,10 +21,27 @@ import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
-} from "./decoder-listener.js";
-import type { MessageType } from "./tcp-listener.js";
+  MessageType,
+} from "./listener-types.js";
 
-const logger = createLogger("zmq-listener");
+const logger = createLogger("services:zmq-listener");
+
+/**
+ * Minimal shape of the zeromq `Subscriber` instance this listener relies on.
+ * Hoisted to module scope (TYPE-08) so it can be used as the `socket` field's
+ * type instead of `unknown` + an inline cast at every call site.
+ */
+interface ZmqSubscriberLike {
+  connect(endpoint: string): void;
+  subscribe(topic: string): void | Promise<void>;
+  close(): void;
+  events: AsyncIterable<{ type: string }>;
+  [Symbol.asyncIterator](): AsyncIterator<[Buffer]>;
+}
+
+interface ZmqModuleLike {
+  Subscriber: new () => ZmqSubscriberLike;
+}
 
 /**
  * ZMQ Subscriber listener for decoder feeds.
@@ -59,10 +76,11 @@ export class ZmqListener
   private isConnected = false;
 
   // The socket is created on start() and set to null on stop().
-  // Typed as unknown to avoid a hard import of the zeromq types at the module
-  // level — zeromq is loaded dynamically so tests can mock it without needing
-  // the native add-on compiled.
-  private socket: unknown = null;
+  // Typed as ZmqSubscriberLike (a hand-rolled structural interface, not the
+  // real zeromq types) to avoid a hard import of the zeromq module at the
+  // module level — zeromq is loaded dynamically so tests can mock it without
+  // needing the native add-on compiled.
+  private socket: ZmqSubscriberLike | null = null;
 
   constructor(type: MessageType, descriptor: ConnectionDescriptor) {
     super();
@@ -143,9 +161,16 @@ export class ZmqListener
     if (this.socket !== null) {
       try {
         // zeromq Subscriber exposes .close() synchronously.
-        (this.socket as { close(): void }).close();
-      } catch {
-        // Ignore errors closing an already-closed socket.
+        this.socket.close();
+      } catch (error) {
+        // The "expected" case is calling close() on an already-closed socket,
+        // which the zeromq add-on can throw on. Anything else (OOM, native
+        // crash, type error) needs to be observable rather than silently
+        // discarded — log at trace because routine double-close is benign.
+        logger.trace("Error closing zmq socket", {
+          type: this.messageType,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
       this.socket = null;
     }
@@ -164,27 +189,15 @@ export class ZmqListener
    * closed by stop().
    */
   private async connectAndReceive(): Promise<void> {
-    interface ZmqSubscriberLike {
-      connect(endpoint: string): void;
-      subscribe(topic: string): void | Promise<void>;
-      close(): void;
-      events: AsyncIterable<{ type: string }>;
-      [Symbol.asyncIterator](): AsyncIterator<[Buffer]>;
-    }
-
-    interface ZmqModuleLike {
-      Subscriber: new () => ZmqSubscriberLike;
-    }
-
     let zmq: ZmqModuleLike;
 
     try {
       // Dynamic import so tests can mock the module without the native add-on.
       zmq = (await import("zeromq")) as unknown as ZmqModuleLike;
-    } catch (err) {
+    } catch (error) {
       logger.error(`${this.messageType} ZMQ: failed to load zeromq module`, {
         type: this.messageType,
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       this.isRunning = false;
       return;
@@ -202,16 +215,16 @@ export class ZmqListener
     try {
       sock.connect(endpoint);
       await Promise.resolve(sock.subscribe(""));
-    } catch (err) {
+    } catch (error) {
       logger.error(`${this.messageType} ZMQ connect/subscribe failed`, {
         type: this.messageType,
         endpoint,
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       this.emit(
         "error",
         this.messageType,
-        err instanceof Error ? err : new Error(String(err)),
+        error instanceof Error ? error : new Error(String(error)),
       );
       this.closeSocket();
       this.isRunning = false;
@@ -243,18 +256,18 @@ export class ZmqListener
         }
         this.handleFrame(frame);
       }
-    } catch (err) {
+    } catch (error) {
       // ETERM / ENOTSUP are thrown when the socket is closed — that is the
       // normal stop() path and should not be logged as an error.
       if (this.isRunning) {
         logger.error(`${this.messageType} ZMQ receive loop error`, {
           type: this.messageType,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.emit(
           "error",
           this.messageType,
-          err instanceof Error ? err : new Error(String(err)),
+          error instanceof Error ? error : new Error(String(error)),
         );
       }
     }
@@ -290,8 +303,15 @@ export class ZmqListener
           this.emit("disconnected", this.messageType);
         }
       }
-    } catch {
-      // Monitor loop exits when the socket is closed — normal stop() path.
+    } catch (error) {
+      // The "expected" case here is the iterator throwing because the socket
+      // was closed by stop() — that is the normal lifecycle exit and not
+      // worth surfacing above trace. Anything else (e.g. native zeromq error,
+      // OOM) used to be silently swallowed; now it is at least observable.
+      logger.trace("ZMQ monitor loop exited", {
+        type: this.messageType,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -319,11 +339,11 @@ export class ZmqListener
       try {
         const message = JSON.parse(trimmed);
         this.emit("message", this.messageType, message);
-      } catch (err) {
+      } catch (error) {
         logger.debug(`${this.messageType} ZMQ skipping invalid JSON frame`, {
           type: this.messageType,
           line: trimmed.substring(0, 100),
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }

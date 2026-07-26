@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type { ExpressionSpecification } from "maplibre-gl";
 import { useMemo } from "react";
 import { Layer, Source } from "react-map-gl/maplibre";
 import { useAppStore } from "../../store/useAppStore";
@@ -93,20 +94,26 @@ export function HeyWhatsThatOverlay() {
   // ring_index not explicitly listed.
   const palette = RING_COLORS[theme];
 
-  // Build a MapLibre `match` expression: ["match", ["get", "ring_index"], 0, color0, 1, color1, ..., fallback]
-  const lineColorExpression = useMemo((): string[] => {
-    const expr: (string | number | string[])[] = [
+  // Build a MapLibre `match` expression:
+  //   ["match", ["get", "ring_index"], 0, color0, 1, color1, …, fallback]
+  // MapLibre's ExpressionSpecification is a deep variadic union whose tuple
+  // signature can't statically describe a runtime-built `match` arm list, so
+  // we build a plain array and assert once at the boundary. This is still
+  // strictly better than `as any` — the consumer sees the precise MapLibre
+  // type, and any future signature drift will surface here rather than at
+  // every paint-prop site.
+  const lineColorExpression = useMemo((): ExpressionSpecification => {
+    const built: (string | number | ExpressionSpecification)[] = [
       "match",
       ["get", "ring_index"],
     ];
     palette.forEach((color, index) => {
-      expr.push(index);
-      expr.push(color);
+      built.push(index);
+      built.push(color);
     });
     // Fallback colour (same as first ring — cycles)
-    expr.push(palette[0]);
-
-    return expr as string[];
+    built.push(palette[0]);
+    return built as unknown as ExpressionSpecification;
   }, [palette]); // palette is always 6 elements (RING_COLORS has fixed tuple types)
 
   // Text colour and halo for labels
@@ -127,8 +134,7 @@ export function HeyWhatsThatOverlay() {
         id="heywhatsthat-coverage-line"
         type="line"
         paint={{
-          // biome-ignore lint/suspicious/noExplicitAny: MapLibre expression type is complex
-          "line-color": lineColorExpression as any,
+          "line-color": lineColorExpression,
           "line-width": 2,
           "line-opacity": 0.85,
           "line-dasharray": [6, 3],

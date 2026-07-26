@@ -13,12 +13,21 @@ This document describes the key features of ACARS Hub.
 - Displays formatted output alongside raw text
 - Alert terms highlighted in decoded output
 
-**Server-Side Decoding** (libacars):
+**Server-Side Decoded Data** (libacars, upstream):
 
-- Decodes CPDLC messages (Controller-Pilot Data Link)
-- Parses frequency information (ground station data)
-- Handles complex message structures
-- Backend sends decoded data as JSON
+- CPDLC (Controller-Pilot Data Link), ARINC622, SPDU, and frequency
+  data are decoded **upstream** by the decoder daemons that link
+  libacars (acarsdec, vdlm2dec, dumpvdl2, dumphfdl, etc.) and arrive
+  at the backend as structured JSON
+- The Node.js backend itself does **not** link libacars. Its
+  `formatters/` extract these substructures from inbound JSON
+  (`arinc622`, `spdu`, `freq_data`, `cpdlc`) and re-serialise them
+  into the message's `libacars` field for storage
+- The React frontend parses and renders the field via
+  `parseAndFormatLibacars`
+- See `agent-docs/DECODER_CONNECTIONS.md` for the ingestion pipeline
+  (TCP/UDP/ZMQ listeners → `services/message-queue.ts` →
+  `formatters/`)
 
 ### Duplicate Detection
 
@@ -529,7 +538,7 @@ npm run generate-sprites
 
 ### Backend Optimization
 
-- Non-blocking I/O (Flask-SocketIO with gevent)
+- Non-blocking I/O (Node.js event loop on Fastify + Socket.IO 4.x)
 - Database indexes on common queries
 - FTS5 for fast search
 - Per-decoder signal/frequency tables

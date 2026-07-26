@@ -43,20 +43,46 @@ const logger = createLogger("db:statistics");
  *
  * Python backend maintains these as global variables that increment
  * as messages arrive. TypeScript does the same for performance.
+ *
+ * STATE-02: encapsulated in a small factory rather than two bare
+ * module-level `let`s, so the mutable counters + initialized flag are
+ * grouped under one object instead of being independent ambient globals.
+ * `get()` returns the live mutable counters object (not a copy) so
+ * existing call sites can keep mutating individual fields in place.
  */
-let messageCounters = {
-  acars: 0,
-  vdlm2: 0,
-  hfdl: 0,
-  imsl: 0,
-  irdm: 0,
-  total: 0,
-};
+interface MessageCounters {
+  acars: number;
+  vdlm2: number;
+  hfdl: number;
+  imsl: number;
+  irdm: number;
+  total: number;
+}
 
-/**
- * Flag to track if counters have been initialized from database
- */
-let countersInitialized = false;
+function createMessageCounterState() {
+  let counters: MessageCounters = {
+    acars: 0,
+    vdlm2: 0,
+    hfdl: 0,
+    imsl: 0,
+    irdm: 0,
+    total: 0,
+  };
+  let initialized = false;
+
+  return {
+    get: (): MessageCounters => counters,
+    set: (next: MessageCounters): void => {
+      counters = next;
+    },
+    isInitialized: (): boolean => initialized,
+    setInitialized: (value: boolean): void => {
+      initialized = value;
+    },
+  };
+}
+
+const messageCounterState = createMessageCounterState();
 
 // ============================================================================
 // Frequency Statistics
@@ -284,7 +310,7 @@ export function getMessageCountStats(): MessageCount | undefined {
  * After initialization, counters are incremented as messages are added.
  */
 export function initializeMessageCounters(): void {
-  if (countersInitialized) {
+  if (messageCounterState.isInitialized()) {
     logger.warn("Message counters already initialized, skipping");
     return;
   }
@@ -303,7 +329,7 @@ export function initializeMessageCounters(): void {
       .all() as Array<{ messageType: string | null; count: number }>;
 
     // Reset counters
-    messageCounters = {
+    const newCounters: MessageCounters = {
       acars: 0,
       vdlm2: 0,
       hfdl: 0,
@@ -311,35 +337,36 @@ export function initializeMessageCounters(): void {
       irdm: 0,
       total: 0,
     };
+    messageCounterState.set(newCounters);
 
     for (const row of results) {
       const messageType = row.messageType?.toUpperCase();
       const count = row.count ?? 0;
 
       if (messageType === "ACARS") {
-        messageCounters.acars = count;
+        messageCounterState.get().acars = count;
       } else if (messageType === "VDLM2" || messageType === "VDL-M2") {
-        messageCounters.vdlm2 += count; // Use += to handle both formats
+        messageCounterState.get().vdlm2 += count; // Use += to handle both formats
       } else if (messageType === "HFDL") {
-        messageCounters.hfdl = count;
+        messageCounterState.get().hfdl = count;
       } else if (messageType === "IMSL" || messageType === "IMS-L") {
-        messageCounters.imsl += count; // Use += to handle both formats
+        messageCounterState.get().imsl += count; // Use += to handle both formats
       } else if (messageType === "IRDM") {
-        messageCounters.irdm = count;
+        messageCounterState.get().irdm = count;
       }
 
-      messageCounters.total += count;
+      messageCounterState.get().total += count;
     }
 
-    countersInitialized = true;
+    messageCounterState.setInitialized(true);
 
     logger.debug("Message counters initialized", {
-      acars: messageCounters.acars,
-      vdlm2: messageCounters.vdlm2,
-      hfdl: messageCounters.hfdl,
-      imsl: messageCounters.imsl,
-      irdm: messageCounters.irdm,
-      total: messageCounters.total,
+      acars: messageCounterState.get().acars,
+      vdlm2: messageCounterState.get().vdlm2,
+      hfdl: messageCounterState.get().hfdl,
+      imsl: messageCounterState.get().imsl,
+      irdm: messageCounterState.get().irdm,
+      total: messageCounterState.get().total,
     });
   } catch (error) {
     logger.error("Failed to initialize message counters", { error });
@@ -356,7 +383,7 @@ export function initializeMessageCounters(): void {
  * @param messageType Decoder type (ACARS, VDLM2, HFDL, etc.)
  */
 export function incrementMessageCounter(messageType: string | null): void {
-  if (!countersInitialized) {
+  if (!messageCounterState.isInitialized()) {
     logger.warn("Message counters not initialized, initializing now");
     initializeMessageCounters();
   }
@@ -368,18 +395,18 @@ export function incrementMessageCounter(messageType: string | null): void {
   const upperType = messageType.toUpperCase();
 
   if (upperType === "ACARS") {
-    messageCounters.acars++;
+    messageCounterState.get().acars++;
   } else if (upperType === "VDLM2" || upperType === "VDL-M2") {
-    messageCounters.vdlm2++;
+    messageCounterState.get().vdlm2++;
   } else if (upperType === "HFDL") {
-    messageCounters.hfdl++;
+    messageCounterState.get().hfdl++;
   } else if (upperType === "IMSL" || upperType === "IMS-L") {
-    messageCounters.imsl++;
+    messageCounterState.get().imsl++;
   } else if (upperType === "IRDM") {
-    messageCounters.irdm++;
+    messageCounterState.get().irdm++;
   }
 
-  messageCounters.total++;
+  messageCounterState.get().total++;
 }
 
 /**
@@ -401,12 +428,12 @@ export function getPerDecoderMessageCounts(): {
   irdm: number;
   total: number;
 } {
-  if (!countersInitialized) {
+  if (!messageCounterState.isInitialized()) {
     logger.warn("Message counters not initialized, initializing now");
     initializeMessageCounters();
   }
 
-  return { ...messageCounters };
+  return { ...messageCounterState.get() };
 }
 
 /**
@@ -504,22 +531,22 @@ export function incrementMessageCount(hasError: boolean, logged = true): void {
 /**
  * Reset in-memory message counter state for testing purposes only.
  *
- * This resets the module-level `countersInitialized` flag and zeroes
- * `messageCounters` so that `initializeMessageCounters()` can be called
- * again in the next test with a fresh in-memory database.
+ * This resets messageCounterState's `initialized` flag and zeroes its
+ * counters so that `initializeMessageCounters()` can be called again in
+ * the next test with a fresh in-memory database.
  *
  * @internal - Do NOT call this in production code.
  */
 export function resetCountersForTesting(): void {
-  countersInitialized = false;
-  messageCounters = {
+  messageCounterState.setInitialized(false);
+  messageCounterState.set({
     acars: 0,
     vdlm2: 0,
     hfdl: 0,
     imsl: 0,
     irdm: 0,
     total: 0,
-  };
+  });
 }
 
 /**

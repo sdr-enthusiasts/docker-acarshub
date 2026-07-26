@@ -28,6 +28,16 @@ describe("Configuration Data Loading (Integration)", () => {
   const METADATA_PATH = "../rootfs/webapp/data/metadata.json";
   const AIRLINES_PATH = "../rootfs/webapp/data/airlines.json";
 
+  // Some CI/dev environments don't have these production data files
+  // checked out. Compute presence once up front and use it.skipIf(...) so
+  // vitest reports these as properly skipped (with a reason visible in
+  // output) instead of the test body silently early-returning after a
+  // console.warn (LOG-03).
+  const hasGroundStations = existsSync(GROUND_STATIONS_PATH);
+  const hasMetadata = existsSync(METADATA_PATH);
+  const hasAirlines = existsSync(AIRLINES_PATH);
+  const hasAllData = hasGroundStations && hasMetadata && hasAirlines;
+
   beforeEach(() => {
     // Clear any existing data
     Object.keys(groundStations).forEach((key) => {
@@ -50,59 +60,54 @@ describe("Configuration Data Loading (Integration)", () => {
   });
 
   describe("loadGroundStations", () => {
-    it("should load ground stations from actual data file", async () => {
-      // Skip if file doesn't exist (CI environment might not have it)
-      if (!existsSync(GROUND_STATIONS_PATH)) {
-        console.warn(`Skipping test: ${GROUND_STATIONS_PATH} does not exist`);
-        return;
-      }
+    it.skipIf(!hasGroundStations)(
+      "should load ground stations from actual data file",
+      async () => {
+        await loadGroundStations(GROUND_STATIONS_PATH);
 
-      await loadGroundStations(GROUND_STATIONS_PATH);
+        // Verify data was loaded
+        expect(Object.keys(groundStations).length).toBeGreaterThan(0);
 
-      // Verify data was loaded
-      expect(Object.keys(groundStations).length).toBeGreaterThan(0);
+        // Check a known station exists (from Dockerfile example)
+        // The file should contain multiple stations with ICAO codes
+        const firstStation = Object.values(groundStations)[0];
+        expect(firstStation).toBeDefined();
+        expect(firstStation).toHaveProperty("icao");
+        expect(firstStation).toHaveProperty("name");
+        expect(typeof firstStation.icao).toBe("string");
+        expect(typeof firstStation.name).toBe("string");
+      },
+    );
 
-      // Check a known station exists (from Dockerfile example)
-      // The file should contain multiple stations with ICAO codes
-      const firstStation = Object.values(groundStations)[0];
-      expect(firstStation).toBeDefined();
-      expect(firstStation).toHaveProperty("icao");
-      expect(firstStation).toHaveProperty("name");
-      expect(typeof firstStation.icao).toBe("string");
-      expect(typeof firstStation.name).toBe("string");
-    });
+    it.skipIf(!hasGroundStations)(
+      "should handle multiple ground stations",
+      async () => {
+        await loadGroundStations(GROUND_STATIONS_PATH);
 
-    it("should handle multiple ground stations", async () => {
-      if (!existsSync(GROUND_STATIONS_PATH)) {
-        return;
-      }
+        // Should have many stations (airframes.io has hundreds)
+        expect(Object.keys(groundStations).length).toBeGreaterThan(100);
+      },
+    );
 
-      await loadGroundStations(GROUND_STATIONS_PATH);
+    it.skipIf(!hasGroundStations)(
+      "should map station IDs correctly",
+      async () => {
+        await loadGroundStations(GROUND_STATIONS_PATH);
 
-      // Should have many stations (airframes.io has hundreds)
-      expect(Object.keys(groundStations).length).toBeGreaterThan(100);
-    });
+        // Pick any station and verify structure
+        const stationIds = Object.keys(groundStations);
+        expect(stationIds.length).toBeGreaterThan(0);
 
-    it("should map station IDs correctly", async () => {
-      if (!existsSync(GROUND_STATIONS_PATH)) {
-        return;
-      }
+        const randomId = stationIds[0];
+        const station = groundStations[randomId];
 
-      await loadGroundStations(GROUND_STATIONS_PATH);
-
-      // Pick any station and verify structure
-      const stationIds = Object.keys(groundStations);
-      expect(stationIds.length).toBeGreaterThan(0);
-
-      const randomId = stationIds[0];
-      const station = groundStations[randomId];
-
-      // Verify station has required fields
-      expect(station.icao).toBeTruthy();
-      expect(station.name).toBeTruthy();
-      expect(station.icao.length).toBeGreaterThan(0);
-      expect(station.name.length).toBeGreaterThan(0);
-    });
+        // Verify station has required fields
+        expect(station.icao).toBeTruthy();
+        expect(station.name).toBeTruthy();
+        expect(station.icao.length).toBeGreaterThan(0);
+        expect(station.name.length).toBeGreaterThan(0);
+      },
+    );
 
     it("should handle missing file gracefully", async () => {
       // Should not throw, just log error
@@ -116,23 +121,17 @@ describe("Configuration Data Loading (Integration)", () => {
   });
 
   describe("loadMessageLabels", () => {
-    it("should load message labels from actual data file", async () => {
-      if (!existsSync(METADATA_PATH)) {
-        console.warn(`Skipping test: ${METADATA_PATH} does not exist`);
-        return;
-      }
+    it.skipIf(!hasMetadata)(
+      "should load message labels from actual data file",
+      async () => {
+        await loadMessageLabels(METADATA_PATH);
 
-      await loadMessageLabels(METADATA_PATH);
+        // Verify data was loaded
+        expect(Object.keys(messageLabels).length).toBeGreaterThan(0);
+      },
+    );
 
-      // Verify data was loaded
-      expect(Object.keys(messageLabels).length).toBeGreaterThan(0);
-    });
-
-    it("should load common ACARS labels", async () => {
-      if (!existsSync(METADATA_PATH)) {
-        return;
-      }
-
+    it.skipIf(!hasMetadata)("should load common ACARS labels", async () => {
       await loadMessageLabels(METADATA_PATH);
 
       // Check for common labels that should exist
@@ -163,23 +162,17 @@ describe("Configuration Data Loading (Integration)", () => {
   });
 
   describe("loadAirlines", () => {
-    it("should load airlines from actual data file", async () => {
-      if (!existsSync(AIRLINES_PATH)) {
-        console.warn(`Skipping test: ${AIRLINES_PATH} does not exist`);
-        return;
-      }
+    it.skipIf(!hasAirlines)(
+      "should load airlines from actual data file",
+      async () => {
+        await loadAirlines(AIRLINES_PATH);
 
-      await loadAirlines(AIRLINES_PATH);
+        // Verify data was loaded
+        expect(Object.keys(airlines).length).toBeGreaterThan(0);
+      },
+    );
 
-      // Verify data was loaded
-      expect(Object.keys(airlines).length).toBeGreaterThan(0);
-    });
-
-    it("should load major airlines correctly", async () => {
-      if (!existsSync(AIRLINES_PATH)) {
-        return;
-      }
-
+    it.skipIf(!hasAirlines)("should load major airlines correctly", async () => {
       await loadAirlines(AIRLINES_PATH);
 
       // Should have many airlines (file has thousands)
@@ -201,26 +194,25 @@ describe("Configuration Data Loading (Integration)", () => {
       }
     });
 
-    it("should have correct structure for all airlines", async () => {
-      if (!existsSync(AIRLINES_PATH)) {
-        return;
-      }
+    it.skipIf(!hasAirlines)(
+      "should have correct structure for all airlines",
+      async () => {
+        await loadAirlines(AIRLINES_PATH);
 
-      await loadAirlines(AIRLINES_PATH);
+        // Pick random airlines and verify structure
+        const airlineCodes = Object.keys(airlines).slice(0, 10);
 
-      // Pick random airlines and verify structure
-      const airlineCodes = Object.keys(airlines).slice(0, 10);
-
-      for (const code of airlineCodes) {
-        const airline = airlines[code];
-        expect(airline).toHaveProperty("ICAO");
-        expect(airline).toHaveProperty("NAME");
-        expect(typeof airline.ICAO).toBe("string");
-        expect(typeof airline.NAME).toBe("string");
-        expect(airline.ICAO.length).toBeGreaterThan(0);
-        expect(airline.NAME.length).toBeGreaterThan(0);
-      }
-    });
+        for (const code of airlineCodes) {
+          const airline = airlines[code];
+          expect(airline).toHaveProperty("ICAO");
+          expect(airline).toHaveProperty("NAME");
+          expect(typeof airline.ICAO).toBe("string");
+          expect(typeof airline.NAME).toBe("string");
+          expect(airline.ICAO.length).toBeGreaterThan(0);
+          expect(airline.NAME.length).toBeGreaterThan(0);
+        }
+      },
+    );
 
     it("should handle missing file gracefully", async () => {
       await expect(loadAirlines("./nonexistent.json")).resolves.toBeUndefined();
@@ -304,45 +296,38 @@ describe("Configuration Data Loading (Integration)", () => {
   });
 
   describe("Full integration test", () => {
-    it("should load all data files successfully", async () => {
-      const allFilesExist =
-        existsSync(GROUND_STATIONS_PATH) &&
-        existsSync(METADATA_PATH) &&
-        existsSync(AIRLINES_PATH);
+    it.skipIf(!hasAllData)(
+      "should load all data files successfully",
+      async () => {
+        // Load all data
+        await Promise.all([
+          loadGroundStations(GROUND_STATIONS_PATH),
+          loadMessageLabels(METADATA_PATH),
+          loadAirlines(AIRLINES_PATH),
+        ]);
 
-      if (!allFilesExist) {
-        console.warn("Skipping integration test: Not all data files exist");
-        return;
-      }
+        // Parse overrides
+        process.env.IATA_OVERRIDE = "UA|UAL|United Override";
+        parseIataOverrides();
 
-      // Load all data
-      await Promise.all([
-        loadGroundStations(GROUND_STATIONS_PATH),
-        loadMessageLabels(METADATA_PATH),
-        loadAirlines(AIRLINES_PATH),
-      ]);
+        // Verify all data was loaded
+        expect(Object.keys(groundStations).length).toBeGreaterThan(100);
+        expect(Object.keys(messageLabels).length).toBeGreaterThan(50);
+        expect(Object.keys(airlines).length).toBeGreaterThan(100);
+        expect(Object.keys(iataOverrides).length).toBe(1);
 
-      // Parse overrides
-      process.env.IATA_OVERRIDE = "UA|UAL|United Override";
-      parseIataOverrides();
+        // Verify data integrity
+        const firstStationId = Object.keys(groundStations)[0];
+        expect(groundStations[firstStationId].icao).toBeTruthy();
 
-      // Verify all data was loaded
-      expect(Object.keys(groundStations).length).toBeGreaterThan(100);
-      expect(Object.keys(messageLabels).length).toBeGreaterThan(50);
-      expect(Object.keys(airlines).length).toBeGreaterThan(100);
-      expect(Object.keys(iataOverrides).length).toBe(1);
+        const firstLabel = Object.keys(messageLabels)[0];
+        expect(messageLabels[firstLabel]).toBeTruthy();
 
-      // Verify data integrity
-      const firstStationId = Object.keys(groundStations)[0];
-      expect(groundStations[firstStationId].icao).toBeTruthy();
+        const firstAirline = Object.keys(airlines)[0];
+        expect(airlines[firstAirline].ICAO).toBeTruthy();
 
-      const firstLabel = Object.keys(messageLabels)[0];
-      expect(messageLabels[firstLabel]).toBeTruthy();
-
-      const firstAirline = Object.keys(airlines)[0];
-      expect(airlines[firstAirline].ICAO).toBeTruthy();
-
-      expect(iataOverrides.UA.name).toBe("United Override");
-    });
+        expect(iataOverrides.UA.name).toBe("United Override");
+      },
+    );
   });
 });

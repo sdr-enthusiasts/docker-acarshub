@@ -14,8 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Marker, useMap } from "react-map-gl/maplibre";
+import {
+  type HoveredTooltipState,
+  useTooltipPositioning,
+} from "../../hooks/useTooltipPositioning";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
 import type { MessageGroup } from "../../types";
@@ -35,6 +40,7 @@ import {
   pairADSBWithACARSMessages,
 } from "../../utils/aircraftPairing";
 import { mapLogger } from "../../utils/logger";
+import { getMarkerSizeScale } from "../../utils/markerSize";
 import { getSpriteLoader } from "../../utils/spriteLoader";
 import { AircraftContextMenu } from "./AircraftContextMenu";
 import { AircraftMessagesModal } from "./AircraftMessagesModal";
@@ -91,13 +97,6 @@ export interface ViewportBounds {
   south: number;
   east: number;
   west: number;
-}
-
-interface TooltipState {
-  hex: string;
-  showBelow: boolean;
-  alignLeft: boolean;
-  alignRight: boolean;
 }
 
 interface ContextMenuState {
@@ -227,7 +226,11 @@ export function AircraftMarkers({
     (state) => state.settings.map.groundAltitudeThreshold,
   );
   const [localHoveredAircraft, setLocalHoveredAircraft] =
-    useState<TooltipState | null>(null);
+    useState<HoveredTooltipState | null>(null);
+  const {
+    onMouseEnter: handleTooltipMouseEnter,
+    onMouseLeave: handleTooltipMouseLeave,
+  } = useTooltipPositioning(setLocalHoveredAircraft);
   const [selectedMessageGroup, setSelectedMessageGroup] =
     useState<MessageGroup | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -401,6 +404,13 @@ export function AircraftMarkers({
     readMessageUids,
   ]);
 
+  // FEAT-MARKER-SIZE: single scale multiplier derived from the user's
+  // marker-size setting, applied to BOTH rendering paths' generation math
+  // (SVG data-URI dimensions and sprite-atlas crop) so x/y/width/height
+  // stay proportionally correct — see utils/markerSize.ts for why this
+  // can't be a CSS-only transform/calc().
+  const markerSizeScale = getMarkerSizeScale(mapSettings.markerSize);
+
   // Prepare marker data using useMemo to avoid infinite loops
   const aircraftMarkers = useMemo(() => {
     const markers: AircraftMarkerData[] = [];
@@ -413,6 +423,7 @@ export function AircraftMarkers({
       spriteLoaderPresent: spriteLoader !== null,
       spriteLoaderReady: spriteLoader?.isLoaded() ?? false,
       totalAircraft: filteredPairedAircraft.length,
+      markerSizeScale,
     });
 
     for (const aircraft of filteredPairedAircraft) {
@@ -451,7 +462,12 @@ export function AircraftMarkers({
       );
 
       // Generate SVG icon (always generate as fallback)
-      const iconData = svgShapeToURI(shapeName, 0.5, scale * 1.5, color);
+      const iconData = svgShapeToURI(
+        shapeName,
+        0.5,
+        scale * 1.5 * markerSizeScale,
+        color,
+      );
 
       // Sprite data (if using sprites)
       let spriteName: string | undefined;
@@ -494,6 +510,7 @@ export function AircraftMarkers({
           const position = spriteLoader.getSpritePosition(
             spriteResult.spriteName,
             0,
+            0.6 * markerSizeScale,
           );
 
           if (position) {
@@ -503,7 +520,8 @@ export function AircraftMarkers({
               width: position.width,
               height: position.height,
               backgroundSize:
-                spriteLoader.getCSSBackgroundSize() ?? "345.6px 1468.8px",
+                spriteLoader.getCSSBackgroundSize(0.6 * markerSizeScale) ??
+                "345.6px 1468.8px",
             };
             spriteFrames = position.frames;
             spriteFrameTime = position.frameTime;
@@ -606,6 +624,7 @@ export function AircraftMarkers({
     colorByDecoder,
     groundAltitudeThreshold,
     spriteLoadError,
+    markerSizeScale,
   ]);
 
   // Filter aircraft markers to only those currently visible in the viewport.
@@ -708,29 +727,30 @@ export function AircraftMarkers({
   return (
     <>
       {visibleMarkers.map((markerData) => {
+        const isHovered =
+          localHoveredAircraft?.hex === markerData.hex ||
+          hoveredAircraftHex === markerData.hex;
+        const markerZ = isHovered ? 10000 : 10;
         return (
           <Marker
             key={markerData.hex}
             longitude={markerData.lon}
             latitude={markerData.lat}
             anchor="center"
-            style={{
-              zIndex:
-                localHoveredAircraft?.hex === markerData.hex ||
-                hoveredAircraftHex === markerData.hex
-                  ? 10000
-                  : 10,
-            }}
+            // <Marker> from react-map-gl/maplibre has no className prop —
+            // its only styling API is the `style` prop, which the library
+            // applies to its internal map-anchored wrapper element. This is
+            // a library-API exception to the AGENTS.md inline-style rule
+            // (STYLE-INLINE-DYNAMIC): the value still flows through a CSS
+            // custom property and the visual z-stacking is consumed in
+            // _aircraft-markers.scss.
+            style={
+              { "--marker-z": markerZ, zIndex: markerZ } as React.CSSProperties
+            }
           >
             <div
-              style={{
-                position: "relative",
-                zIndex:
-                  localHoveredAircraft?.hex === markerData.hex ||
-                  hoveredAircraftHex === markerData.hex
-                    ? 10000
-                    : 10,
-              }}
+              className="aircraft-marker__container"
+              style={{ "--marker-z": markerZ } as React.CSSProperties}
             >
               {useSprites && markerData.spritePosition ? (
                 // Sprite rendering - use AnimatedSprite for multi-frame, static button otherwise
@@ -746,36 +766,8 @@ export function AircraftMarkers({
                     onContextMenu={(e) =>
                       handleMarkerContextMenu(e, markerData.aircraft)
                     }
-                    onMouseEnter={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const distanceFromTop = rect.top;
-                      const showBelow = distanceFromTop < 280;
-                      const mapContainer =
-                        e.currentTarget.closest(".maplibregl-map");
-                      const mapBounds = mapContainer
-                        ? mapContainer.getBoundingClientRect()
-                        : { left: 0, right: window.innerWidth };
-                      const tooltipWidth = 280;
-                      const halfTooltipWidth = tooltipWidth / 2;
-                      const markerCenterX = rect.left + rect.width / 2;
-                      const tooltipLeftEdgeIfCentered =
-                        markerCenterX - halfTooltipWidth;
-                      const tooltipRightEdgeIfCentered =
-                        markerCenterX + halfTooltipWidth;
-                      const wouldClipLeft =
-                        tooltipLeftEdgeIfCentered < mapBounds.left;
-                      const wouldClipRight =
-                        tooltipRightEdgeIfCentered > mapBounds.right;
-                      const alignLeft = wouldClipLeft && !wouldClipRight;
-                      const alignRight = wouldClipRight && !wouldClipLeft;
-                      setLocalHoveredAircraft({
-                        hex: markerData.hex,
-                        showBelow,
-                        alignLeft,
-                        alignRight,
-                      });
-                    }}
-                    onMouseLeave={() => setLocalHoveredAircraft(null)}
+                    onMouseEnter={handleTooltipMouseEnter(markerData.hex)}
+                    onMouseLeave={handleTooltipMouseLeave}
                     isHovered={hoveredAircraftHex === markerData.hex}
                     isFollowed={followedAircraftHex === markerData.hex}
                     hasUnreadMessages={markerData.hasUnreadMessages}
@@ -783,11 +775,86 @@ export function AircraftMarkers({
                     cursorStyle={
                       markerData.aircraft.hasMessages ? "pointer" : "default"
                     }
+                    scale={0.6 * markerSizeScale}
                   />
                 ) : (
+                  // FEAT-MARKER-SIZE: the clickable element is a
+                  // 44px-floored hit-target wrapper (.aircraft-marker-hit);
+                  // the visual sprite lives on a decorative inner <span> so
+                  // growing the hit target never distorts the atlas crop
+                  // (see the comment in utils/markerSize.ts).
                   <button
                     type="button"
-                    className={`aircraft-sprite ${markerData.spriteClass || ""} ${
+                    className="aircraft-marker-hit"
+                    aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
+                    style={
+                      {
+                        "--marker-cursor": markerData.aircraft.hasMessages
+                          ? "pointer"
+                          : "default",
+                      } as React.CSSProperties
+                    }
+                    onClick={() => handleMarkerClick(markerData.aircraft)}
+                    onContextMenu={(e) =>
+                      handleMarkerContextMenu(e, markerData.aircraft)
+                    }
+                    onMouseEnter={handleTooltipMouseEnter(markerData.hex)}
+                    onMouseLeave={handleTooltipMouseLeave}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`aircraft-sprite ${markerData.spriteClass || ""} ${
+                        hoveredAircraftHex === markerData.hex
+                          ? "aircraft-marker--hovered"
+                          : ""
+                      } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
+                        followedAircraftHex === markerData.hex
+                          ? "aircraft-marker--followed"
+                          : ""
+                      }`}
+                      style={
+                        {
+                          "--sprite-x": `-${markerData.spritePosition.x}px`,
+                          "--sprite-y": `-${markerData.spritePosition.y}px`,
+                          "--sprite-bg-size":
+                            markerData.spritePosition.backgroundSize,
+                          "--sprite-width": `${markerData.spritePosition.width}px`,
+                          "--sprite-height": `${markerData.spritePosition.height}px`,
+                          "--sprite-rotation": `${markerData.rotation}deg`,
+                        } as React.CSSProperties
+                      }
+                    />
+                  </button>
+                )
+              ) : (
+                // SVG rendering (fallback or when sprites disabled).
+                // Same hit-target/visual split as the sprite branch above —
+                // here it's mainly for a uniform hit-target model across
+                // both render paths (an SVG <img> stretches safely inside
+                // a bigger box, so it didn't strictly need decoupling, but
+                // sharing one wrapper class keeps the touch-target
+                // guarantee in one place instead of two).
+                <button
+                  type="button"
+                  className="aircraft-marker-hit"
+                  aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
+                  style={
+                    {
+                      "--marker-cursor": markerData.aircraft.hasMessages
+                        ? "pointer"
+                        : "default",
+                    } as React.CSSProperties
+                  }
+                  onClick={() => handleMarkerClick(markerData.aircraft)}
+                  onContextMenu={(e) =>
+                    handleMarkerContextMenu(e, markerData.aircraft)
+                  }
+                  onMouseEnter={handleTooltipMouseEnter(markerData.hex)}
+                  onMouseLeave={handleTooltipMouseLeave}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`aircraft-marker ${
                       hoveredAircraftHex === markerData.hex
                         ? "aircraft-marker--hovered"
                         : ""
@@ -796,176 +863,36 @@ export function AircraftMarkers({
                         ? "aircraft-marker--followed"
                         : ""
                     }`}
-                    aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
-                    style={{
-                      backgroundPosition: `-${markerData.spritePosition.x}px -${markerData.spritePosition.y}px`,
-                      backgroundSize: markerData.spritePosition.backgroundSize,
-                      width: `${markerData.spritePosition.width}px`,
-                      height: `${markerData.spritePosition.height}px`,
-                      transform: `rotate(${markerData.rotation}deg)`,
-                      transformOrigin: "center center",
-                      cursor: markerData.aircraft.hasMessages
-                        ? "pointer"
-                        : "default",
-                    }}
-                    onClick={() => handleMarkerClick(markerData.aircraft)}
-                    onContextMenu={(e) =>
-                      handleMarkerContextMenu(e, markerData.aircraft)
+                    style={
+                      {
+                        "--marker-width": `${markerData.width}px`,
+                        "--marker-height": `${markerData.height}px`,
+                        "--marker-rotation": `${markerData.rotation}deg`,
+                      } as React.CSSProperties
                     }
-                    onMouseEnter={(e) => {
-                      // Calculate if tooltip should appear above or below marker
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const distanceFromTop = rect.top;
-                      const showBelow = distanceFromTop < 280; // Show below if within 280px of top (accounts for full tooltip height)
-
-                      // Get the map container bounds (not window bounds - accounts for sidebar)
-                      const mapContainer =
-                        e.currentTarget.closest(".maplibregl-map");
-                      const mapBounds = mapContainer
-                        ? mapContainer.getBoundingClientRect()
-                        : { left: 0, right: window.innerWidth };
-
-                      // Calculate if tooltip should align left or right based on horizontal position
-                      const tooltipWidth = 280; // Approximate tooltip width
-                      const halfTooltipWidth = tooltipWidth / 2;
-
-                      // Calculate where the tooltip will actually be positioned relative to map container
-                      const markerCenterX = rect.left + rect.width / 2;
-                      const tooltipLeftEdgeIfCentered =
-                        markerCenterX - halfTooltipWidth;
-                      const tooltipRightEdgeIfCentered =
-                        markerCenterX + halfTooltipWidth;
-
-                      // Check if the centered tooltip would clip map container edges
-                      const wouldClipLeft =
-                        tooltipLeftEdgeIfCentered < mapBounds.left;
-                      const wouldClipRight =
-                        tooltipRightEdgeIfCentered > mapBounds.right;
-
-                      // Only align left/right if tooltip would actually clip, otherwise center
-                      // Mutually exclusive: can't be both left AND right aligned
-                      const alignLeft = wouldClipLeft && !wouldClipRight;
-                      const alignRight = wouldClipRight && !wouldClipLeft;
-
-                      setLocalHoveredAircraft({
-                        hex: markerData.hex,
-                        showBelow,
-                        alignLeft,
-                        alignRight,
-                      });
-                      // Don't call onAircraftHover - pulsing glow is only for list hover
-                    }}
-                    onMouseLeave={() => {
-                      setLocalHoveredAircraft(null);
-                      // Don't call onAircraftHover - pulsing glow is only for list hover
-                    }}
-                  />
-                )
-              ) : (
-                // SVG rendering (fallback or when sprites disabled)
-                <button
-                  type="button"
-                  className={`aircraft-marker ${
-                    hoveredAircraftHex === markerData.hex
-                      ? "aircraft-marker--hovered"
-                      : ""
-                  } ${markerData.hasUnreadMessages ? "aircraft-marker--unread" : ""} ${
-                    followedAircraftHex === markerData.hex
-                      ? "aircraft-marker--followed"
-                      : ""
-                  }`}
-                  aria-label={`Aircraft ${markerData.hex}${markerData.aircraft.hasMessages ? " - Click to view messages" : ""}`}
-                  style={{
-                    width: `${markerData.width}px`,
-                    height: `${markerData.height}px`,
-                    transform: `rotate(${markerData.rotation}deg)`,
-                    transformOrigin: "center center",
-                    cursor: markerData.aircraft.hasMessages
-                      ? "pointer"
-                      : "default",
-                  }}
-                  onClick={() => handleMarkerClick(markerData.aircraft)}
-                  onContextMenu={(e) =>
-                    handleMarkerContextMenu(e, markerData.aircraft)
-                  }
-                  onMouseEnter={(e) => {
-                    // Calculate if tooltip should appear above or below marker
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const distanceFromTop = rect.top;
-                    const showBelow = distanceFromTop < 280; // Show below if within 280px of top (accounts for full tooltip height)
-
-                    // Get the map container bounds (not window bounds - accounts for sidebar)
-                    const mapContainer =
-                      e.currentTarget.closest(".maplibregl-map");
-                    const mapBounds = mapContainer
-                      ? mapContainer.getBoundingClientRect()
-                      : { left: 0, right: window.innerWidth };
-
-                    // Calculate if tooltip should align left or right based on horizontal position
-                    const tooltipWidth = 280; // Approximate tooltip width
-                    const halfTooltipWidth = tooltipWidth / 2;
-
-                    // Calculate where the tooltip will actually be positioned relative to map container
-                    const markerCenterX = rect.left + rect.width / 2;
-                    const tooltipLeftEdgeIfCentered =
-                      markerCenterX - halfTooltipWidth;
-                    const tooltipRightEdgeIfCentered =
-                      markerCenterX + halfTooltipWidth;
-
-                    // Check if the centered tooltip would clip map container edges
-                    const wouldClipLeft =
-                      tooltipLeftEdgeIfCentered < mapBounds.left;
-                    const wouldClipRight =
-                      tooltipRightEdgeIfCentered > mapBounds.right;
-
-                    // Only align left/right if tooltip would actually clip, otherwise center
-                    // Mutually exclusive: can't be both left AND right aligned
-                    const alignLeft = wouldClipLeft && !wouldClipRight;
-                    const alignRight = wouldClipRight && !wouldClipLeft;
-
-                    setLocalHoveredAircraft({
-                      hex: markerData.hex,
-                      showBelow,
-                      alignLeft,
-                      alignRight,
-                    });
-                    // Don't call onAircraftHover - pulsing glow is only for list hover
-                  }}
-                  onMouseLeave={() => {
-                    setLocalHoveredAircraft(null);
-                    // Don't call onAircraftHover - pulsing glow is only for list hover
-                  }}
-                >
-                  <img
-                    src={markerData.iconHtml}
-                    alt={`Aircraft ${markerData.hex}`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      pointerEvents: "none",
-                    }}
-                  />
+                  >
+                    {/* Decorative: the accessible name lives on the
+                        outer button's aria-label above; this span is
+                        already aria-hidden. */}
+                    <img src={markerData.iconHtml} alt="" />
+                  </span>
                 </button>
               )}
               {/* Tooltip outside rotated button */}
               {localHoveredAircraft &&
                 localHoveredAircraft.hex === markerData.hex && (
                   <div
-                    className={`aircraft-tooltip ${localHoveredAircraft.showBelow ? "aircraft-tooltip--below" : "aircraft-tooltip--above"}`}
-                    style={{
-                      pointerEvents: "none",
-                      left: localHoveredAircraft.alignLeft
-                        ? "0"
+                    className={`aircraft-tooltip ${
+                      localHoveredAircraft.showBelow
+                        ? "aircraft-tooltip--below"
+                        : "aircraft-tooltip--above"
+                    } ${
+                      localHoveredAircraft.alignLeft
+                        ? "aircraft-tooltip--align-left"
                         : localHoveredAircraft.alignRight
-                          ? "auto"
-                          : "50%",
-                      right: localHoveredAircraft.alignRight ? "0" : "auto",
-                      transform:
-                        localHoveredAircraft.alignLeft ||
-                        localHoveredAircraft.alignRight
-                          ? "translateX(0) rotate(0deg)"
-                          : "translateX(-50%) rotate(0deg)",
-                    }}
+                          ? "aircraft-tooltip--align-right"
+                          : ""
+                    }`}
                   >
                     <div className="aircraft-tooltip__content">
                       <div className="aircraft-tooltip__header">

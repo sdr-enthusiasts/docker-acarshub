@@ -97,7 +97,7 @@ import {
 import { createLogger } from "../utils/logger.js";
 import { getLatestTimeseriesData } from "./rrd-migration.js";
 
-const logger = createLogger("metrics");
+const logger = createLogger("services:metrics");
 
 // ---------------------------------------------------------------------------
 // Registry singleton
@@ -146,9 +146,9 @@ function buildRegistry(): Registry {
       try {
         const { count } = getRowCount();
         this.set(count);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect database row-count metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -163,9 +163,9 @@ function buildRegistry(): Registry {
       try {
         const { size } = getRowCount();
         this.set(size ?? 0);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect database size metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -180,9 +180,9 @@ function buildRegistry(): Registry {
       try {
         const errors = getErrors();
         this.set(errors.non_empty_total);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect non_empty_messages metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -197,9 +197,9 @@ function buildRegistry(): Registry {
       try {
         const errors = getErrors();
         this.set(errors.non_empty_errors);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect non_empty_errors metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -214,9 +214,9 @@ function buildRegistry(): Registry {
       try {
         const errors = getErrors();
         this.set(errors.empty_total);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect empty_messages metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -231,9 +231,9 @@ function buildRegistry(): Registry {
       try {
         const errors = getErrors();
         this.set(errors.empty_errors);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect empty_errors metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -252,9 +252,9 @@ function buildRegistry(): Registry {
       try {
         const latest = await getLatestTimeseriesData("1min");
         this.set(latest?.acarsCount ?? 0);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect ACARS timeseries metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -269,9 +269,9 @@ function buildRegistry(): Registry {
       try {
         const latest = await getLatestTimeseriesData("1min");
         this.set(latest?.vdlmCount ?? 0);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect VDLM timeseries metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -286,9 +286,9 @@ function buildRegistry(): Registry {
       try {
         const latest = await getLatestTimeseriesData("1min");
         this.set(latest?.totalCount ?? 0);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect total timeseries metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -303,9 +303,9 @@ function buildRegistry(): Registry {
       try {
         const latest = await getLatestTimeseriesData("1min");
         this.set(latest?.errorCount ?? 0);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect error timeseries metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -320,9 +320,9 @@ function buildRegistry(): Registry {
       try {
         const latest = await getLatestTimeseriesData("1min");
         this.set(latest?.hfdlCount ?? 0);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect HFDL timeseries metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -337,9 +337,9 @@ function buildRegistry(): Registry {
       try {
         const latest = await getLatestTimeseriesData("1min");
         this.set(latest?.imslCount ?? 0);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect IMSL timeseries metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -354,9 +354,9 @@ function buildRegistry(): Registry {
       try {
         const latest = await getLatestTimeseriesData("1min");
         this.set(latest?.irdmCount ?? 0);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect IRDM timeseries metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -382,9 +382,9 @@ function buildRegistry(): Registry {
             this.labels(String(row.level), decoder).set(row.count);
           }
         }
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect signal level metrics", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     },
@@ -407,9 +407,9 @@ function buildRegistry(): Registry {
           if (row.freq === null || row.count === null) continue;
           this.labels(row.freq, row.decoder).set(row.count);
         }
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect frequency distribution metrics", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     },
@@ -427,9 +427,9 @@ function buildRegistry(): Registry {
       try {
         const counts = getAlertCounts();
         this.set(counts.length);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect alert terms configured metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }
@@ -449,9 +449,9 @@ function buildRegistry(): Registry {
           if (entry.term === null) continue;
           this.labels(entry.term).set(entry.count ?? 0);
         }
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect alert term match metrics", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     },
@@ -464,9 +464,9 @@ function buildRegistry(): Registry {
     collect() {
       try {
         this.set(getSavedAlertCount());
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to collect saved alert count metric", {
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         this.set(0);
       }

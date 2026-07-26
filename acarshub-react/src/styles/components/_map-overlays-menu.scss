@@ -28,6 +28,11 @@
 
   &__button {
     position: relative;
+    // Matches .map-control-button's sizing convention so this button (which
+    // replaces a whole group of individual .map-control-buttons at short
+    // viewport heights) doesn't look oversized next to its siblings at
+    // desktop widths. Mobile-first: 44px, same breakpoint .map-control-button
+    // itself uses.
     width: 44px;
     height: 44px;
     display: flex;
@@ -39,6 +44,11 @@
     cursor: pointer;
     font-size: 1.125rem;
     transition: all 0.2s ease;
+
+    @include breakpoint(md) {
+      width: 32px;
+      height: 32px;
+    }
 
     @media (prefers-reduced-motion: reduce) {
       transition: none;
@@ -82,8 +92,16 @@
 
   &__dropdown {
     position: absolute;
-    // Dropdown opens upward — keeps it on-screen on short displays
-    bottom: 0;
+    // Default: opens downward. The button usually sits near the TOP of the
+    // .map-controls column (below zoom controls, pause, and the
+    // map-provider group), so there is normally far more room below it than
+    // above. MapOverlaysMenu.tsx measures actual available space on every
+    // open and applies --upward (below) when downward doesn't fit and
+    // upward has more room -- neither direction is correct 100% of the
+    // time, so this is a JS-driven flip, not a fixed CSS choice. See the
+    // component's docstring for the full rationale and the specific
+    // regressions each fixed direction produced on its own.
+    top: calc(100% + 0.5rem);
     right: 0;
     min-width: 200px;
     background-color: var(--color-surface0);
@@ -93,18 +111,38 @@
     z-index: 200;
     padding: 0.5rem;
     display: flex;
-    flex-direction: column-reverse; // Build upward
+    flex-direction: column;
     gap: 2px;
 
-    // Ensure dropdown doesn't overflow viewport top
-    max-height: calc(100vh - 200px);
+    // Safety net: cap height and scroll rather than overflow the viewport
+    // in whichever direction this dropdown is currently opening.
+    // MapOverlaysMenu.tsx sets --map-overlays-menu-max-height to the actual
+    // measured space in the chosen direction on every open; the calc() is
+    // only a fallback for the instant before that first measurement runs.
+    max-height: var(--map-overlays-menu-max-height, calc(100vh - 150px));
     overflow-y: auto;
     @include scrollbar-thin();
+
+    // Applied by MapOverlaysMenu.tsx when there isn't enough room below the
+    // button but there is more room above it (e.g. very short viewports
+    // where the button sits close to the bottom of the available space).
+    &--upward {
+      top: auto;
+      bottom: calc(100% + 0.5rem);
+      flex-direction: column-reverse;
+    }
   }
 
   &__item {
     display: flex;
     align-items: center;
+    // Mobile-first: touch-friendly sizing. Desktop overrides to compact --
+    // this flyout only appears at short viewport heights, which are
+    // overwhelmingly a desktop/mouse scenario (a short *window*, not a
+    // small touch device) -- the 44px-everywhere sizing (matching the
+    // touch-target floor used elsewhere) made a 4-5 item list needlessly
+    // tall on exactly the viewports where space is already the scarce
+    // resource.
     gap: 0.75rem;
     padding: 0.75rem;
     min-height: 44px;
@@ -112,6 +150,12 @@
     user-select: none;
     border-radius: 4px;
     transition: background-color 0.15s ease;
+
+    @include breakpoint(md) {
+      gap: 0.5rem;
+      padding: 0.375rem 0.5rem;
+      min-height: 32px;
+    }
 
     @media (prefers-reduced-motion: reduce) {
       transition: none;
@@ -128,27 +172,41 @@
 
   &__icon {
     flex-shrink: 0;
-    width: 20px;
+    width: 20px; // mobile-first
     text-align: center;
     color: var(--color-subtext0);
     font-size: 1rem;
+
+    @include breakpoint(md) {
+      width: 16px;
+      font-size: 0.875rem;
+    }
   }
 
   &__label {
     flex: 1;
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: 0.875rem; // mobile-first
     font-weight: 500;
+
+    @include breakpoint(md) {
+      font-size: 0.8125rem;
+    }
   }
 
   // Checkbox styling
   input[type="checkbox"] {
     flex-shrink: 0;
-    width: 20px;
+    width: 20px; // mobile-first
     height: 20px;
     cursor: pointer;
     accent-color: var(--color-blue);
     margin: 0;
+
+    @include breakpoint(md) {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   // Active state — highlight label and icon when overlay is active

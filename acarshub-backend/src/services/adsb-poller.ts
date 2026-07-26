@@ -18,7 +18,7 @@ import { EventEmitter } from "node:events";
 import type { ADSBSourceType } from "@acarshub/types";
 import { createLogger } from "../utils/logger.js";
 
-const logger = createLogger("adsb-poller");
+const logger = createLogger("services:adsb-poller");
 
 /**
  * Minimal aircraft data structure (optimized from ~52 fields to 18 essential fields)
@@ -179,11 +179,12 @@ export class AdsbPoller extends EventEmitter<AdsbPollerEvents> {
       logger.trace("ADS-B data fetched", {
         aircraftCount: optimizedData.aircraft.length,
       });
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+    } catch (error) {
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error));
 
       // Check if it's an abort error (timeout)
-      if (error.name === "AbortError") {
+      if (normalizedError.name === "AbortError") {
         logger.warn("ADS-B fetch timeout", {
           url: this.config.url,
           timeout: this.config.timeout,
@@ -191,11 +192,11 @@ export class AdsbPoller extends EventEmitter<AdsbPollerEvents> {
       } else {
         logger.error("ADS-B fetch failed", {
           url: this.config.url,
-          error: error.message,
+          error: normalizedError.message,
         });
       }
 
-      this.emit("error", error);
+      this.emit("error", normalizedError);
     } finally {
       // Schedule next poll
       if (this.isRunning) {

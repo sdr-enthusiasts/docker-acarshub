@@ -31,11 +31,19 @@
     url("../../assets/sprites/spritesheet-mocha-default.png") type("image/png")
   );
   background-repeat: no-repeat;
-  /* background-size is set via inline style, computed from spritesheet.json metadata
-     (sheetWidth * 0.6 x sheetHeight * 0.6) — see SpriteLoader.getCSSBackgroundSize() */
-  width: 43.2px; /* 60% of 72px */
-  height: 43.2px; /* 60% of 72px */
-  cursor: pointer;
+  /* background-size, width, and height are all driven by the --sprite-*
+     custom properties in styles/components/_aircraft-markers.scss
+     (STYLE-INLINE-DYNAMIC / FEAT-MARKER-SIZE) — computed from
+     spritesheet.json metadata via SpriteLoader.getSpritePosition()/
+     getCSSBackgroundSize(). This file used to hardcode `width`/`height`
+     to 43.2px (72px * the old fixed 0.6 scale); that hardcoded value
+     silently matched the dynamic one at the only scale ever used, until
+     FEAT-MARKER-SIZE introduced other scales and exposed the conflict —
+     the later-imported rule here was winning the cascade (same
+     specificity, imported after _aircraft-markers.scss) and freezing the
+     box size while background-position/background-size kept scaling,
+     misaligning the visible sprite crop. Do not reintroduce a hardcoded
+     width/height here. */
   transition:
     filter 0.15s ease,
     opacity 0.15s ease;
@@ -98,18 +106,15 @@
     );
   }
 
-  // Hover state - slight scale up
-  // Note: Don't use transform here as it would override inline rotation
+  // Hover state - slight scale up. FEAT-MARKER-SIZE: .aircraft-sprite is a
+  // decorative (aria-hidden) inner <span> now, not the interactive element
+  // — :hover only fires here when the pointer is exactly over the visual
+  // box, which may be smaller than the enclosing .aircraft-marker-hit
+  // button's 44px hit area. The wrapper has its own :hover z-index bump in
+  // _aircraft-markers.scss; this one is a purely cosmetic extra on top.
   &:hover {
     z-index: 1000;
     filter: brightness(1.1);
-  }
-
-  // Focus state for accessibility
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 4px;
-    z-index: 1001;
   }
 
   // Unread messages highlight - yellow/peach glow

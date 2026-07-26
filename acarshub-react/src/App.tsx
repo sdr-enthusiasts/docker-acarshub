@@ -49,9 +49,24 @@ const AboutPage = lazy(() =>
 const AlertsPage = lazy(() =>
   import("./pages/AlertsPage.tsx").then((m) => ({ default: m.AlertsPage })),
 );
-const LiveMapPage = lazy(() =>
-  import("./pages/LiveMapPage.tsx").then((m) => ({ default: m.LiveMapPage })),
-);
+// maplibre-gl's base stylesheet is fetched in parallel with the page's own
+// JS chunk (PERF-BUNDLE Phase B — see agent-docs/REMEDIATION_PLAN.md §15).
+// Previously this was a static top-level import inside Map.tsx, which
+// still landed in the "map" vendor chunk's CSS asset — Vite links CSS
+// assets tied to a named manualChunks group unconditionally in the root
+// index.html, regardless of whether the current route ever renders that
+// chunk's JS. Loading it here instead makes it a genuinely async CSS
+// chunk, injected only when this dynamic import resolves. Suspense keeps
+// showing PageLoader until both promises settle, so there's no FOUC on
+// the map page itself — same fallback window that already existed while
+// the JS chunk was fetching.
+const LiveMapPage = lazy(async () => {
+  const [pageModule] = await Promise.all([
+    import("./pages/LiveMapPage.tsx"),
+    import("maplibre-gl/dist/maplibre-gl.css"),
+  ]);
+  return { default: pageModule.LiveMapPage };
+});
 const SearchPage = lazy(() =>
   import("./pages/SearchPage.tsx").then((m) => ({ default: m.SearchPage })),
 );

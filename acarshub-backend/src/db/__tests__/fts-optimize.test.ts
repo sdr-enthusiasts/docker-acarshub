@@ -26,7 +26,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, getSqliteConnection, initDatabase } from "../client.js";
-import { optimizeDbFts, optimizeDbMerge } from "../queries/messages.js";
+import { optimizeDbFts, optimizeDbMerge } from "../queries/messages/index.js";
 
 // ---------------------------------------------------------------------------
 // Helpers

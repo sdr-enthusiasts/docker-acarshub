@@ -90,18 +90,42 @@ check:
     cd acarshub-react && npm test
     pre-commit run --all-files
 
+# Check for circular import dependencies across all TS subprojects.
+#
+# Cyclic imports are a whole-project property (not per-file), so this is
+# wired into `just ci` rather than into the per-file pre-commit chain.
+# Madge respects `tsconfig.json` path aliases via `--ts-config`.
+madge:
+    @echo "Checking for circular dependencies (types)..."
+    npx madge --circular --extensions ts,tsx --ts-config acarshub-types/tsconfig.json acarshub-types/src
+    @echo "Checking for circular dependencies (backend)..."
+    npx madge --circular --extensions ts,tsx --ts-config acarshub-backend/tsconfig.json acarshub-backend/src
+    @echo "Checking for circular dependencies (frontend)..."
+    npx madge --circular --extensions ts,tsx --ts-config acarshub-react/tsconfig.json acarshub-react/src
+
 # Full CI-like check (unit/integration tests + linting + formatting)
 ci:
     @echo "Building shared types package (required before TypeScript project references check)..."
     cd acarshub-types && npm run build
     @echo "Running TypeScript checks (all projects via project references)..."
-    npx tsc --build --force
+    # NOTE: deliberately NOT `npx tsc` here. `madge` (devDependency, NIT-05) pulls
+    # in a transitive typescript@5.x (its own tooling is incompatible with
+    # TypeScript 7 — see the tsc pin bump commit) which npm hoists to the
+    # *root* node_modules/.bin/tsc, shadowing the 7.x actually pinned by every
+    # workspace. `npx tsc` run from repo root would silently type-check with
+    # that wrong, older compiler instead of the one CI is actually meant to
+    # verify. Invoke a workspace-local tsc explicitly instead — all three
+    # workspaces pin the same exact typescript version by policy, so which
+    # one's binary drives the multi-project `--build` is arbitrary.
+    ./acarshub-backend/node_modules/.bin/tsc --build --force
     @echo "Running frontend build..."
     cd acarshub-react && npm run build
     @echo "Running backend build..."
     cd acarshub-backend && npm run build
     @echo "Running Biome checks..."
     biome check --error-on-warnings acarshub-react/ acarshub-backend/
+    @echo "Checking for circular import dependencies..."
+    just madge
     @echo "Running frontend tests with coverage..."
     cd acarshub-react && npm run test:coverage
     @echo "Running backend tests with coverage..."

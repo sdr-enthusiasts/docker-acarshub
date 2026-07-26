@@ -17,16 +17,22 @@
 import { EventEmitter } from "node:events";
 import { Socket } from "node:net";
 import type { ConnectionDescriptor } from "../config.js";
+import { TCP_READ_TIMEOUT_MS } from "../config.js";
 import { createLogger } from "../utils/logger.js";
 import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
-} from "./decoder-listener.js";
+  MessageType,
+} from "./listener-types.js";
 
-const logger = createLogger("tcp-listener");
+const logger = createLogger("services:tcp-listener");
 
-export type MessageType = "ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM";
+// Re-exported so existing callers that import `MessageType` from
+// `./tcp-listener.js` continue to work.  Canonical home is
+// `./listener-types.ts` — importing from there breaks the cycle between
+// the factory and the concrete listener classes.
+export type { MessageType };
 
 export interface TcpListenerConfig {
   type: MessageType;
@@ -186,7 +192,7 @@ export class TcpListener
     }
 
     this.socket = new Socket();
-    this.socket.setTimeout(1000); // 1 second timeout for reads
+    this.socket.setTimeout(TCP_READ_TIMEOUT_MS);
 
     this.socket.on("connect", () => {
       this.isConnected = true;
@@ -238,10 +244,10 @@ export class TcpListener
 
     try {
       this.socket.connect(this.port, this.host);
-    } catch (err) {
+    } catch (error) {
       logger.error(`${this.messageType} TCP connection failed`, {
         type: this.messageType,
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
 
       this.handleDisconnect();
@@ -326,7 +332,7 @@ export class TcpListener
       try {
         const message = JSON.parse(line);
         this.emit("message", this.messageType, message);
-      } catch (err) {
+      } catch (error) {
         if (i === lines.length - 1) {
           this.partialMessage = line;
 
@@ -338,7 +344,7 @@ export class TcpListener
           logger.debug(`${this.messageType} TCP skipping invalid JSON`, {
             type: this.messageType,
             line: line.substring(0, 100),
-            error: err instanceof Error ? err.message : String(err),
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       }

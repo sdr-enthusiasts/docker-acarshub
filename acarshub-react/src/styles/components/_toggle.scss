@@ -58,20 +58,38 @@
 }
 
 .toggle-slider {
-  display: inline-block;
+  // Mobile-first base: SCSS-TOUCH 44px floor so the whole wrapper is a
+  // comfortable hit area (the visually-hidden input covers the wrapper, so
+  // the wrapper IS the click target). inline-flex + align-items centers the
+  // (visually smaller) track within that floor.
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   cursor: pointer;
   user-select: none;
+
+  @include breakpoint(md) {
+    // Mouse-driven pointer: no touch-target floor needed, track governs height.
+    display: inline-block;
+    min-height: unset;
+  }
 
   &__track {
     position: relative;
     display: flex;
     align-items: center;
-    width: 2.75rem;
-    height: 1.375rem;
+    // Mobile-first base: larger tap target track sizing.
+    width: 3.5rem;
+    height: 1.75rem;
     background-color: var(--color-surface1);
     border-radius: 1.5rem;
     transition: background-color 0.2s ease;
     border: 2px solid var(--color-surface2);
+
+    @include breakpoint(md) {
+      width: 2.75rem;
+      height: 1.375rem;
+    }
 
     // Checked state
     .toggle-input:checked ~ .toggle-slider & {
@@ -101,7 +119,7 @@
     width: 1.125rem;
     height: 1.125rem;
     margin-left: 0.125rem;
-    background-color: #ffffff;
+    background-color: var(--color-toggle-thumb);
     border-radius: 50%;
     transition:
       transform 0.2s ease,
@@ -111,7 +129,7 @@
     // Checked state - move thumb to right
     .toggle-input:checked ~ .toggle-slider & {
       transform: translateX(1.25rem);
-      background-color: #ffffff;
+      background-color: var(--color-toggle-thumb);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     }
 
@@ -138,7 +156,8 @@
 }
 
 .toggle-help-text {
-  font-size: 0.75rem;
+  // Shared settings help-text scale: 0.8125rem / 400, flat.
+  font-size: 0.8125rem;
   color: var(--color-subtext0);
   margin: 0;
   line-height: 1.5;
@@ -194,15 +213,6 @@
 
   .toggle-help-text {
     font-size: 0.875rem;
-  }
-}
-
-// Mobile responsive adjustments
-@media (max-width: 768px) {
-  .toggle-slider__track {
-    // Larger tap target for mobile
-    min-width: 3.5rem;
-    min-height: 1.75rem;
   }
 }
 

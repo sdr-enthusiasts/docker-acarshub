@@ -106,20 +106,6 @@
 
 // Re-open the block so the remaining rules still belong to .chart-container
 .chart-container {
-  // Mobile/small screen adjustments
-  @media (max-width: 767px) {
-    padding: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
-
-    &__header {
-      margin-bottom: var(--spacing-sm);
-    }
-
-    &__title {
-      font-size: var(--font-size-md);
-    }
-  }
-
   // Loading state
   &--loading {
     position: relative;

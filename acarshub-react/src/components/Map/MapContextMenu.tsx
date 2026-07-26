@@ -52,15 +52,18 @@ export function MapContextMenu({
   const items: ContextMenuItem[] = [];
 
   // Always show pause/resume option
+  //
+  // NIT-09: item onClick handlers do NOT call onClose() themselves — the
+  // underlying ContextMenu component already calls onClose() after every
+  // item click (see ContextMenu.tsx handleItemClick), so doing it here too
+  // was a redundant double-call. Harmless in practice (onClose is
+  // idempotent) but dead/misleading code.
   items.push({
     id: "toggle-pause",
     label: isPaused ? "Resume Updates" : "Pause Updates",
     icon: isPaused ? "▶" : "⏸",
     variant: "default",
-    onClick: () => {
-      onTogglePause();
-      onClose();
-    },
+    onClick: onTogglePause,
   });
 
   // Show unfollow option if we're currently following an aircraft
@@ -70,10 +73,7 @@ export function MapContextMenu({
       label: "Unfollow Aircraft",
       icon: "📍",
       variant: "default",
-      onClick: () => {
-        onUnfollowAircraft();
-        onClose();
-      },
+      onClick: onUnfollowAircraft,
     });
   }
 

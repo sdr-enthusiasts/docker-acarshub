@@ -25,7 +25,14 @@ import MapLibreMap, {
   NavigationControl,
   ScaleControl,
 } from "react-map-gl/maplibre";
-import "maplibre-gl/dist/maplibre-gl.css";
+// maplibre-gl's base stylesheet is loaded via a dynamic import alongside
+// the `LiveMapPage` lazy chunk in App.tsx (PERF-BUNDLE Phase B — see
+// agent-docs/REMEDIATION_PLAN.md §15), not statically here. A static
+// top-level import here would still land in the "map" vendor chunk's CSS
+// asset, which Vite links unconditionally in the root index.html
+// regardless of route (a ~10KB gzip render-blocking stylesheet on every
+// page, including ones that never touch the map). Do NOT reintroduce a
+// static import of this CSS file.
 import {
   getProviderConfig,
   getProviderTileUrl,
@@ -450,7 +457,6 @@ export function MapComponent({
         onLoad={handleLoad}
         onError={handleError}
         mapStyle={mapStyle}
-        style={{ width: "100%", height: "100%" }}
         attributionControl={{}}
         maxZoom={20}
         minZoom={1}

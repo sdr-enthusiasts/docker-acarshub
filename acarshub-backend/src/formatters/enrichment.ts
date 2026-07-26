@@ -30,7 +30,7 @@ import { getConfig } from "../config.js";
 import { lookupGroundstation, lookupLabel } from "../db/index.js";
 import { createLogger } from "../utils/logger.js";
 
-const logger = createLogger("enrichment");
+const logger = createLogger("formatters:enrichment");
 
 /**
  * Singleton ACARS Message Decoder instance

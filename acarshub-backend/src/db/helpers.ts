@@ -329,3 +329,68 @@ export function getErrors(): {
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Row-shape validation helpers (TYPE-05)
+// ---------------------------------------------------------------------------
+//
+// better-sqlite3's `Statement.get()` returns `unknown`.  Migration code and a
+// handful of one-off queries had been doing bare casts:
+//
+//     const row = db.prepare(...).get() as { count: number };
+//
+// A column rename or accidental NULL silently produces `undefined` access at
+// the next dereference, with no useful error.  These helpers narrow the
+// `unknown` to a typed object and throw a descriptive error if any expected
+// key is missing.  Use in any code path where a future schema drift would
+// otherwise hide behind a silent `undefined`.
+//
+// `assertRow` requires the row to be present.  `assertRowOrUndefined` permits
+// the row to be `undefined` (e.g. `SELECT … LIMIT 1` against an empty table)
+// while still validating the shape when present.
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Narrow an `unknown` better-sqlite3 row to `T`, asserting that every
+ * declared key is present.  Throws on `undefined`/`null`/wrong-shape rows.
+ *
+ * @param row     The value returned by `Statement.get()` (or similar).
+ * @param keys    The keys that must exist on the row.  Use
+ *                `["foo", "bar"] as const satisfies ReadonlyArray<keyof T>`
+ *                at the call site to keep the key list in sync with `T`.
+ * @param context Optional label included in the error message.
+ */
+export function assertRow<T extends Record<string, unknown>>(
+  row: unknown,
+  keys: ReadonlyArray<keyof T & string>,
+  context = "row",
+): T {
+  if (!isPlainObject(row)) {
+    throw new Error(
+      `assertRow(${context}): expected an object row, got ${row === null ? "null" : typeof row}`,
+    );
+  }
+  const missing = keys.filter((k) => !(k in row));
+  if (missing.length > 0) {
+    throw new Error(
+      `assertRow(${context}): missing required keys: ${missing.join(", ")}`,
+    );
+  }
+  return row as T;
+}
+
+/**
+ * Like `assertRow` but allows the row to be absent (returning `undefined`).
+ * Use for queries that legitimately match zero rows.
+ */
+export function assertRowOrUndefined<T extends Record<string, unknown>>(
+  row: unknown,
+  keys: ReadonlyArray<keyof T & string>,
+  context = "row",
+): T | undefined {
+  if (row === undefined || row === null) return undefined;
+  return assertRow<T>(row, keys, context);
+}

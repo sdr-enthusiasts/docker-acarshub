@@ -30,38 +30,45 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: $spacing-lg;
+  // Mobile-first: no padding, so full-screen modals go edge-to-edge.
+  padding: 0;
   overflow-y: auto;
 
   @include fade-in($transition-base);
 
-  &:focus {
-    outline: none;
-  }
-
-  // Remove padding on mobile for full-screen modals
-  @media (max-width: #{$breakpoint-md - 1px}) {
-    padding: 0;
+  @include breakpoint(md) {
+    padding: $spacing-lg;
   }
 }
 
 .modal {
   background-color: var(--color-surface0);
-  border-radius: $radius-lg;
   box-shadow: $shadow-2xl;
-  max-width: 600px;
   width: 100%;
   position: relative;
   z-index: $z-index-modal;
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
   margin: auto;
+  // Mobile-first: bottom-sheet style -- docked to the bottom, rounded top
+  // corners only, grows up to the full viewport height.
+  max-width: none;
+  max-height: 100vh;
+  border-radius: $radius-lg $radius-lg 0 0;
+
+  // FE-MODAL-A11Y: the dialog itself carries tabIndex={-1} so useFocusTrap
+  // can focus it directly when there are no focusable elements inside (a
+  // content-less or read-only modal). Visible focus ring only for that
+  // fallback path -- normal modals move focus straight to a real
+  // focusable descendant (e.g. the close button) and never show this.
+  @include focus-visible;
 
   @include slide-in-bottom($transition-slow);
 
-  @include media-md {
+  @include breakpoint(md) {
     max-width: 700px;
+    max-height: 90vh;
+    border-radius: $radius-lg;
   }
 
   @include media-lg {
@@ -83,13 +90,22 @@
 
 .modal--full {
   max-width: none;
-  width: calc(100% - #{$spacing-xl});
-  height: calc(100% - #{$spacing-xl});
   max-height: none;
+  // Mobile-first: truly full-bleed (no rounding, fills the viewport).
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+
+  @include breakpoint(md) {
+    width: calc(100% - #{$spacing-xl});
+    height: calc(100% - #{$spacing-xl});
+    border-radius: $radius-lg; // restore .modal's own desktop rounding
+  }
 }
 
 .modal__header {
-  padding: $spacing-lg $spacing-xl;
+  // Mobile-first.
+  padding: $spacing-md $spacing-lg;
   border-bottom: 1px solid var(--color-overlay0);
   border-top-left-radius: $radius-lg;
   border-top-right-radius: $radius-lg;
@@ -98,13 +114,21 @@
   justify-content: space-between;
   gap: $spacing-md;
   flex-shrink: 0;
+
+  @include breakpoint(md) {
+    padding: $spacing-lg $spacing-xl;
+  }
 }
 
 .modal__title {
-  font-size: $font-size-2xl;
+  font-size: $font-size-xl; // mobile-first
   font-weight: $font-weight-semibold;
   color: var(--color-text);
   margin: 0;
+
+  @include breakpoint(md) {
+    font-size: $font-size-2xl;
+  }
 }
 
 .modal__close {
@@ -128,15 +152,19 @@
 }
 
 .modal__body {
-  padding: $spacing-xl;
+  padding: $spacing-lg; // mobile-first
   overflow-y: auto;
   flex: 1;
 
   @include custom-scrollbar;
+
+  @include breakpoint(md) {
+    padding: $spacing-xl;
+  }
 }
 
 .modal__footer {
-  padding: $spacing-lg $spacing-xl;
+  padding: $spacing-md $spacing-lg; // mobile-first
   border-top: 1px solid var(--color-overlay0);
   border-bottom-left-radius: $radius-lg;
   border-bottom-right-radius: $radius-lg;
@@ -146,6 +174,10 @@
   gap: $spacing-md;
   flex-shrink: 0;
   flex-wrap: wrap;
+
+  @include breakpoint(md) {
+    padding: $spacing-lg $spacing-xl;
+  }
 }
 
 /**
@@ -180,38 +212,13 @@ body.modal-open {
   overflow: hidden;
 }
 
-/**
- * Mobile optimizations
- */
-
-@media (max-width: #{$breakpoint-md - 1px}) {
+// Respect the user's "disable animations" appearance setting (data-animations
+// is set on <html> by App.tsx). Without this the modal's entrance fade/slide
+// ran regardless of the setting, and the exit transition could still be in
+// flight immediately after close — a race that intercepts nav-link clicks.
+[data-animations="false"] {
+  .modal-backdrop,
   .modal {
-    max-width: none;
-    width: 100%;
-    max-height: 100vh;
-    border-radius: $radius-lg $radius-lg 0 0;
-    margin-top: auto;
-  }
-
-  .modal--full {
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-  }
-
-  .modal__header {
-    padding: $spacing-md $spacing-lg;
-  }
-
-  .modal__title {
-    font-size: $font-size-xl;
-  }
-
-  .modal__body {
-    padding: $spacing-lg;
-  }
-
-  .modal__footer {
-    padding: $spacing-md $spacing-lg;
+    animation: none;
   }
 }

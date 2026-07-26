@@ -61,14 +61,20 @@
     button {
       background-color: var(--color-surface0);
       color: var(--color-text);
-      width: 32px;
-      height: 32px;
+      // Mobile-first: SCSS-TOUCH 44px floor.
+      width: 44px;
+      height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
       border: none;
       cursor: pointer;
       transition: all 0.2s ease;
+
+      @include breakpoint(md) {
+        width: 32px;
+        height: 32px;
+      }
 
       // Target the icon span inside buttons
       .maplibregl-ctrl-icon {
@@ -201,12 +207,18 @@
   }
 
   // Data block styling (aircraft info labels)
+  // NOTE: .map-datablock is not currently rendered by any TSX component
+  // (confirmed via grep) -- dead CSS, same as the .btn module in
+  // _button.scss. Inverted mechanically for structural consistency with
+  // the rest of this file rather than left as a lingering desktop-first
+  // holdout.
   .map-datablock {
     background-color: rgba(var(--color-surface0-rgb), 0.9);
     color: var(--color-text);
-    padding: var(--spacing-xs) var(--spacing-sm);
+    // Mobile-first: larger text/padding.
+    font-size: 0.8rem;
+    padding: var(--spacing-sm) var(--spacing-md);
     border-radius: var(--border-radius-sm);
-    font-size: 0.75rem;
     font-family: var(--font-mono);
     white-space: nowrap;
     pointer-events: none;
@@ -214,9 +226,19 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     border: 1px solid var(--color-overlay0);
 
+    @include breakpoint(md) {
+      font-size: 0.75rem;
+      padding: var(--spacing-xs) var(--spacing-sm);
+    }
+
     &--extended {
+      display: none; // mobile-first: hidden by default
       font-size: 0.7rem;
       line-height: 1.3;
+
+      @include breakpoint(md) {
+        display: unset;
+      }
     }
 
     &--alert {
@@ -260,28 +282,6 @@
 @keyframes spin {
   to {
     transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-
-// Mobile responsive adjustments
-@include breakpoint-max(md) {
-  .map-container {
-    // Larger touch targets for mobile
-    .maplibregl-ctrl-group button {
-      min-width: 44px;
-      min-height: 44px;
-    }
-
-    // Larger datablock text on mobile
-    .map-datablock {
-      font-size: 0.8rem;
-      padding: var(--spacing-sm) var(--spacing-md);
-    }
-
-    // Hide extended datablocks on small screens by default
-    .map-datablock--extended {
-      display: none;
-    }
   }
 }
 

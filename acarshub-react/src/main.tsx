@@ -19,11 +19,30 @@ import { createRoot } from "react-dom/client";
 import "./styles/main.scss";
 import App from "./App.tsx";
 
+// Shape of the React DevTools global hook that React inspects on the host
+// console object to decide whether to print the "Download the React DevTools"
+// message in development.  We only need to satisfy the property checks React
+// itself performs; we are not implementing a real DevTools backend.
+interface ReactDevToolsGlobalHook {
+  checkDCE: () => void;
+  supportsFiber: boolean;
+  inject: () => void;
+  onCommitFiberRoot: () => void;
+  onCommitFiberUnmount: () => void;
+}
+
+// Augment the lib-dom Console interface with the optional hook field so we
+// can assign it without a `noExplicitAny` waiver.  Marked optional because
+// production builds never set it.
+declare global {
+  interface Console {
+    __REACT_DEVTOOLS_GLOBAL_HOOK__?: ReactDevToolsGlobalHook;
+  }
+}
+
 // Suppress React DevTools message in development
 if (import.meta.env.DEV) {
-  // biome-ignore lint/suspicious/noExplicitAny: Console type doesn't have __REACT_DEVTOOLS_GLOBAL_HOOK__
-  (console as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
-    ...console,
+  console.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
     checkDCE: () => {},
     supportsFiber: true,
     inject: () => {},

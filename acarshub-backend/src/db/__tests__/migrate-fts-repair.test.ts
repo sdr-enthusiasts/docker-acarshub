@@ -755,7 +755,7 @@ describe("migration10 rebuild_fts", () => {
 
   // -------------------------------------------------------------------------
 
-  test("regression: alembic_version is 803398f85958 after all migrations", () => {
+  test("regression: alembic_version is 8c9d47f5ed13 after all migrations", () => {
     const db = new Database(DB_PATH);
     const version = db
       .prepare("SELECT version_num FROM alembic_version")

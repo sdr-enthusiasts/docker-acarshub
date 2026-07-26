@@ -17,7 +17,7 @@
 import { EventEmitter } from "node:events";
 import { createLogger } from "../utils/logger.js";
 
-const logger = createLogger("scheduler");
+const logger = createLogger("services:scheduler");
 
 export type ScheduleUnit = "seconds" | "minutes" | "hours";
 
@@ -54,6 +54,12 @@ export interface SchedulerEvents {
 export class Scheduler extends EventEmitter<SchedulerEvents> {
   private tasks: Map<string, ScheduledTask> = new Map();
   private timers: Map<string, NodeJS.Timeout> = new Map();
+  // One-shot setTimeout handles for tasks scheduled with .at() that are
+  // currently waiting for their first aligned run. Once the alignment window
+  // fires, the entry is removed and the recurring setInterval handle takes
+  // over in `timers`. Tracked separately so stop()/disable()/removeTask() can
+  // cancel a pending alignment without leaking it into a fresh interval.
+  private alignmentTimers: Map<string, NodeJS.Timeout> = new Map();
   private isRunning = false;
   private taskCounter = 0;
 
@@ -136,6 +142,15 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
     }
     this.timers.clear();
 
+    // Cancel any pending alignment-window setTimeouts. Without this, a task
+    // scheduled with .at() that was still waiting for its first aligned run
+    // would fire after stop() and register a fresh setInterval that nothing
+    // owns.
+    for (const timer of this.alignmentTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.alignmentTimers.clear();
+
     logger.info("Scheduler stopped");
   }
 
@@ -186,6 +201,14 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
       clearInterval(timer);
       this.timers.delete(taskId);
     }
+    // Also cancel a pending alignment-window setTimeout, if any: a task
+    // disabled during its alignment window would otherwise still fire its
+    // first run and register a recurring interval that ignores `enabled`.
+    const alignment = this.alignmentTimers.get(taskId);
+    if (alignment) {
+      clearTimeout(alignment);
+      this.alignmentTimers.delete(taskId);
+    }
 
     logger.info("Task disabled", { taskId, taskName: task.name });
   }
@@ -205,6 +228,14 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
     if (timer) {
       clearInterval(timer);
       this.timers.delete(taskId);
+    }
+    // Also cancel a pending alignment-window setTimeout: removing a task
+    // mid-alignment would otherwise leave a callback that fires against a
+    // task no longer in the registry.
+    const alignment = this.alignmentTimers.get(taskId);
+    if (alignment) {
+      clearTimeout(alignment);
+      this.alignmentTimers.delete(taskId);
     }
 
     this.tasks.delete(taskId);
@@ -336,8 +367,18 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
   private startTask(task: ScheduledTask): void {
     const intervalMs = this.getIntervalMs(task.interval, task.unit);
 
-    const timer = setInterval(async () => {
-      await this.executeTask(task);
+    // executeTask() is documented to never reject (ERR-03), but nothing
+    // awaits this callback's own returned promise — setInterval discards it.
+    // The .catch() backstop below means a violation of that invariant is
+    // logged rather than becoming an unhandled rejection.
+    const timer = setInterval(() => {
+      this.executeTask(task).catch((error: unknown) => {
+        logger.error("Unexpected error escaped executeTask", {
+          taskId: task.id,
+          taskName: task.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     }, intervalMs);
 
     this.timers.set(task.id, timer);
@@ -357,17 +398,38 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
     const now = Date.now();
     const delayToFirstRun = task.nextRun - now;
 
-    // Schedule first run at aligned time
-    setTimeout(async () => {
-      await this.executeTask(task);
+    // Schedule first run at aligned time. Capture the handle so stop(),
+    // disable(), and removeTask() can cancel a pending alignment that has
+    // not yet fired — without this, the callback would run after the task
+    // was disabled and register a fresh setInterval that nothing owns.
+    // See startTask() above (ERR-03) — executeTask() is documented never to
+    // reject, but nothing awaits either callback's own returned promise
+    // here, so both the aligned first run and the recurring interval get an
+    // explicit .catch() backstop.
+    const alignmentTimer = setTimeout(() => {
+      this.alignmentTimers.delete(task.id);
+      this.executeTask(task).catch((error: unknown) => {
+        logger.error("Unexpected error escaped executeTask (aligned run)", {
+          taskId: task.id,
+          taskName: task.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
 
       // Then run at regular intervals
-      const timer = setInterval(async () => {
-        await this.executeTask(task);
+      const timer = setInterval(() => {
+        this.executeTask(task).catch((error: unknown) => {
+          logger.error("Unexpected error escaped executeTask", {
+            taskId: task.id,
+            taskName: task.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
       }, intervalMs);
 
       this.timers.set(task.id, timer);
     }, delayToFirstRun);
+    this.alignmentTimers.set(task.id, alignmentTimer);
 
     logger.debug("Task timer started with at-time", {
       taskId: task.id,
@@ -378,7 +440,19 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
   }
 
   /**
-   * Execute a task handler with error handling
+   * Execute a task handler with error handling.
+   *
+   * Invariant (ERR-03): this method must never throw or return a rejected
+   * promise. Every await inside the try block, and the emit() calls in both
+   * the try and catch branches, are covered by the outer try/catch — but
+   * `this.emit(...)` runs listeners synchronously, so a listener that throws
+   * would otherwise escape as an unhandled rejection from the `async () =>
+   * await this.executeTask(task)` callbacks passed to `setInterval`/
+   * `setTimeout` in startTask()/startTaskAt(), since nothing awaits those
+   * callbacks' returned promises. As defense in depth, both call sites also
+   * wrap the returned promise in an explicit `.catch(...)` backstop — see
+   * the comments there — so a violation of this invariant is logged instead
+   * of crashing the process.
    */
   private async executeTask(task: ScheduledTask): Promise<void> {
     const startTime = Date.now();
@@ -405,17 +479,18 @@ export class Scheduler extends EventEmitter<SchedulerEvents> {
         taskName: task.name,
         duration,
       });
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+    } catch (error) {
+      const normalizedError =
+        error instanceof Error ? error : new Error(String(error));
 
       logger.error("Task execution failed", {
         taskId: task.id,
         taskName: task.name,
-        error: error.message,
-        stack: error.stack,
+        error: normalizedError.message,
+        stack: normalizedError.stack,
       });
 
-      this.emit("taskError", task.id, task.name, error);
+      this.emit("taskError", task.id, task.name, normalizedError);
     }
   }
 

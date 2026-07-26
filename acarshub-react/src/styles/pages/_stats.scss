@@ -50,27 +50,27 @@
 
   // Section content wrapper
   &__section-content {
-    // Single card view - no scrolling
-    min-height: 600px;
+    // Single card view - no scrolling. Mobile-first base.
+    min-height: 400px;
 
-    @media (max-width: 767px) {
-      min-height: 400px;
+    @include breakpoint(md) {
+      min-height: 600px;
     }
   }
 
   // Card spacing
   .card {
-    margin-bottom: $spacing-xl;
+    margin-bottom: $spacing-lg; // mobile-first
     overflow-anchor: none; // Prevent scroll anchoring in cards
     contain: layout style; // Isolate card layout from siblings
     transform: translateZ(0); // Force GPU layer
 
-    &:last-child {
-      margin-bottom: 0;
+    @include breakpoint(md) {
+      margin-bottom: $spacing-xl;
     }
 
-    @media (max-width: 767px) {
-      margin-bottom: $spacing-lg;
+    &:last-child {
+      margin-bottom: 0;
     }
   }
 
@@ -129,12 +129,6 @@
       position: relative; // Create positioning context
     }
 
-    @media (max-width: 767px) {
-      padding: $spacing-sm;
-      min-height: 200px;
-      margin-top: $spacing-sm;
-    }
-
     // First chart wrapper in a card should have top margin
     .chart-section__header + & {
       margin-top: $spacing-sm;
@@ -170,24 +164,31 @@
     }
 
     &__title {
-      @media (max-width: 767px) {
-        font-size: var(--font-size-lg);
+      // Mobile-first: only ever had a mobile-only tweak (no desktop rule
+      // existed here at all) -- restore to "no override" at the tablet
+      // breakpoint via unset (font-size is inherited, so this falls back
+      // to whatever the parent/global heading style provides, matching
+      // the original no-rule-at-desktop behavior exactly).
+      font-size: var(--font-size-lg);
+
+      @include breakpoint(md) {
+        font-size: unset;
       }
     }
 
     &__description {
-      @media (max-width: 767px) {
-        font-size: var(--font-size-sm);
+      font-size: var(--font-size-sm);
+
+      @include breakpoint(md) {
+        font-size: unset;
       }
     }
   }
 
   // Responsive grid adjustments for stats images
   .chart-grid--two-col {
-    // Mobile: single column
-    @media (max-width: 767px) {
-      grid-template-columns: 1fr;
-    }
+    // Mobile-first: single column
+    grid-template-columns: 1fr;
 
     // Tablet: two columns
     @include media-md {

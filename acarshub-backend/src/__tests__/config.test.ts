@@ -415,6 +415,69 @@ describe("config module", () => {
       const { MIN_LOG_LEVEL } = await import("../config.js");
       expect(MIN_LOG_LEVEL).toBe("warn");
     });
+
+    it("should use toLowerCase() (not toLocaleLowerCase()) so log-level parsing is locale-independent (TYPE-07 regression)", async () => {
+      // Turkish-locale toLocaleLowerCase() maps "I" -> "ı" (dotless i)
+      // instead of "i", which used to make the validation check
+      // (toLocaleLowerCase) and the returned value (toLowerCase) disagree.
+      // Spy on toLocaleLowerCase to prove parseLogLevel never calls it.
+      const localeSpy = vi.spyOn(String.prototype, "toLocaleLowerCase");
+      process.env.MIN_LOG_LEVEL = "WARN";
+      const { MIN_LOG_LEVEL } = await import("../config.js");
+      expect(MIN_LOG_LEVEL).toBe("warn");
+      expect(localeSpy).not.toHaveBeenCalled();
+      localeSpy.mockRestore();
+    });
+  });
+
+  describe("Operational tunables (NIT-01)", () => {
+    it("should use documented defaults", async () => {
+      const {
+        MESSAGE_BATCH_CHUNK_SIZE,
+        SEARCH_PAGE_SIZE,
+        HEYWHATSTHAT_TIMEOUT_MS,
+        TCP_READ_TIMEOUT_MS,
+        DB_CACHE_SIZE_KB,
+        DB_WAL_AUTOCHECKPOINT_PAGES,
+        DB_BACKUP_MMAP_SIZE_BYTES,
+      } = await import("../config.js");
+
+      expect(MESSAGE_BATCH_CHUNK_SIZE).toBe(25);
+      expect(SEARCH_PAGE_SIZE).toBe(50);
+      expect(HEYWHATSTHAT_TIMEOUT_MS).toBe(30_000);
+      expect(TCP_READ_TIMEOUT_MS).toBe(1000);
+      expect(DB_CACHE_SIZE_KB).toBe(10_000);
+      expect(DB_WAL_AUTOCHECKPOINT_PAGES).toBe(200);
+      expect(DB_BACKUP_MMAP_SIZE_BYTES).toBe(268_435_456);
+    });
+
+    it("should allow each tunable to be overridden via its env var", async () => {
+      process.env.MESSAGE_BATCH_CHUNK_SIZE = "10";
+      process.env.SEARCH_PAGE_SIZE = "20";
+      process.env.HEYWHATSTHAT_TIMEOUT_MS = "5000";
+      process.env.TCP_READ_TIMEOUT_MS = "2000";
+      process.env.DB_CACHE_SIZE_KB = "5000";
+      process.env.DB_WAL_AUTOCHECKPOINT_PAGES = "100";
+      process.env.DB_BACKUP_MMAP_SIZE_BYTES = "1000000";
+
+      const {
+        MESSAGE_BATCH_CHUNK_SIZE,
+        SEARCH_PAGE_SIZE,
+        HEYWHATSTHAT_TIMEOUT_MS,
+        TCP_READ_TIMEOUT_MS,
+        DB_CACHE_SIZE_KB,
+        DB_WAL_AUTOCHECKPOINT_PAGES,
+        DB_BACKUP_MMAP_SIZE_BYTES,
+      } = await import("../config.js");
+
+      expect(MESSAGE_BATCH_CHUNK_SIZE).toBe(10);
+      expect(SEARCH_PAGE_SIZE).toBe(20);
+      expect(HEYWHATSTHAT_TIMEOUT_MS).toBe(5000);
+      expect(TCP_READ_TIMEOUT_MS).toBe(2000);
+      expect(DB_CACHE_SIZE_KB).toBe(5000);
+      expect(DB_WAL_AUTOCHECKPOINT_PAGES).toBe(100);
+      expect(DB_BACKUP_MMAP_SIZE_BYTES).toBe(1_000_000);
+    });
   });
 
   describe("getConfig()", () => {
@@ -520,7 +583,11 @@ describe("config module", () => {
 
       config.setAlertTerms(["emergency", "MAYDAY", "Pan-Pan"]);
 
-      expect(config.alertTerms).toEqual(["EMERGENCY", "MAYDAY", "PAN-PAN"]);
+      expect(config.getAlertTerms()).toEqual([
+        "EMERGENCY",
+        "MAYDAY",
+        "PAN-PAN",
+      ]);
     });
   });
 
@@ -530,7 +597,89 @@ describe("config module", () => {
 
       config.setAlertIgnoreTerms(["test", "DEBUG", "Sample"]);
 
-      expect(config.alertTermsIgnore).toEqual(["TEST", "DEBUG", "SAMPLE"]);
+      expect(config.getAlertIgnoreTerms()).toEqual(["TEST", "DEBUG", "SAMPLE"]);
+    });
+  });
+
+  describe("STATE-01: alert terms getter (regression)", () => {
+    // STATE-01 converted `export let alertTerms` (a live ESM binding) to a
+    // module-private variable accessed only through getAlertTerms(). This
+    // suite locks in the new contract:
+    //
+    //   1. The getter always reflects the latest value after a setter call.
+    //   2. A value captured *before* a setter call (the previous failure mode
+    //      for any consumer who did `const t = config.alertTerms`) does not
+    //      poison subsequent reads through the getter.
+    //   3. getConfig() snapshots the current values, not the initial empty
+    //      arrays.
+    //
+    // These tests would still pass with the old `export let` because the
+    // old test file used `config.alertTerms` (a live binding read through
+    // the namespace import). What they document is that consumers no longer
+    // *can* take a stale snapshot — the API simply doesn't expose one.
+
+    it("getter reflects latest value after setAlertTerms()", async () => {
+      const config = await import("../config.js");
+
+      config.setAlertTerms(["FOO", "BAR"]);
+      expect(config.getAlertTerms()).toEqual(["FOO", "BAR"]);
+
+      config.setAlertTerms(["BAZ"]);
+      // Critical: the getter must see the newest value, not the cached
+      // ["FOO","BAR"] from the previous read.
+      expect(config.getAlertTerms()).toEqual(["BAZ"]);
+    });
+
+    it("getter reflects latest value after setAlertIgnoreTerms()", async () => {
+      const config = await import("../config.js");
+
+      config.setAlertIgnoreTerms(["IGNORE-A"]);
+      expect(config.getAlertIgnoreTerms()).toEqual(["IGNORE-A"]);
+
+      config.setAlertIgnoreTerms(["IGNORE-B", "IGNORE-C"]);
+      expect(config.getAlertIgnoreTerms()).toEqual(["IGNORE-B", "IGNORE-C"]);
+    });
+
+    it("a value captured before a setter call does not affect later getter reads", async () => {
+      const config = await import("../config.js");
+
+      config.setAlertTerms(["ORIGINAL"]);
+      const captured = config.getAlertTerms();
+
+      config.setAlertTerms(["UPDATED"]);
+
+      // The captured array is the old reference (semantics of returning the
+      // internal array unchanged from the previous API). The point is that
+      // subsequent getter calls return the NEW value, so consumers that
+      // always re-read are correct.
+      expect(captured).toEqual(["ORIGINAL"]);
+      expect(config.getAlertTerms()).toEqual(["UPDATED"]);
+    });
+
+    it("getConfig() includes the most recent alert terms", async () => {
+      const config = await import("../config.js");
+
+      config.setAlertTerms(["LATEST-TERM"]);
+      config.setAlertIgnoreTerms(["LATEST-IGNORE"]);
+
+      const snapshot = config.getConfig();
+      expect(snapshot.alertTerms).toEqual(["LATEST-TERM"]);
+      expect(snapshot.alertIgnoreTerms).toEqual(["LATEST-IGNORE"]);
+
+      // Update again and re-snapshot — must reflect the change.
+      config.setAlertTerms(["EVEN-NEWER"]);
+      const snapshot2 = config.getConfig();
+      expect(snapshot2.alertTerms).toEqual(["EVEN-NEWER"]);
+    });
+
+    it("the old `alertTerms` named export no longer exists", async () => {
+      // Lock in that the bug-prone API is gone. If a future change
+      // re-introduces `export let alertTerms`, this test fails loudly.
+      const config = (await import("../config.js")) as Record<string, unknown>;
+      expect(config.alertTerms).toBeUndefined();
+      expect(config.alertTermsIgnore).toBeUndefined();
+      expect(typeof config.getAlertTerms).toBe("function");
+      expect(typeof config.getAlertIgnoreTerms).toBe("function");
     });
   });
 });

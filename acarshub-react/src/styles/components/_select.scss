@@ -44,8 +44,10 @@
 }
 
 .select-label {
-  font-size: 0.8125rem;
-  font-weight: 500;
+  // Shared settings field-label scale: 0.875rem / 600, flat across
+  // breakpoints. See _radio.scss `.radio-group__legend` for the rationale.
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--color-text);
   margin: 0;
 
@@ -62,8 +64,10 @@
 
 .select {
   width: 100%;
-  padding: 0.5rem 2.25rem 0.5rem 0.75rem;
-  font-size: 0.875rem;
+  // Mobile-first base: larger tap target and text for touch input.
+  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  font-size: 1rem;
+  min-height: 44px;
   font-family: inherit;
   color: var(--color-text);
   background-color: var(--color-surface0);
@@ -73,6 +77,13 @@
   appearance: none;
   transition: all 0.2s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  @include breakpoint(md) {
+    // Denser layout once there's room for a mouse-driven pointer.
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    min-height: unset;
+  }
 
   // Remove default select arrow
   &::-ms-expand {
@@ -129,27 +140,9 @@
 }
 
 .select-help-text {
-  font-size: 0.75rem;
+  // Shared settings help-text scale: 0.8125rem / 400, flat.
+  font-size: 0.8125rem;
   color: var(--color-subtext0);
   margin: 0;
   line-height: 1.4;
-}
-
-// Mobile responsive adjustments
-@media (max-width: 768px) {
-  .select {
-    padding: 0.75rem 2.5rem 0.75rem 1rem;
-    font-size: 1rem;
-
-    // Larger tap target for mobile
-    min-height: 44px;
-  }
-
-  .select-label {
-    font-size: 0.9375rem;
-  }
-
-  .select-help-text {
-    font-size: 0.875rem;
-  }
 }

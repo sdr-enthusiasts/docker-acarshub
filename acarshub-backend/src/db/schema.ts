@@ -35,9 +35,19 @@ import {
  * Primary table for storing ACARS messages
  *
  * Indexes:
- * - depa, dsta, flight, freq, icao, label, msg_text, msgno, tail: Non-unique for searches
- * - aircraft_id: For future aircraft tracking feature (v5+)
- * - Composite indexes for common query patterns (added in migration 8)
+ * - icao, msgno: Non-unique for searches
+ * - Composite index for common query patterns (added in migration 8)
+ *
+ * Migration 15 (drop_unnecessary_indexes2, commit c994e8e4) dropped the
+ * single-column indexes on depa, dsta, flight, freq, label, and tail —
+ * every search against those columns goes through FTS
+ * (`messages_fts`) or a leading-wildcard LIKE, neither of which a B-tree
+ * index on the bare column can accelerate. schema.ts is Drizzle's schema
+ * DSL, not the source of the real DDL (this project migrates by hand, see
+ * db/migrations/), so this comment and the index list below must be kept
+ * in sync with the migrations by hand too — this exact drift (schema.ts
+ * still declaring six indexes migration 15 had already dropped) is what
+ * db/__tests__/schema.test.ts's smoke test caught.
  */
 export const messages = sqliteTable(
   "messages",
@@ -76,16 +86,11 @@ export const messages = sqliteTable(
     aircraftId: text("aircraft_id", { length: 36 }), // Added in migration 8, nullable for future use
   },
   (table) => ({
-    // Single-column indexes
-    depaIdx: index("ix_messages_depa").on(table.depa),
-    dstaIdx: index("ix_messages_dsta").on(table.dsta),
-    flightIdx: index("ix_messages_flight").on(table.flight),
-    freqIdx: index("ix_messages_freq").on(table.freq),
+    // Single-column indexes. depa/dsta/flight/freq/label/tail were dropped
+    // by migration 15 — see the table-level comment above.
     icaoIdx: index("ix_messages_icao").on(table.icao),
-    labelIdx: index("ix_messages_label").on(table.label),
     msgnoIdx: index("ix_messages_msgno").on(table.msgno),
-    tailIdx: index("ix_messages_tail").on(table.tail),
-    // Composite indexes (added in migration 8 for query optimization)
+    // Composite index (added in migration 8 for query optimization)
     typeTimeIdx: index("ix_messages_type_time").on(
       table.messageType,
       table.time,

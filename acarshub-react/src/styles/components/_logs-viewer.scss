@@ -50,14 +50,24 @@
 
 .logs-viewer-select,
 .logs-viewer-input {
+  // SCSS-TOUCH mobile-first: form controls inside the Settings → Advanced
+  // log viewer. Mobile gets a 44px floor and 1rem font (also fixes iOS
+  // form-control zoom-on-focus -- <16px triggers it); desktop relaxes to
+  // ~29px from compact padding.
   padding: var(--spacing-xs) var(--spacing-sm);
   background: var(--color-surface0);
   border: 1px solid var(--color-overlay0);
   border-radius: var(--border-radius-sm);
   color: var(--color-text);
   font-family: inherit;
-  font-size: 0.875rem;
+  font-size: 1rem;
+  min-height: 44px;
   min-width: 150px;
+
+  @include breakpoint(md) {
+    min-height: unset;
+    font-size: 0.875rem;
+  }
 
   &:focus {
     outline: 2px solid var(--color-blue);
@@ -165,6 +175,10 @@
   border: 1px solid var(--color-surface0);
   border-radius: var(--border-radius-md);
   padding: var(--spacing-sm);
+
+  // Runtime-measured max-height set by the component via the
+  // --logs-viewer-max-height custom property (STYLE-INLINE-DYNAMIC).
+  max-height: var(--logs-viewer-max-height);
 
   @include scrollbar-thin;
 }

@@ -24,12 +24,18 @@
  */
 
 .connection-status {
-  padding: $spacing-md $spacing-lg;
+  // Mobile-first.
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-xs;
   text-align: center;
   font-weight: $font-weight-medium;
-  font-size: $font-size-sm;
   transition: all $transition-base;
   border-bottom: 2px solid transparent;
+
+  @include breakpoint(md) {
+    padding: $spacing-md $spacing-lg;
+    font-size: $font-size-sm;
+  }
 }
 
 .connection-status--connected {
@@ -56,18 +62,31 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: $spacing-md;
+  gap: $spacing-sm; // mobile-first
+
+  @include breakpoint(md) {
+    gap: $spacing-md;
+  }
 }
 
 .connection-status__icon {
-  font-size: $font-size-lg;
+  font-size: $font-size-base; // mobile-first
   display: flex;
   align-items: center;
   justify-content: center;
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
+  }
+
+  @include breakpoint(md) {
+    font-size: $font-size-lg;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
   }
 }
 
@@ -76,9 +95,14 @@
 }
 
 .connection-status__details {
+  display: none; // mobile-first
   font-size: $font-size-xs;
   opacity: 0.9;
   margin-left: $spacing-sm;
+
+  @include breakpoint(md) {
+    display: unset;
+  }
 }
 
 /**
@@ -121,33 +145,5 @@
 @media (prefers-reduced-motion: reduce) {
   .connection-status--disconnected {
     animation: none;
-  }
-}
-
-/**
- * Mobile optimizations
- */
-
-@media (max-width: #{$breakpoint-md - 1px}) {
-  .connection-status {
-    padding: $spacing-sm $spacing-md;
-    font-size: $font-size-xs;
-  }
-
-  .connection-status__content {
-    gap: $spacing-sm;
-  }
-
-  .connection-status__icon {
-    font-size: $font-size-base;
-
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-
-  .connection-status__details {
-    display: none;
   }
 }

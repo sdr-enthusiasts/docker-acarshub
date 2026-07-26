@@ -100,15 +100,16 @@ async function fireSocketEvent(
 
 /**
  * The ConnectionStatus banner selector.
- * The component renders <div class="connection-status disconnected"> when
+ * The component renders
+ * <div class="connection-status connection-status--disconnected"> when
  * isConnected === false, and returns null (no DOM element) when connected.
  */
-const BANNER = ".connection-status.disconnected";
+const BANNER = ".connection-status.connection-status--disconnected";
 
 /**
  * The text inside the banner.
  */
-const BANNER_TEXT = ".connection-status-text";
+const BANNER_TEXT = ".connection-status__text";
 
 // ---------------------------------------------------------------------------
 // Test suite

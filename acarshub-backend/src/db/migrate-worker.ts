@@ -68,8 +68,12 @@
 import { parentPort, workerData } from "node:worker_threads";
 import { createLogger } from "../utils/logger.js";
 import { runMigrations } from "./migrate.js";
+import {
+  type MigrateWorkerData,
+  validateWorkerData,
+} from "./migrate-worker-validate.js";
 
-const logger = createLogger("migrate-worker");
+const logger = createLogger("db:migrate-worker");
 
 // ---------------------------------------------------------------------------
 // Debug simulation delay
@@ -104,14 +108,18 @@ function sleepSync(ms: number): void {
 // Types
 // ---------------------------------------------------------------------------
 
-interface MigrateWorkerData {
-  dbPath: string;
-}
-
-export interface MigrateWorkerResult {
+// NIT-04: not exported — used only within this file's own `satisfies`
+// expressions below. Verified via grep that no other module or test
+// imports MigrateWorkerResult; the parent (migrate.ts) that spawns this
+// worker communicates over a plain JSON message, not this type.
+interface MigrateWorkerResult {
   success: boolean;
   error?: string;
 }
+
+// `MigrateWorkerData` is re-exported via the validator module so callers
+// (and tests) can import either from here or from migrate-worker-validate.
+export type { MigrateWorkerData };
 
 // ---------------------------------------------------------------------------
 // Resolve dbPath
@@ -119,15 +127,25 @@ export interface MigrateWorkerResult {
 // When spawned as a child process, workerData is null and the db path is
 // passed as the first positional argument (process.argv[2]).
 // When used as a worker thread, workerData.dbPath is set by the caller.
+//
+// TYPE-06: workerData arrives as `unknown` from node:worker_threads.  We MUST
+// validate its shape at runtime — a bare cast hides the (very real) failure
+// mode where a future caller passes the wrong shape and silently propagates
+// `undefined` to the "no dbPath provided" branch when the actual error is a
+// schema mismatch.  See migrate-worker-validate.ts.
 // ---------------------------------------------------------------------------
 
-const typedWorkerData = workerData as MigrateWorkerData | null;
+const validatedWorkerData = validateWorkerData(workerData);
 const dbPath: string | undefined =
-  typedWorkerData?.dbPath ?? process.argv[2];
+  validatedWorkerData?.dbPath ?? process.argv[2];
 
 if (!dbPath) {
-  const msg = "migrate-worker: no dbPath provided (expected workerData.dbPath or argv[2])";
-  parentPort?.postMessage({ success: false, error: msg } satisfies MigrateWorkerResult);
+  const msg =
+    "migrate-worker: no dbPath provided (expected workerData.dbPath or argv[2])";
+  parentPort?.postMessage({
+    success: false,
+    error: msg,
+  } satisfies MigrateWorkerResult);
   process.stderr.write(`${msg}\n`);
   process.exit(1);
 }

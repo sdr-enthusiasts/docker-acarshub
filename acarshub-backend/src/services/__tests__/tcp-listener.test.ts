@@ -19,16 +19,19 @@ import {
   type Server as NetServer,
   type Socket as NetSocket,
 } from "node:net";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TcpListener } from "../tcp-listener.js";
 
 describe("TcpListener", () => {
   let testServer: NetServer | null = null;
-  let testPort: number;
+  let assignedPort: number;
+  let unusedPort: number;
 
   beforeEach(() => {
-    // Find available port
-    testPort = 15550 + Math.floor(Math.random() * 1000);
+    // Random port for the single "no server running" test below.  Collision
+    // here is harmless because the listener is expected to fail to connect
+    // regardless of who else owns the port.
+    unusedPort = 15550 + Math.floor(Math.random() * 1000);
   });
 
   afterEach(async () => {
@@ -89,9 +92,23 @@ describe("TcpListener", () => {
 
   /**
    * Create a test TCP server that sends JSON messages.
-   * Tracks all connected client sockets so closeTestServer() can force-close them.
+   *
+   * When `port` is omitted the server binds to port 0 (OS-assigned
+   * ephemeral port) and the resolved port is read back from
+   * `server.address()`.  This eliminates the race where two parallel
+   * vitest workers roll the same fixed-range port (the old behaviour
+   * was `15550 + random*1000`, which had ~3% collision per pair and
+   * surfaced as a sporadic flake — see NIT-08 in the remediation plan).
+   *
+   * The optional `port` parameter is used by tests that need to restart
+   * a server on the same port for reconnection-behaviour assertions.
+   *
+   * Tracks all connected client sockets so closeTestServer() can
+   * force-close them.
    */
-  function createTestServer(port: number): Promise<NetServer> {
+  function createTestServer(
+    port = 0,
+  ): Promise<{ server: NetServer; port: number }> {
     return new Promise((resolve, reject) => {
       const clientSockets = new Set<NetSocket>();
 
@@ -109,20 +126,32 @@ describe("TcpListener", () => {
 
       server.on("error", reject);
 
+      // Port 0 → OS assigns a free ephemeral port.  Caller may pass a
+      // specific port to rebind to the same address (used by the
+      // auto-reconnect test).
       server.listen(port, "127.0.0.1", () => {
-        resolve(server);
+        const address = server.address();
+        if (address === null || typeof address === "string") {
+          reject(
+            new Error(
+              `Unexpected server.address() result: ${JSON.stringify(address)}`,
+            ),
+          );
+          return;
+        }
+        resolve({ server, port: address.port });
       });
     });
   }
 
   describe("Connection Management", () => {
     it("should connect to TCP server and emit connected event", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
         reconnectDelay: 100,
       });
 
@@ -143,7 +172,7 @@ describe("TcpListener", () => {
       const listener = new TcpListener({
         type: "VDLM2",
         host: "127.0.0.1",
-        port: testPort, // No server running
+        port: unusedPort, // No server running on this port
         reconnectDelay: 100,
       });
 
@@ -161,12 +190,12 @@ describe("TcpListener", () => {
     });
 
     it("should auto-reconnect after disconnection", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "HFDL",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
         reconnectDelay: 100,
       });
 
@@ -188,7 +217,7 @@ describe("TcpListener", () => {
       expect(listener.connected).toBe(false);
 
       // Restart server on the same port for reconnection
-      testServer = await createTestServer(testPort);
+      ({ server: testServer } = await createTestServer(assignedPort));
 
       // Wait for reconnect — listener retries every 100 ms
       await waitForEvent(listener, "connected", 5000);
@@ -198,12 +227,12 @@ describe("TcpListener", () => {
     }, 15000);
 
     it("should not start twice", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       listener.start();
@@ -215,12 +244,12 @@ describe("TcpListener", () => {
     });
 
     it("should stop gracefully", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       listener.start();
@@ -235,12 +264,12 @@ describe("TcpListener", () => {
 
   describe("Message Parsing", () => {
     it("should parse single JSON line message", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       const messagePromise = new Promise<unknown>((resolve) => {
@@ -265,12 +294,12 @@ describe("TcpListener", () => {
     });
 
     it("should handle back-to-back JSON objects", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "VDLM2",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       const messages: unknown[] = [];
@@ -297,12 +326,12 @@ describe("TcpListener", () => {
     });
 
     it("should handle partial messages across multiple reads", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "HFDL",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       const messagePromise = new Promise<unknown>((resolve) => {
@@ -331,12 +360,12 @@ describe("TcpListener", () => {
     });
 
     it("should skip invalid JSON messages", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       const validMessages: unknown[] = [];
@@ -364,12 +393,12 @@ describe("TcpListener", () => {
     });
 
     it("should handle empty lines", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "VDLM2",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       const messages: unknown[] = [];
@@ -397,12 +426,12 @@ describe("TcpListener", () => {
 
   describe("Statistics", () => {
     it("should return connection statistics", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       listener.start();
@@ -414,7 +443,7 @@ describe("TcpListener", () => {
       expect(stats).toEqual({
         type: "ACARS",
         listenType: "tcp",
-        connectionPoint: `127.0.0.1:${testPort}`,
+        connectionPoint: `127.0.0.1:${assignedPort}`,
         connected: true,
       });
 
@@ -424,7 +453,7 @@ describe("TcpListener", () => {
 
   describe("Event Emission", () => {
     it("should emit all message type events correctly", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const messageTypes: Array<"ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM"> =
         ["ACARS", "VDLM2", "HFDL", "IMSL", "IRDM"];
@@ -433,7 +462,7 @@ describe("TcpListener", () => {
         const listener = new TcpListener({
           type,
           host: "127.0.0.1",
-          port: testPort,
+          port: assignedPort,
         });
 
         const messagePromise = new Promise<string>((resolve) => {
@@ -459,17 +488,17 @@ describe("TcpListener", () => {
         await new Promise<void>((resolve) => {
           testServer?.close(() => resolve());
         });
-        testServer = await createTestServer(testPort);
+        ({ server: testServer, port: assignedPort } = await createTestServer());
       }
     });
 
     it("should emit disconnected event on connection loss", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       listener.start();
@@ -490,12 +519,12 @@ describe("TcpListener", () => {
 
   describe("Edge Cases", () => {
     it("should handle empty data gracefully", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       const disconnectedPromise = new Promise<void>((resolve) => {
@@ -521,12 +550,12 @@ describe("TcpListener", () => {
     });
 
     it("should handle socket timeout gracefully", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "VDLM2",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
       });
 
       listener.start();
@@ -545,12 +574,12 @@ describe("TcpListener", () => {
     });
 
     it("should not reconnect after stop is called", async () => {
-      testServer = await createTestServer(testPort);
+      ({ server: testServer, port: assignedPort } = await createTestServer());
 
       const listener = new TcpListener({
         type: "ACARS",
         host: "127.0.0.1",
-        port: testPort,
+        port: assignedPort,
         reconnectDelay: 100,
       });
 
@@ -579,6 +608,55 @@ describe("TcpListener", () => {
 
       // Should only have connected once
       expect(connectCount).toBe(1);
+    });
+
+    it("regression: clears the reconnectTimer handle when stop() is called (LEAK-02)", async () => {
+      // connect()/handleDisconnect() both early-return once isRunning is
+      // false, so a stale (uncleared) reconnectTimer firing after stop()
+      // produces no observable behaviour difference — assert on the
+      // pending-timer count directly instead.
+      ({ server: testServer, port: assignedPort } = await createTestServer());
+
+      const listener = new TcpListener({
+        type: "ACARS",
+        host: "127.0.0.1",
+        port: assignedPort,
+        reconnectDelay: 5000,
+      });
+
+      await new Promise<void>((resolve) => {
+        listener.once("connected", () => resolve());
+        listener.start();
+      });
+
+      // Fake timers *after* the connection is established so the
+      // setTimeout() inside handleDisconnect() is the one
+      // vi.getTimerCount() can see. Socket close/end events are real
+      // socket I/O (net.Socket), not JS timers, so they still fire
+      // normally while fake timers are active.
+      vi.useFakeTimers();
+
+      try {
+        const disconnectedPromise = new Promise<void>((resolve) => {
+          listener.once("disconnected", () => resolve());
+        });
+
+        await closeTestServer(testServer);
+        testServer = null;
+        await disconnectedPromise;
+
+        // Exactly one pending timer: the reconnectTimer scheduled by
+        // handleDisconnect().
+        expect(vi.getTimerCount()).toBe(1);
+
+        listener.stop();
+
+        // LEAK-02 regression: stop() must clear the reconnectTimer handle,
+        // not just set isRunning = false.
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

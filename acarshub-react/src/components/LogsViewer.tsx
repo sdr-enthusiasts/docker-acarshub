@@ -16,8 +16,16 @@
 
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
-import { type LogEntry, type LogLevel, logBuffer } from "../utils/logger";
+import { useToastStore } from "../store/useToastStore";
+import {
+  createLogger,
+  type LogEntry,
+  type LogLevel,
+  logBuffer,
+} from "../utils/logger";
 import { Button } from "./Button";
+
+const logger = createLogger("LogsViewer");
 
 type LogLevelFilter = LogLevel | "all";
 
@@ -40,8 +48,8 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
   const [filter, setFilter] = useState<LogLevelFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
-  const logsEndRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
+  const showToast = useToastStore((state) => state.showToast);
 
   // Subscribe to log updates
   useEffect(() => {
@@ -49,12 +57,29 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
     return unsubscribe;
   }, []);
 
-  // Auto-scroll to bottom when new logs arrive
+  // Auto-scroll to bottom when new logs arrive.
+  //
+  // BUG-SETTINGS-SCROLL: previously this used
+  //   logsEndRef.current.scrollIntoView({ behavior: "smooth" })
+  // which scrolls *every* scrolling ancestor of the sentinel — including
+  // the Settings modal when LogsViewer is embedded there. That made the
+  // entire modal scroll to its bottom whenever a new log entry arrived,
+  // hiding the settings controls above the log panel. The fix is to
+  // imperatively set scrollTop on the LogsViewer's own scroll container
+  // (viewerRef → .logs-viewer-display) so the scroll is scoped to this
+  // component and ancestors are left alone.
+  //
+  // Also corrects a latent bug: the previous dep array was [autoScroll],
+  // so the effect only fired when the toggle flipped — not when new logs
+  // arrived. Including `logs` makes auto-scroll actually behave like
+  // auto-scroll.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `logs` is intentionally a trigger, not a read dependency — the effect body doesn't reference `logs`, but the dep is included so that arrival of new log entries re-runs the effect (which sets scrollTop on the viewer). Without this, the effect would only fire when the `autoScroll` toggle flips.
   useEffect(() => {
-    if (autoScroll && logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [autoScroll]);
+    if (!autoScroll) return;
+    const el = viewerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [autoScroll, logs]);
 
   // Filter logs by level and search term
   const filteredLogs = logs.filter((log) => {
@@ -102,11 +127,18 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
     const content = logBuffer.exportLogs();
     try {
       await navigator.clipboard.writeText(content);
-      // Could add a toast notification here
-      alert("Logs copied to clipboard!");
+      showToast({
+        variant: "success",
+        message: "Logs copied to clipboard",
+      });
     } catch (err) {
-      console.error("Failed to copy logs:", err);
-      alert("Failed to copy logs to clipboard");
+      logger.error("Failed to copy logs", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      showToast({
+        variant: "error",
+        message: "Failed to copy logs to clipboard",
+      });
     }
   };
 
@@ -202,7 +234,11 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
       <div
         ref={viewerRef}
         className="logs-viewer-display"
-        style={{ maxHeight: `${maxHeight}px` }}
+        style={
+          {
+            "--logs-viewer-max-height": `${maxHeight}px`,
+          } as React.CSSProperties
+        }
         // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable log region requires tabIndex for WCAG 2.1 SC 2.1.1 — keyboard users must be able to scroll without a pointer device
         tabIndex={0}
         role="log"
@@ -234,7 +270,6 @@ export const LogsViewer: React.FC<LogsViewerProps> = ({
             </div>
           ))
         )}
-        <div ref={logsEndRef} />
       </div>
     </div>
   );

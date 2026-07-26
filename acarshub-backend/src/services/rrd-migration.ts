@@ -60,7 +60,7 @@ import { rrdImportRegistry, timeseriesStats } from "../db/schema.js";
 import { createLogger } from "../utils/logger.js";
 
 const execAsync = promisify(exec);
-const logger = createLogger("rrd-migration");
+const logger = createLogger("services:rrd-migration");
 
 /**
  * Time-series data point

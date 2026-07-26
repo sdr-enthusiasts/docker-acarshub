@@ -105,7 +105,7 @@ export interface AcarsMsg {
   is_response?: number;
   is_onground?: number;
   error?: number | string;
-  libacars?: string; // JSON string that needs parsing
+  libacars?: string | LibacarsData; // JSON string or already-parsed decoder data
   level?: number;
   // Custom parameters injected by JavaScript or from the backend
   matched?: boolean;

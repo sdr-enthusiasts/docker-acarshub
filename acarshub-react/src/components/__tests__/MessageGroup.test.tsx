@@ -351,4 +351,45 @@ describe("MessageGroup", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  describe("NIT-03 regression: a11y attributes on multi-message group", () => {
+    // MessageGroup.tsx:186 carries two biome-ignore directives:
+    //   - lint/a11y/noStaticElementInteractions
+    //   - lint/a11y/useAriaPropsSupportedByRole
+    //
+    // Both are required: the multi-message <div> implements a focus-
+    // managed composite widget (role="group" + tabIndex=0 + onKeyDown
+    // for arrow navigation between message tabs), and aria-label is
+    // valid on role="group" per ARIA 1.2 §6.2.2 even though biome's
+    // rule flags it. A future cleanup that drops the suppressions
+    // MUST also remove the attributes they protect, or this test
+    // will catch the regression.
+    it('renders role="group", aria-label, and tabIndex=0 when group has multiple messages', () => {
+      const plane = makePlane([
+        makeMsg("uid-1"),
+        makeMsg("uid-2"),
+        makeMsg("uid-3"),
+      ]);
+      const { container } = renderGroup(plane);
+
+      const groupEl = container.querySelector(".message-group");
+      expect(groupEl).not.toBeNull();
+      expect(groupEl?.getAttribute("role")).toBe("group");
+      expect(groupEl?.getAttribute("aria-label")).toBe("Messages for N12345");
+      expect(groupEl?.getAttribute("tabindex")).toBe("0");
+    });
+
+    it("omits role, aria-label, and is non-focusable when group has a single message", () => {
+      const plane = makePlane([makeMsg("uid-1")]);
+      const { container } = renderGroup(plane);
+
+      const groupEl = container.querySelector(".message-group");
+      expect(groupEl).not.toBeNull();
+      // Single-message groups intentionally drop the composite-widget
+      // semantics — there's nothing to navigate.
+      expect(groupEl?.getAttribute("role")).toBeNull();
+      expect(groupEl?.getAttribute("aria-label")).toBeNull();
+      expect(groupEl?.getAttribute("tabindex")).toBe("-1");
+    });
+  });
 });

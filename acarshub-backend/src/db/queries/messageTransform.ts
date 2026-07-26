@@ -18,7 +18,7 @@ import { createLogger } from "../../utils/logger.js";
 import { getBackupDatabase, hasBackupDatabase } from "../client.js";
 import type { NewMessage } from "../schema.js";
 import { messages } from "../schema.js";
-import { type AlertMetadata, addMessage } from "./messages.js";
+import { type AlertMetadata, addMessage } from "./messages/index.js";
 
 const logger = createLogger("db:transform");
 

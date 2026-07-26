@@ -271,6 +271,45 @@ describe("Stats Writer Service", () => {
     it("should be safe to call without starting", () => {
       stopStatsWriter(); // Should not throw
     });
+
+    it("regression: stop() during alignment window cancels the pending first write (LEAK-01)", async () => {
+      // Bug: startStatsWriter scheduled a setTimeout to align to the next
+      // minute boundary but never captured the handle. If stop() ran during
+      // the alignment window (e.g. fast shutdown), the callback would still
+      // fire after stop, perform a write, and register a new setInterval
+      // that nothing owned — leaking a 60s timer per start/stop cycle.
+      const mockStats = {
+        acars: { lastMinute: 5, total: 50 },
+        vdlm2: { lastMinute: 0, total: 0 },
+        hfdl: { lastMinute: 0, total: 0 },
+        imsl: { lastMinute: 0, total: 0 },
+        irdm: { lastMinute: 0, total: 0 },
+        error: { lastMinute: 0, total: 0 },
+      };
+      vi.spyOn(getMessageQueue(), "getStats").mockReturnValue(mockStats);
+
+      // Position time well before the next minute boundary so the alignment
+      // setTimeout is guaranteed to be pending after start.
+      const baseTime = new Date("2024-01-01T12:00:30Z").getTime(); // 30s before next minute
+      vi.setSystemTime(baseTime);
+
+      startStatsWriter();
+
+      const db = getDatabase();
+      // No write yet — alignment timer hasn't fired.
+      expect(db.select().from(timeseriesStats).all()).toHaveLength(0);
+
+      // Stop while still inside the alignment window.
+      stopStatsWriter();
+
+      // Advance well past where the first aligned write would have happened
+      // and several would-be intervals beyond. If LEAK-01 regresses, the
+      // alignment callback fires after stop, performs the write, and arms a
+      // recurring interval — both are observable as rows in timeseries_stats.
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000); // 5 minutes
+
+      expect(db.select().from(timeseriesStats).all()).toHaveLength(0);
+    });
   });
 
   describe("integration with MessageQueue", () => {

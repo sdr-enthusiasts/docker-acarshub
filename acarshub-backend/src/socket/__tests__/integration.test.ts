@@ -1002,8 +1002,8 @@ describe("Socket.IO integration", () => {
       await waitForConnect(socket);
       await new Promise((r) => setTimeout(r, 200));
 
-      // Note: Python broadcasts signal to the namespace; Node targets the requester.
-      // This tests the Node behavior (targeted, not broadcast). See API_PARITY.md.
+      // The Node backend targets the requester (not a namespace broadcast).
+      // This tests the targeted-emit behavior.
       const alertTermsPromise = waitForEvent<{
         data: Record<number, { count: number; id: number; term: string }>;
       }>(socket, "alert_terms");

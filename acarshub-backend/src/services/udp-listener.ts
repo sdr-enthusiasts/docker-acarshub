@@ -22,10 +22,10 @@ import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
-} from "./decoder-listener.js";
-import type { MessageType } from "./tcp-listener.js";
+  MessageType,
+} from "./listener-types.js";
 
-const logger = createLogger("udp-listener");
+const logger = createLogger("services:udp-listener");
 
 /**
  * UDP Listener for decoder feeds.
@@ -188,10 +188,10 @@ export class UdpListener
 
     try {
       sock.bind(this.port, this.host === "*" ? "0.0.0.0" : this.host);
-    } catch (err) {
+    } catch (error) {
       logger.error(`${this.messageType} UDP bind() threw synchronously`, {
         type: this.messageType,
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       this.handleBindFailure();
     }
@@ -257,11 +257,11 @@ export class UdpListener
       try {
         const message = JSON.parse(trimmed);
         this.emit("message", this.messageType, message);
-      } catch (err) {
+      } catch (error) {
         logger.debug(`${this.messageType} UDP skipping invalid JSON`, {
           type: this.messageType,
           line: trimmed.substring(0, 100),
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }

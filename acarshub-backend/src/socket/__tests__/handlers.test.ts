@@ -115,6 +115,9 @@ vi.mock("../../config.js", () => ({
     backend: "4.0.0-test",
     frontend: "4.0.0-test",
   },
+  // NIT-01: formerly-hardcoded magic numbers, now sourced from config.ts.
+  MESSAGE_BATCH_CHUNK_SIZE: 25,
+  SEARCH_PAGE_SIZE: 50,
 }));
 
 vi.mock("../../db/index.js", () => ({
@@ -208,7 +211,10 @@ import {
   isMigrationRunning,
   registerPendingSocket,
 } from "../../startup-state.js";
-import { registerHandlers } from "../handlers.js";
+import {
+  registerHandlers,
+  resetAlertRegenStateForTesting,
+} from "../handlers/index.js";
 
 // ---------------------------------------------------------------------------
 // Typed aliases for mocked functions
@@ -355,6 +361,11 @@ function simulateConnect(socket: MockSocket): void {
 beforeEach(() => {
   // Reset all mocks
   vi.clearAllMocks();
+
+  // STATE-02: alertRegenState is module-level; without this reset, a test
+  // that leaves it mid-flight (or a future test added before the finally
+  // block's own cleanup runs) would leak "in progress" into the next test.
+  resetAlertRegenStateForTesting();
 
   // Default config
   mockGetConfig.mockReturnValue(makeDefaultConfig());
@@ -1173,6 +1184,99 @@ describe("handleRegenerateAlertMatches", () => {
       messages: [fakeAlert],
     });
   });
+
+  it("regression: an error thrown from within the catch block itself does not become an unhandled rejection and still clears the in-progress flag (ERR-02)", async () => {
+    // Force the regeneration path to throw so we exercise the inner catch...
+    mockGetCachedAlertTerms.mockReturnValue([]);
+    mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
+    mockRegenerateAllAlertMatches.mockImplementation(() => {
+      throw new Error("regen failed");
+    });
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // ...and make the catch block's own socket.emit() call throw, simulating
+    // e.g. the client having disconnected mid-run. Before the ERR-02 fix,
+    // this would reject the setImmediate(async () => {...}) IIFE's promise
+    // with nothing awaiting it — an unhandled rejection that vitest surfaces
+    // as a test-file failure. After the fix, the outer .catch() backstop
+    // handles it and this test completes normally.
+    (socket.emit as Mock).mockImplementation((event: string) => {
+      if (event === "regenerate_alert_matches_error") {
+        throw new Error("socket disconnected mid-emit");
+      }
+    });
+
+    socket.handlers.regenerate_alert_matches();
+
+    // Flush the setImmediate and the backstop .catch() microtask.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // The backstop must have reset the in-progress flag — prove it by
+    // switching the mock back to a normal implementation and confirming a
+    // fresh request is NOT rejected as "already in progress".
+    (socket.emit as Mock).mockImplementation(vi.fn());
+    mockRegenerateAllAlertMatches.mockReturnValue({
+      total_messages: 0,
+      matched_messages: 0,
+      total_matches: 0,
+    });
+    mockGetAlertCounts.mockReturnValue([]);
+
+    socket.handlers.regenerate_alert_matches();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const errors = emittedAs<{ error: string }>(
+      socket,
+      "regenerate_alert_matches_error",
+    );
+    expect(errors.some((e) => e.error.toLowerCase().includes("progress"))).toBe(
+      false,
+    );
+  });
+
+  it("regression: resetAlertRegenStateForTesting() clears in-progress state left dangling by a prior test (STATE-02)", async () => {
+    // Simulate a prior test leaving the module-level flag "stuck" at
+    // in-progress — e.g. because it triggered a regen but never awaited the
+    // deferred setImmediate work to let the finally block run. Without an
+    // explicit reset hook, this state would leak into whichever test runs
+    // next in this file (module-level state is shared across all `it`
+    // blocks since the module is only imported once).
+    mockGetCachedAlertTerms.mockReturnValue([]);
+    mockGetCachedAlertIgnoreTerms.mockReturnValue([]);
+    mockRegenerateAllAlertMatches.mockReturnValue({
+      total_messages: 0,
+      matched_messages: 0,
+      total_matches: 0,
+    });
+
+    const dirtySocket = makeMockSocket("dirty-socket");
+    simulateConnect(dirtySocket);
+    dirtySocket.handlers.regenerate_alert_matches();
+    // Deliberately do NOT flush setImmediate — the finally block that would
+    // naturally clear the flag never runs, leaving it stuck at true.
+
+    resetAlertRegenStateForTesting();
+
+    // A fresh request on a different socket must succeed (not be rejected
+    // as "already in progress"), proving the explicit reset — not the
+    // code's own eventual cleanup — is what cleared the flag.
+    const freshSocket = makeMockSocket("fresh-socket");
+    triggerRegen(freshSocket);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const errors = emittedAs<{ error: string }>(
+      freshSocket,
+      "regenerate_alert_matches_error",
+    );
+    expect(errors.some((e) => e.error.toLowerCase().includes("progress"))).toBe(
+      false,
+    );
+    const started = emittedAs(freshSocket, "regenerate_alert_matches_started");
+    expect(started).toHaveLength(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1684,6 +1788,256 @@ describe("handleRRDTimeseries — explicit start/end", () => {
 });
 
 // ---------------------------------------------------------------------------
+// SEC-01 — handleRRDTimeseries explicit-path input validation
+//
+// Regression: the explicit start/end/downsample path historically interpolated
+// caller-supplied values straight into a raw SQL template via sql.raw(...).
+// TypeScript typed them as `number?` but Socket.IO is an untyped wire, so a
+// malicious or buggy client could send a string and inject SQL. These tests
+// lock in runtime validation that rejects anything other than safe integers.
+// ---------------------------------------------------------------------------
+
+describe("handleRRDTimeseries — explicit-path input validation (SEC-01)", () => {
+  /** Wire up a mock DB; return the captured `db.all` mock so tests can assert
+   *  on whether and how the SQL path was reached. */
+  async function mockExplicitDb(): Promise<Mock> {
+    const mockAll = vi.fn().mockReturnValue([]);
+    const { getDatabase } = await import("../../db/index.js");
+    vi.mocked(getDatabase).mockReturnValue({
+      all: mockAll,
+    } as unknown as ReturnType<typeof getDatabase>);
+    return mockAll;
+  }
+
+  it("regression: rejects a string `start` payload (SQL injection vector) without touching the DB", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // The exact payload that motivated SEC-01: a SQL-injection attempt as a
+    // string where TypeScript expects a number.
+    socket.handlers.rrd_timeseries({
+      start: "0; DROP TABLE timeseries_stats--" as unknown as number,
+      end: Math.floor(Date.now() / 1000),
+      downsample: 300,
+    });
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // The handler must NOT have reached the DB.
+    expect(mockAll).not.toHaveBeenCalled();
+
+    // Post-SEC-03 contract: rejection now arrives as a structured
+    // `validation_error` event from validatedHandler() rather than a
+    // `rrd_timeseries_data { error }` from the in-handler check.  The
+    // protection against the SQL-injection vector is the same — the DB
+    // is never touched — but the wire response is the new generic shape.
+    const validationErrors = emittedAs<{
+      event: string;
+      summary: string;
+      issues: Array<{ path: Array<string | number>; code: string }>;
+    }>(socket, "validation_error");
+    expect(validationErrors).toHaveLength(1);
+    expect(validationErrors[0].event).toBe("rrd_timeseries");
+    expect(validationErrors[0].issues[0].path).toEqual(["start"]);
+  });
+
+  it("rejects a string `end` payload", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: "now()" as unknown as number,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("rejects a string `downsample` payload", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: "300; DELETE FROM timeseries_stats--" as unknown as number,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("rejects a negative `start`", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: -1,
+      end: 1_700_000_000,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("rejects a non-integer (fractional) `start`", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000.5,
+      end: 1_700_086_400,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("rejects NaN/Infinity `end`", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: Number.POSITIVE_INFINITY,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("rejects `end` <= `start`", async () => {
+    // This is the one cross-field invariant that zod cannot express in a
+    // per-field schema, so it remains in the handler and emits the legacy
+    // `rrd_timeseries_data { error }` shape rather than `validation_error`.
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_086_400,
+      end: 1_700_000_000,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeDefined();
+  });
+
+  it("rejects out-of-range `downsample` (< 60s or > 1 day)", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Below floor — would create absurdly small buckets and is also nonsensical.
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: 30,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+
+    socket.emit.mockClear();
+
+    // Above ceiling — protects against denial-of-service via giant buckets.
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: 86_401,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(mockAll).not.toHaveBeenCalled();
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("accepts valid integer parameters and reaches the DB layer", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).toHaveBeenCalledTimes(1);
+    expect(
+      firstEmit<{ error?: string }>(socket, "rrd_timeseries_data")?.error,
+    ).toBeUndefined();
+  });
+
+  it("regression: even when validation passes, parameters bind via the sql tagged template (no raw interpolation)", async () => {
+    const mockAll = await mockExplicitDb();
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.rrd_timeseries({
+      start: 1_700_000_000,
+      end: 1_700_086_400,
+      downsample: 300,
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(mockAll).toHaveBeenCalledTimes(1);
+
+    // Drizzle's `sql` tagged template returns a SQL object with a
+    // `queryChunks` array that alternates between static SQL fragments
+    // (objects of shape `{ value: string[] }`) and bound parameter values.
+    // With the (insecure) `sql.raw` template, the numbers would be baked
+    // into those static `value` strings. With the (secure) `sql` template,
+    // they live as separate chunks alongside the SQL fragments.
+    //
+    // We assert that NONE of the static fragments contain the literal
+    // numeric values — proving the fix isn't merely string-equivalent to
+    // the old `sql.raw` behaviour but structurally parameterised.
+    const sqlArg = mockAll.mock.calls[0]?.[0] as {
+      queryChunks?: Array<{ value?: string[] } | unknown>;
+    };
+    expect(sqlArg).toBeDefined();
+    expect(Array.isArray(sqlArg.queryChunks)).toBe(true);
+
+    const staticFragments =
+      sqlArg.queryChunks
+        ?.filter(
+          (c): c is { value: string[] } =>
+            typeof c === "object" &&
+            c !== null &&
+            "value" in c &&
+            Array.isArray((c as { value: unknown }).value),
+        )
+        .flatMap((c) => c.value)
+        .join("") ?? "";
+
+    expect(staticFragments).not.toContain("1700000000");
+    expect(staticFragments).not.toContain("1700086400");
+    expect(staticFragments).not.toContain("300");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // zeroFillBuckets — tested directly in utils/__tests__/timeseries.test.ts
 // The explicit start/end path below still exercises zero-fill end-to-end.
 // ---------------------------------------------------------------------------
@@ -1771,5 +2125,309 @@ describe("migration-aware connection handling", () => {
     expect(socket.handlers.request_status).toBeDefined();
     expect(socket.handlers.signal_freqs).toBeDefined();
     expect(socket.handlers.disconnect).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TYPE-01/02 regression: legacy Flask-SocketIO 3rd-argument namespace shape
+// ---------------------------------------------------------------------------
+//
+// Prior to TYPE-01/02 the React frontend emitted with a trailing "/main"
+// namespace argument:
+//
+//   socket.emit("query_search", payload, "/main")
+//
+// That signature is a Flask-SocketIO Python-client quirk; in Socket.IO v4
+// the namespace is bound at connection time (`io.of("/main")` server-side
+// matches `io("${origin}/main", ...)` client-side) and any extra positional
+// arg after `payload` is silently ignored by the server-side handler unless
+// the handler explicitly reads more parameters.
+//
+// These tests pin that contract: handlers must produce identical output
+// for `(payload)` and `(payload, "/main")`. Without this guarantee a future
+// handler that adds a 2nd parameter would silently start consuming the
+// dead namespace string and corrupt its own behaviour.
+// ---------------------------------------------------------------------------
+describe("TYPE-01/02 regression: legacy 3rd-arg namespace is inert", () => {
+  it("query_search produces identical results with and without trailing namespace arg", () => {
+    mockDatabaseSearch.mockReturnValue({
+      messages: [{ uid: "uid-1" }],
+      totalCount: 1,
+    });
+    mockEnrichMessages.mockReturnValue([makeEnrichedMsg("uid-1")]);
+
+    const socketA = makeMockSocket();
+    simulateConnect(socketA);
+    // New-shape: payload only.
+    (socketA.handlers.query_search as (...args: unknown[]) => void)({
+      search_term: { flight: "UAL123" },
+    });
+
+    mockDatabaseSearch.mockReturnValue({
+      messages: [{ uid: "uid-1" }],
+      totalCount: 1,
+    });
+    mockEnrichMessages.mockReturnValue([makeEnrichedMsg("uid-1")]);
+
+    const socketB = makeMockSocket();
+    simulateConnect(socketB);
+    // Legacy-shape: payload + stale namespace string.
+    (socketB.handlers.query_search as (...args: unknown[]) => void)(
+      { search_term: { flight: "UAL123" } },
+      "/main",
+    );
+
+    const a = emittedAs<{ num_results: number }>(
+      socketA,
+      "database_search_results",
+    );
+    const b = emittedAs<{ num_results: number }>(
+      socketB,
+      "database_search_results",
+    );
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(1);
+    expect(a[0].num_results).toBe(b[0].num_results);
+  });
+
+  it("request_status accepts both shapes without throwing", () => {
+    const socketA = makeMockSocket();
+    simulateConnect(socketA);
+    expect(() =>
+      (socketA.handlers.request_status as (...args: unknown[]) => void)(),
+    ).not.toThrow();
+
+    const socketB = makeMockSocket();
+    simulateConnect(socketB);
+    expect(() =>
+      (socketB.handlers.request_status as (...args: unknown[]) => void)(
+        {},
+        "/main",
+      ),
+    ).not.toThrow();
+  });
+
+  it("signal_freqs accepts both shapes without throwing", () => {
+    const socketA = makeMockSocket();
+    simulateConnect(socketA);
+    expect(() =>
+      (socketA.handlers.signal_freqs as (...args: unknown[]) => void)(),
+    ).not.toThrow();
+
+    const socketB = makeMockSocket();
+    simulateConnect(socketB);
+    expect(() =>
+      (socketB.handlers.signal_freqs as (...args: unknown[]) => void)(
+        { freqs: true },
+        "/main",
+      ),
+    ).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SEC-03 regression: zod-validated handler inputs
+//
+// Socket.IO is an untyped wire — TypeScript on a `socket.on(...)` handler is
+// documentation-only, so without runtime validation any client can send any
+// shape and trigger TypeError or worse downstream.  These tests pin down the
+// post-SEC-03 contract:
+//
+//   1. Invalid shape → handler is NOT invoked, `validation_error` is emitted,
+//      no business-logic side effects (DB / cache / namespace-broadcast).
+//   2. Valid shape → handler runs and emits its normal response event.
+//   3. Unknown keys → rejected (strict() schemas).
+//   4. The structured `validation_error` payload identifies the rejected
+//      event and includes a zod-style issue list the frontend can render.
+//
+// To prove these tests really cover the regression, run them against a
+// commit where validatedHandler() is bypassed: every assertion should fail.
+// ---------------------------------------------------------------------------
+
+describe("SEC-03 regression: zod-validated socket inputs", () => {
+  it("regression: query_search rejects a non-object payload without invoking the handler", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Untyped wire — a client could send a string, a number, or null.
+    socket.handlers.query_search("malicious string" as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    // The handler emits database_search_results on success.  It must NOT
+    // have done so for a string input.
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+
+    // A structured validation_error must have been sent instead.
+    const errors = emittedAs<{
+      event: string;
+      summary: string;
+      issues: Array<{ path: Array<string | number>; code: string }>;
+    }>(socket, "validation_error");
+    expect(errors).toHaveLength(1);
+    expect(errors[0].event).toBe("query_search");
+    expect(errors[0].issues.length).toBeGreaterThan(0);
+    expect(typeof errors[0].summary).toBe("string");
+  });
+
+  it("regression: query_search rejects a missing search_term without invoking the handler", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_search({ results_after: 0 } as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("regression: query_search rejects a non-string field inside search_term", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // icao is typed as string in CurrentSearch; sending a number would
+    // historically reach databaseSearch where the cast would silently
+    // coerce or fail.
+    socket.handlers.query_search({
+      search_term: { icao: 123 as unknown as string },
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+    const error = firstEmit<{
+      event: string;
+      issues: Array<{ path: Array<string | number> }>;
+    }>(socket, "validation_error");
+    expect(error).toBeDefined();
+    expect(error?.issues[0].path).toEqual(["search_term", "icao"]);
+  });
+
+  it("regression: query_search strict() rejects unknown keys inside search_term", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_search({
+      search_term: { icao: "ABC123", unexpected_field: "drop" },
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("query_search accepts a partial search_term and reaches the handler", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Only icao supplied; other fields default to "" per CurrentSearchSchema.
+    // This matches the runtime contract the handler always honoured —
+    // SEC-03 is not allowed to break that.
+    socket.handlers.query_search({
+      search_term: { icao: "ABC123" },
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(1);
+    expect(emittedAs(socket, "validation_error")).toHaveLength(0);
+  });
+
+  it("regression: update_alerts rejects a payload missing the `terms` array", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    // Set allowRemoteUpdates so update_alerts isn't short-circuited.
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ allowRemoteUpdates: true }),
+    );
+
+    socket.handlers.update_alerts({ ignore: ["foo"] } as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+    expect(mockSetAlertTerms).not.toHaveBeenCalled();
+  });
+
+  it("regression: update_alerts rejects non-string entries inside terms", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ allowRemoteUpdates: true }),
+    );
+
+    socket.handlers.update_alerts({
+      terms: ["valid", 42 as unknown as string],
+      ignore: [],
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+    expect(mockSetAlertTerms).not.toHaveBeenCalled();
+  });
+
+  it("regression: alert_term_query rejects non-string field types", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.alert_term_query({
+      icao: { $ne: null } as unknown as string,
+      flight: "",
+      tail: "",
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "database_search_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("regression: query_alerts_by_term rejects a missing `term`", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_alerts_by_term({ page: 0 } as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "alerts_by_term_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("regression: query_alerts_by_term rejects a negative `page`", async () => {
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_alerts_by_term({ term: "foo", page: -5 });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(emittedAs(socket, "alerts_by_term_results")).toHaveLength(0);
+    expect(firstEmit(socket, "validation_error")).toBeDefined();
+  });
+
+  it("validation_error payload is well-formed: { event, summary, issues[] }", async () => {
+    // Tight assertion on the wire shape so the frontend toast UI can rely on it.
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    socket.handlers.query_search(null as unknown as object);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const error = firstEmit<{
+      event: string;
+      summary: string;
+      issues: Array<{
+        path: Array<string | number>;
+        code: string;
+        message: string;
+      }>;
+    }>(socket, "validation_error");
+
+    expect(error).toBeDefined();
+    expect(error?.event).toBe("query_search");
+    expect(typeof error?.summary).toBe("string");
+    expect(error?.summary.length).toBeGreaterThan(0);
+    expect(Array.isArray(error?.issues)).toBe(true);
+    expect(error?.issues.length).toBeGreaterThan(0);
+    for (const issue of error?.issues ?? []) {
+      expect(Array.isArray(issue.path)).toBe(true);
+      expect(typeof issue.code).toBe("string");
+      expect(typeof issue.message).toBe("string");
+    }
   });
 });

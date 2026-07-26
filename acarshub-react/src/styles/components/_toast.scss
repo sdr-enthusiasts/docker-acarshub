@@ -25,10 +25,13 @@
 
 .toast {
   position: fixed;
-  bottom: $spacing-lg;
-  right: $spacing-lg;
-  min-width: 300px;
-  max-width: 400px;
+  // Mobile-first: full-width bottom bar (see the breakpoint(sm) override
+  // below for the desktop-style bottom-right corner box).
+  left: $spacing-md;
+  right: $spacing-md;
+  bottom: $spacing-md;
+  min-width: auto;
+  max-width: none;
   background-color: var(--color-surface0);
   border: 2px solid var(--color-danger);
   border-radius: $radius-lg;
@@ -41,6 +44,14 @@
   z-index: $z-index-toast;
   overflow: hidden;
 
+  @include breakpoint(sm) {
+    left: unset;
+    right: $spacing-lg;
+    bottom: $spacing-lg;
+    min-width: 300px;
+    max-width: 400px;
+  }
+
   // Visible state
   &--visible {
     opacity: 1;
@@ -51,6 +62,26 @@
   &--exiting {
     opacity: 0;
     transform: translateX(calc(100% + #{$spacing-lg}));
+  }
+
+  // Variant: alert (default — alert-term match)
+  &--alert {
+    border-color: var(--color-danger);
+  }
+
+  // Variant: success — operation succeeded
+  &--success {
+    border-color: var(--color-success);
+  }
+
+  // Variant: error — operation failed
+  &--error {
+    border-color: var(--color-danger);
+  }
+
+  // Variant: info — neutral notice
+  &--info {
+    border-color: var(--color-primary);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -82,20 +113,40 @@
   font-weight: $font-weight-bold;
   font-size: $font-size-base;
   color: var(--color-danger);
+
+  // Variant title colors mirror the border colors
+  .toast--success & {
+    color: var(--color-success);
+  }
+
+  .toast--error & {
+    color: var(--color-danger);
+  }
+
+  .toast--info & {
+    color: var(--color-primary);
+  }
 }
 
 .toast__close {
   @include button-reset;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+  @include flex-center;
+  // SCSS-TOUCH mobile-first: toast dismiss is mobile-critical accessibility
+  // (toasts are ARIA-live announcements; dismissing them must be reachable
+  // by touch). 28×28 was below WCAG 2.1 AA. Mobile-first default is 44,
+  // desktop shrinks to 28 for density inside the toast tray.
+  width: 44px;
+  height: 44px;
   border-radius: $radius-md;
   color: var(--color-text);
   background-color: transparent;
   transition: background-color $transition-fast;
   cursor: pointer;
+
+  @include breakpoint(md) {
+    width: 28px;
+    height: 28px;
+  }
 
   &:hover {
     background-color: var(--color-surface1);
@@ -122,6 +173,11 @@
   word-break: break-word;
 }
 
+.toast__message {
+  color: var(--color-text);
+  word-break: break-word;
+}
+
 .toast__progress {
   height: 4px;
   background-color: var(--color-surface1);
@@ -132,8 +188,23 @@
   height: 100%;
   background: linear-gradient(90deg, var(--color-danger), var(--color-red));
   width: 100%;
-  animation: toast-progress linear forwards;
+  // Animation duration set by the component via the
+  // --toast-progress-duration custom property (STYLE-INLINE-DYNAMIC).
+  animation: toast-progress var(--toast-progress-duration) linear forwards;
   transform-origin: left;
+
+  // Variant progress-bar gradients mirror border / title colors
+  .toast--success & {
+    background: linear-gradient(
+      90deg,
+      var(--color-success),
+      var(--color-green)
+    );
+  }
+
+  .toast--info & {
+    background: linear-gradient(90deg, var(--color-primary), var(--color-blue));
+  }
 
   @media (prefers-reduced-motion: reduce) {
     animation: none;
@@ -156,37 +227,26 @@
  */
 .toast-container {
   position: fixed;
-  bottom: $spacing-lg;
-  right: $spacing-lg;
+  // Mobile-first: full-width bottom bar, matching .toast above.
+  left: $spacing-md;
+  right: $spacing-md;
+  bottom: $spacing-md;
   display: flex;
   flex-direction: column-reverse;
   gap: $spacing-md;
   z-index: $z-index-toast;
   pointer-events: none;
 
+  @include breakpoint(sm) {
+    left: unset;
+    right: $spacing-lg;
+    bottom: $spacing-lg;
+  }
+
   .toast {
     position: relative;
     bottom: auto;
     right: auto;
     pointer-events: auto;
-  }
-}
-
-/**
- * Mobile Responsive
- */
-@media (max-width: #{$breakpoint-sm - 1px}) {
-  .toast {
-    left: $spacing-md;
-    right: $spacing-md;
-    bottom: $spacing-md;
-    min-width: auto;
-    max-width: none;
-  }
-
-  .toast-container {
-    left: $spacing-md;
-    right: $spacing-md;
-    bottom: $spacing-md;
   }
 }

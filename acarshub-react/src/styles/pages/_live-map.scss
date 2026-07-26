@@ -42,12 +42,12 @@
     overflow: hidden;
     background-color: var(--color-mantle);
     border-right: none; // Border replaced by the resize handle element
-    display: flex;
     flex-direction: column;
+    // Mobile-first: hidden by default, can be toggled.
+    display: none;
 
-    // Mobile: hide by default, can be toggled
-    @include breakpoint-max(md) {
-      display: none;
+    @include breakpoint(md) {
+      display: flex;
     }
 
     // Collapsed state: shrink to a thin strip showing only the expand button.
@@ -109,6 +109,12 @@
     position: relative;
     transition: background-color 0.15s ease;
     z-index: 5;
+    // Mobile-first: hidden where the sidebar itself is not shown.
+    display: none;
+
+    @include breakpoint(md) {
+      display: block;
+    }
 
     @media (prefers-reduced-motion: reduce) {
       transition: none;
@@ -139,11 +145,6 @@
       &::after {
         background-color: var(--color-blue);
       }
-    }
-
-    // Hide on mobile where the sidebar is not shown
-    @include breakpoint-max(md) {
-      display: none;
     }
   }
 

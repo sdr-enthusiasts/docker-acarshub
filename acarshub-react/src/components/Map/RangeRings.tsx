@@ -18,6 +18,113 @@ import { useCallback, useMemo } from "react";
 import { Layer, Source, useMap } from "react-map-gl/maplibre";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
+import { createLogger } from "../../utils/logger";
+
+const logger = createLogger("RangeRings");
+
+// --- FEAT-RANGE-RINGS Phase B tuning constants -----------------------------
+//
+// See agent-docs/REMEDIATION_PLAN.md §15 FEAT-RANGE-RINGS for the full Phase
+// A investigation. Summary of the root cause the constants below address:
+// the old algorithm sized all rings to fit fully inside `minEdgeDistance`
+// (the shortest of the 4 station-to-edge distances) with a flat 30% margin,
+// which on a landscape map container — the common case — meant rings were
+// sized to the *short* (north/south) axis and looked tiny against the much
+// larger long axis. Every comparable tool surveyed (tar1090, dump1090-fa,
+// dump1090-mutability) accepts rings clipping at the viewport edge as normal
+// map behavior; this implementation now does the same for the *outer*
+// rings, while still guaranteeing the *innermost* ring is always fully
+// visible (never clipped).
+
+/** Fraction of the nearest visible corner distance the outer ring targets. */
+const CORNER_BUFFER = 0.9;
+
+/**
+ * Fraction of `minEdgeDistance` used as the outer-ring target when even the
+ * corner-based target would clip the innermost ring (rare — see
+ * `calculateRangeRingRadii`'s fallback branch). This is the old algorithm's
+ * buffer, preserved as the safety net.
+ */
+const EDGE_FALLBACK_BUFFER = 0.7;
+
+/** Ring count never drops below this, matching the original fixed count. */
+const MIN_RING_COUNT = 3;
+
+/** Ring count never exceeds this — more than 5 concentric rings reads as
+ * clutter rather than useful reference data, even on a very wide desktop
+ * viewport. */
+const MAX_RING_COUNT = 5;
+
+/** Below this container width (px), cap ring count at `MIN_RING_COUNT` —
+ * matches the mobile breakpoint used elsewhere (DESIGN_LANGUAGE.md). */
+const MOBILE_WIDTH_BREAKPOINT = 400;
+
+/** Below this container width (px), cap ring count at 4. */
+const TABLET_WIDTH_BREAKPOINT = 900;
+
+/**
+ * Determine the maximum number of range rings to render for a given map
+ * container width. Narrower containers (mobile) get fewer rings so labels
+ * don't crowd each other; wide desktop containers can support more.
+ *
+ * Exported for direct unit testing without needing to mount the component.
+ */
+export function getMaxRingCount(containerWidthPx: number | undefined): number {
+  if (containerWidthPx === undefined) {
+    return MIN_RING_COUNT;
+  }
+  if (containerWidthPx < MOBILE_WIDTH_BREAKPOINT) {
+    return MIN_RING_COUNT;
+  }
+  if (containerWidthPx < TABLET_WIDTH_BREAKPOINT) {
+    return 4;
+  }
+  return MAX_RING_COUNT;
+}
+
+/**
+ * Compute the final list of ring radii (NM) given the pre-computed distance
+ * inputs. Pulled out of the component's `useMemo` so the count-selection /
+ * buffer logic is directly unit-testable with contrived distance values,
+ * independent of constructing real lat/lon bounds.
+ *
+ * @param minEdgeDistance - shortest of the 4 station-to-edge distances (NM).
+ *   Used as the hard "never clip the innermost ring" ceiling.
+ * @param minCornerDistance - shortest of the 4 station-to-corner distances
+ *   (NM). Used as the generous outer-ring target — outer rings are allowed
+ *   to clip past this in the short axis, matching tar1090/dump1090 behavior.
+ * @param maxRingCount - upper bound on ring count (from `getMaxRingCount`).
+ * @param roundFn - nice-interval rounding function (injected so this stays a
+ *   pure function of its inputs for testing).
+ */
+export function calculateRangeRingRadii(
+  minEdgeDistance: number,
+  minCornerDistance: number,
+  maxRingCount: number,
+  roundFn: (distance: number) => number,
+): number[] {
+  const outerTarget = Math.max(
+    minCornerDistance * CORNER_BUFFER,
+    minEdgeDistance * EDGE_FALLBACK_BUFFER,
+  );
+
+  for (let count = maxRingCount; count >= MIN_RING_COUNT; count--) {
+    const step = roundFn(outerTarget / count);
+    if (step <= minEdgeDistance) {
+      return Array.from({ length: count }, (_, i) => step * (i + 1));
+    }
+  }
+
+  // Fallback: even MIN_RING_COUNT rings at the corner-based target would
+  // clip the innermost ring (only possible on near-square aspect ratios
+  // where nice-interval rounding pushes the step just over minEdgeDistance).
+  // Revert to the original edge-only formula, which always satisfies the
+  // no-clip invariant by construction.
+  const fallbackStep = roundFn(
+    (minEdgeDistance * EDGE_FALLBACK_BUFFER) / MIN_RING_COUNT,
+  );
+  return [fallbackStep, fallbackStep * 2, fallbackStep * 3];
+}
 
 interface RangeRingsProps {
   /** Current map viewport state (used to calculate dynamic ring sizes) */
@@ -33,7 +140,9 @@ interface RangeRingsProps {
  *
  * Displays concentric circles around the ground station to visualize
  * reception range. Ring radii are dynamically calculated based on viewport
- * and zoom level, always showing 3 rings that fit the current view.
+ * and zoom level, showing 3-5 rings depending on container width (see
+ * `getMaxRingCount`) sized to reach close to the visible map's corner
+ * distance, not just the shortest edge (see `calculateRangeRingRadii`).
  *
  * Uses GeoJSON circle approximation (64-point polygon) for MapLibre compatibility.
  */
@@ -118,8 +227,18 @@ export function RangeRings({ viewState }: RangeRingsProps) {
   }, []);
 
   /**
-   * Calculate dynamic range ring radii based on current viewport
-   * Returns 3 rings that fit nicely in the current view
+   * Calculate dynamic range ring radii based on current viewport.
+   * Returns 3-5 rings (see `getMaxRingCount`) sized via
+   * `calculateRangeRingRadii` — outer rings target the visible corner
+   * distance (allowing short-axis clipping, like tar1090/dump1090), while
+   * the innermost ring is always guaranteed fully visible.
+   *
+   * Size is derived from the *viewport's own* center (`viewState`), not
+   * the station's position — this keeps ring size/count stable while
+   * panning, and correct even when the station is off-center within the
+   * current view (see FEAT-RANGE-RINGS Phase B fix-up in
+   * agent-docs/REMEDIATION_PLAN.md §15). Rings are still drawn centered on
+   * the station's real-world coordinates further down.
    */
   const rangeRings = useMemo(() => {
     if (!map || !viewState) {
@@ -138,37 +257,57 @@ export function RangeRings({ viewState }: RangeRingsProps) {
           : [100, 200, 300];
       }
 
-      // Calculate distances from station to each edge (not corners)
       const ne = bounds.getNorthEast();
       const sw = bounds.getSouthWest();
 
-      // Distance to each edge (north, south, east, west)
+      // Ring SIZE is derived from the current *viewport's own* geometry —
+      // distances measured from the map's center (viewState.latitude/
+      // longitude), NOT from the station's position. This is deliberate:
+      // the station is usually near the map center (the default camera
+      // centers on it), but as soon as the user pans, the station drifts
+      // off-center within the visible frame. Sizing off "station -> edge
+      // distance" made minEdgeDistance collapse toward zero whenever the
+      // station approached any edge of the pan — rings would shrink,
+      // change count, or nearly disappear purely from panning, with no
+      // zoom change at all. Sizing off "map-center -> edge distance"
+      // instead means ring size only changes with zoom (and the smooth,
+      // latitude-dependent Mercator scale factor), and is completely
+      // stable under a pure pan. The rings are still *drawn* centered on
+      // the station's real-world position (`createCircle`/
+      // `createLabelPoints` below use `stationLat`/`stationLon`
+      // unchanged) — only the SIZE calculation moved off the station.
+      const viewCenterLat = viewState.latitude;
+      const viewCenterLon = viewState.longitude;
+
+      // Distance from the viewport center to each edge (north, south,
+      // east, west) — i.e. the current view's own half-height/half-width.
       const distanceToNorth = calculateDistance(
-        stationLat,
-        stationLon,
+        viewCenterLat,
+        viewCenterLon,
         ne.lat,
-        stationLon,
+        viewCenterLon,
       );
       const distanceToSouth = calculateDistance(
-        stationLat,
-        stationLon,
+        viewCenterLat,
+        viewCenterLon,
         sw.lat,
-        stationLon,
+        viewCenterLon,
       );
       const distanceToEast = calculateDistance(
-        stationLat,
-        stationLon,
-        stationLat,
+        viewCenterLat,
+        viewCenterLon,
+        viewCenterLat,
         ne.lng,
       );
       const distanceToWest = calculateDistance(
-        stationLat,
-        stationLon,
-        stationLat,
+        viewCenterLat,
+        viewCenterLon,
+        viewCenterLat,
         sw.lng,
       );
 
-      // Use the minimum distance to the nearest edge
+      // Use the minimum distance to the nearest edge — the innermost ring
+      // must never exceed this, so it's always fully visible.
       const minEdgeDistance = Math.min(
         distanceToNorth,
         distanceToSouth,
@@ -176,17 +315,54 @@ export function RangeRings({ viewState }: RangeRingsProps) {
         distanceToWest,
       );
 
-      // Use 70% of nearest edge distance for safety margin (prevents clipping)
-      const maxDistance = minEdgeDistance * 0.7;
+      // Distance from the viewport center to each of the 4 corners; the
+      // outer rings target this (more generous than minEdgeDistance) and
+      // may clip in the short axis — normal map behavior, same as
+      // tar1090/dump1090's static rings.
+      const distanceToNE = calculateDistance(
+        viewCenterLat,
+        viewCenterLon,
+        ne.lat,
+        ne.lng,
+      );
+      const distanceToNW = calculateDistance(
+        viewCenterLat,
+        viewCenterLon,
+        ne.lat,
+        sw.lng,
+      );
+      const distanceToSE = calculateDistance(
+        viewCenterLat,
+        viewCenterLon,
+        sw.lat,
+        ne.lng,
+      );
+      const distanceToSW = calculateDistance(
+        viewCenterLat,
+        viewCenterLon,
+        sw.lat,
+        sw.lng,
+      );
+      const minCornerDistance = Math.min(
+        distanceToNE,
+        distanceToNW,
+        distanceToSE,
+        distanceToSW,
+      );
 
-      // Calculate ring spacing (divide by 3 for 3 rings)
-      const spacing = maxDistance / 3;
-      const roundedSpacing = roundToNiceInterval(spacing);
+      const containerWidth = map.getContainer?.().clientWidth;
+      const maxRingCount = getMaxRingCount(containerWidth);
 
-      // Generate 3 rings with nice rounded intervals
-      return [roundedSpacing, roundedSpacing * 2, roundedSpacing * 3];
+      return calculateRangeRingRadii(
+        minEdgeDistance,
+        minCornerDistance,
+        maxRingCount,
+        roundToNiceInterval,
+      );
     } catch (error) {
-      console.error("Error calculating dynamic range rings:", error);
+      logger.error("Error calculating dynamic range rings", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Fallback to settings or defaults
       return settings.map.rangeRings.length > 0
         ? settings.map.rangeRings
@@ -195,8 +371,6 @@ export function RangeRings({ viewState }: RangeRingsProps) {
   }, [
     map,
     viewState,
-    stationLat,
-    stationLon,
     settings.map.rangeRings,
     calculateDistance,
     roundToNiceInterval,

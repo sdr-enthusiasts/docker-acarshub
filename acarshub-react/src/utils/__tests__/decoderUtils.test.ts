@@ -14,8 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DecodedText, DecodedTextItem } from "../../types";
+
+const loggerMocks = vi.hoisted(() => ({
+  info: vi.fn(),
+  debug: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  trace: vi.fn(),
+}));
+
+vi.mock("../logger", () => ({
+  createLogger: () => loggerMocks,
+}));
+
 import {
   formatDecodedText,
   highlightMatchedText,
@@ -415,14 +428,8 @@ describe("decoderUtils", () => {
   });
 
   describe("parseAndFormatLibacars", () => {
-    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-
     beforeEach(() => {
-      consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      consoleErrorSpy.mockRestore();
+      loggerMocks.error.mockClear();
     });
 
     describe("frequency data", () => {
@@ -597,6 +604,56 @@ describe("decoderUtils", () => {
         expect(result).toContain("Station1");
         expect(result).toContain("Station2");
       });
+
+      it("regression: formats media-adv current link time from JSON text", () => {
+        const libacarsString = JSON.stringify({
+          "media-adv": {
+            err: false,
+            version: 0,
+            current_link: {
+              code: "H",
+              descr: "HF",
+              established: false,
+              time: { hour: 5, min: 6, sec: 55 },
+            },
+            links_avail: [{ code: "V", descr: "VHF ACARS" }],
+          },
+        });
+
+        const result = parseAndFormatLibacars(libacarsString);
+
+        expect(result).toContain("Media Adv");
+        expect(result).toContain("Current Link");
+        expect(result).toContain("HF");
+        expect(result).toContain("Links Avail");
+        expect(result).toContain("05:06:55 UTC");
+        expect(loggerMocks.error).not.toHaveBeenCalled();
+      });
+
+      it("regression: formats media-adv current link time from parsed objects", () => {
+        const libacarsObject = {
+          "media-adv": {
+            err: false,
+            version: 0,
+            current_link: {
+              code: "H",
+              descr: "HF",
+              established: false,
+              time: { hour: 5, min: 6, sec: 55 },
+            },
+            links_avail: [{ code: "V", descr: "VHF ACARS" }],
+          },
+        };
+
+        const result = parseAndFormatLibacars(libacarsObject);
+
+        expect(result).toContain("Media Adv");
+        expect(result).toContain("Current Link");
+        expect(result).toContain("HF");
+        expect(result).toContain("Links Avail");
+        expect(result).toContain("05:06:55 UTC");
+        expect(loggerMocks.error).not.toHaveBeenCalled();
+      });
     });
 
     describe("data cleaning", () => {
@@ -642,14 +699,14 @@ describe("decoderUtils", () => {
         const result = parseAndFormatLibacars(libacarsString);
 
         expect(result).toBeNull();
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerMocks.error).toHaveBeenCalled();
       });
 
       it("should return null for empty string", () => {
         const result = parseAndFormatLibacars("");
 
         expect(result).toBeNull();
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerMocks.error).toHaveBeenCalled();
       });
 
       it("should return null for malformed JSON", () => {
@@ -658,7 +715,7 @@ describe("decoderUtils", () => {
         const result = parseAndFormatLibacars(libacarsString);
 
         expect(result).toBeNull();
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerMocks.error).toHaveBeenCalled();
       });
 
       it("should handle JSON with no braces", () => {
@@ -667,7 +724,7 @@ describe("decoderUtils", () => {
         const result = parseAndFormatLibacars(libacarsString);
 
         expect(result).toBeNull();
-        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(loggerMocks.error).toHaveBeenCalled();
       });
     });
 

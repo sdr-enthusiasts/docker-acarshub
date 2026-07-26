@@ -119,6 +119,11 @@
       background-color: rgba(var(--color-yellow-rgb), 0.1);
       border-color: var(--color-yellow);
       color: var(--color-yellow);
+      // The warning notice sits directly above the message list, which has
+      // its own top padding. The base `.page__notice` margin-bottom creates
+      // a visible gap that makes the warning feel detached from the list it
+      // refers to. Drop it so the warning butts up against the list.
+      margin-bottom: 0;
     }
 
     .notice__icon {
@@ -458,6 +463,15 @@
     height: 20px;
     cursor: pointer;
     accent-color: var(--color-blue);
+    // SCSS-TOUCH: 44×44 touch target on mobile (matches sister
+    // .station-filter-item__checkbox pattern above). Desktop keeps 20×20.
+    min-width: 44px;
+    min-height: 44px;
+
+    @include breakpoint(md) {
+      min-width: 20px;
+      min-height: 20px;
+    }
   }
 }
 
@@ -477,19 +491,28 @@
 
 .message-list {
   // Full height of the flex parent — the virtualizer scroll container.
-  // Explicit height is set as an inline style by the component after measuring
-  // the available viewport space. This fallback ensures something renders on
-  // the first paint frame before the measurement effect runs.
-  height: 100%;
+  // Runtime-measured viewport height set by the component via the
+  // --virtual-list-height custom property (STYLE-INLINE-DYNAMIC).
+  // The 100% fallback ensures something renders on the first paint
+  // frame before the ResizeObserver measurement effect runs.
+  height: var(--virtual-list-height, 100%);
   overflow-y: auto;
   overflow-x: hidden;
-  // Horizontal padding keeps cards away from the viewport edges.
+  // Mobile-first: no horizontal padding, so message cards span the full
+  // viewport width. Combined with `.message-group__content { padding: 0 }`
+  // and `.message-card`'s own padding, this gives cards full-bleed alignment
+  // with the page edges — critical at 320-375px where every pixel counts.
+  padding: 0;
+  box-sizing: border-box;
+
+  // Desktop: horizontal padding keeps cards away from the viewport edges.
   // No top/bottom padding: top padding would create a visible dead-zone
   // between the filter bar and the first message card (messages would scroll
   // out of view one padding-height earlier than expected). Bottom spacing is
   // provided by .message-list__item's padding-bottom instead.
-  padding: 0 var(--spacing-lg);
-  box-sizing: border-box;
+  @include breakpoint(md) {
+    padding: 0 var(--spacing-lg);
+  }
 }
 
 // Gap between virtual items — replaces the flex gap that the old list used.
@@ -506,10 +529,13 @@
 
 // Message Content Modifiers (page-specific overrides)
 .message-content {
-  // Hide non-decoded text on small screens when decoded text exists
+  // Hide non-decoded text on small screens when decoded text exists.
+  // Mobile-first: hidden by default, shown again from the sm breakpoint up.
   &--hide-small {
-    @include breakpoint-max(sm) {
-      display: none;
+    display: none;
+
+    @include breakpoint(sm) {
+      display: block;
     }
   }
 
@@ -708,6 +734,13 @@
 
   .message-group {
     page-break-inside: avoid;
+    // SCSS-COLOR-01: print is an explicit theme-independent context — output
+    // lands on white paper regardless of the user's Mocha/Latte preference, so
+    // `#000` gives the strongest, most predictable contrast. Catppuccin
+    // variables resolve to the *active screen theme* at print time
+    // (e.g. mocha-text is light grey, base is near-black or near-white) and
+    // would produce unreadable borders in one theme or the other. The
+    // hardcoded value is intentional and documented here per AGENTS.md.
     border: 1px solid #000;
     margin-bottom: 1rem;
   }

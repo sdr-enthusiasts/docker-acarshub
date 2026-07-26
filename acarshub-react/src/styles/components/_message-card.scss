@@ -45,20 +45,23 @@
     flex-wrap: wrap;
     gap: var(--spacing-sm);
 
-    // Mobile: when a Mark Read button or Read badge is present, switch to a
+    // Mobile-first: when a Mark Read button or Read badge is present, use a
     // two-row grid so the button sits top-right and the timestamp wraps to
     // its own full-width row, left-aligned with the card content below it.
-    @include breakpoint-max(md) {
-      &:has(.message-card__mark-read-btn),
-      &:has(.message-card__read-badge) {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        grid-template-areas:
-          "badge  action"
-          "ts     ts";
-        row-gap: var(--spacing-xs);
-        column-gap: var(--spacing-sm);
-        align-items: start;
+    // Reverts to the plain flex layout from the tablet breakpoint up.
+    &:has(.message-card__mark-read-btn),
+    &:has(.message-card__read-badge) {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "badge  action"
+        "ts     ts";
+      row-gap: var(--spacing-xs);
+      column-gap: var(--spacing-sm);
+      align-items: start;
+
+      @include breakpoint(md) {
+        display: flex;
       }
     }
   }
@@ -67,12 +70,13 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-
-    // Mobile (grid mode): place button in the top-right cell.
-    @include breakpoint-max(md) {
-      grid-area: action;
-      justify-self: end;
-    }
+    // Grid-cell placement, only takes effect when the parent header is in
+    // its mobile-first :has(...) grid mode above -- a harmless no-op when
+    // the parent is a flex container (desktop, or mobile without a
+    // mark-read button/read badge present), so no breakpoint override is
+    // needed here.
+    grid-area: action;
+    justify-self: end;
   }
 
   &__type-badge {
@@ -83,37 +87,49 @@
     // Grow to fill available space so timestamp + button stay on the right
     // in the flex (desktop / non-alert mobile) layout.
     flex: 1;
-
-    // Mobile (grid mode): explicit grid-area placement.
-    @include breakpoint-max(md) {
-      grid-area: badge;
-    }
+    // Grid-cell placement -- see &__header-right above for why this needs
+    // no breakpoint override.
+    grid-area: badge;
   }
 
   &__timestamp {
     color: var(--color-subtext0);
     font-size: var(--font-size-sm);
     font-weight: 700;
+    // Grid-cell placement (harmless outside grid mode, see &__header-right
+    // above). padding-left is a real style change though (not grid-inert):
+    // mobile-first inset to match the identifiers/fields sections below,
+    // reverted from the tablet breakpoint up.
+    grid-area: ts;
+    padding-left: var(--spacing-md);
 
-    // Mobile (grid mode): full-width second row, left-aligned and inset to
-    // match the identifiers and fields sections below it.
-    @include breakpoint-max(md) {
-      grid-area: ts;
-      padding-left: var(--spacing-md);
+    @include breakpoint(md) {
+      padding-left: unset;
     }
   }
 
   &__mark-read-btn {
-    padding: var(--spacing-xs) var(--spacing-sm);
+    // SCSS-TOUCH mobile-first: previously exempted from the 44px rule as a
+    // "secondary in-card action". Per remediation policy that exemption is
+    // removed -- 44px floor by default. Desktop keeps the original compact
+    // padding/font for in-card density.
+    padding: var(--spacing-sm) var(--spacing-md);
     background: var(--color-green);
     color: var(--color-base);
     border: none;
     border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-xs);
+    font-size: var(--font-size-sm);
+    min-height: 44px;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-fast);
     white-space: nowrap;
+
+    @include breakpoint(md) {
+      min-height: unset;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: var(--font-size-xs);
+    }
 
     &:hover {
       background: var(--color-teal);
@@ -127,14 +143,6 @@
     &:focus-visible {
       outline: 2px solid var(--color-green);
       outline-offset: 2px;
-    }
-
-    // Mobile: secondary in-card action — intentionally exempt from 44px
-    // primary touch-target rule (same rationale as .adsb-tracking badge).
-    // Padding is kept generous enough for comfortable tapping without
-    // bloating the message card header row.
-    @include breakpoint-max(md) {
-      padding: var(--spacing-xs) var(--spacing-sm);
     }
 
     // Reduced motion
@@ -383,10 +391,13 @@
     }
   }
 
-  // Hide non-decoded text on small screens when decoded text exists
+  // Hide non-decoded text on small screens when decoded text exists.
+  // Mobile-first: hidden by default, shown again from the sm breakpoint up.
   &--hide-small {
-    @include breakpoint-max(sm) {
-      display: none;
+    display: none;
+
+    @include breakpoint(sm) {
+      display: block;
     }
   }
 

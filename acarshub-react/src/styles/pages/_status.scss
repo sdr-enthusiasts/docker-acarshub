@@ -190,6 +190,12 @@
     font-style: italic;
   }
 
+  // STYLE-INLINE-STATIC: was `style={{ marginBottom: "1rem" }}` on the
+  // decoder-errors description paragraph.
+  .text-muted--spaced {
+    margin-bottom: 1rem;
+  }
+
   // Configuration grid (simpler layout)
   .config-grid {
     display: grid;

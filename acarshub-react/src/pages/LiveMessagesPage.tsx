@@ -15,47 +15,19 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageFilters } from "../components/MessageFilters";
 import { MessageGroup as MessageGroupComponent } from "../components/MessageGroup";
+import { useMessageFilters } from "../hooks/useMessageFilters";
+import { useMessageListHeight } from "../hooks/useMessageListHeight";
+import { useMessageScrollAnchor } from "../hooks/useMessageScrollAnchor";
+import { usePageRegistration } from "../hooks/usePageRegistration";
 import { useRegisterScrollContainer } from "../hooks/useRegisterScrollContainer";
-import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import type {
-  AcarsMsg,
-  Labels,
-  MessageGroup as MessageGroupType,
-} from "../types";
-import { isScrollingToTop } from "../utils/scrollRegistry";
+import type { AcarsMsg, MessageGroup as MessageGroupType } from "../types";
 
-// Global filter state for Navigation access
-let globalFilterProps: {
-  labels: Labels;
-  excludedLabels: string[];
-  onExcludedLabelsChange: (labels: string[]) => void;
-  filterNoText: boolean;
-  onFilterNoTextChange: (enabled: boolean) => void;
-  isPaused: boolean;
-  onPauseChange: (paused: boolean) => void;
-  textFilter: string;
-  onTextFilterChange: (text: string) => void;
-  showAlertsOnly: boolean;
-  onShowAlertsOnlyChange: (enabled: boolean) => void;
-  stationIds: string[];
-  selectedStationIds: string[];
-  onSelectedStationIdsChange: (ids: string[]) => void;
-} | null = null;
-
-export function getMessageFilterProps() {
-  return globalFilterProps;
-}
+export { getMessageFilterProps } from "../hooks/useMessageFilters";
 
 /**
  * LiveMessagesPage Component
@@ -73,6 +45,13 @@ export function getMessageFilterProps() {
  * - Local state for UI filters (pause, text search, excluded labels)
  * - Filters persist to localStorage
  * - Mobile-first responsive layout
+ *
+ * EFFECT-02: the page's original 9 useEffects (filter persistence, keyboard
+ * shortcut, page registration, list-height measurement, scroll anchoring,
+ * globalFilterProps exposure) have been extracted into domain hooks under
+ * src/hooks/. This component now composes those hooks plus the pure
+ * derivations (messageGroupsArray/filteredMessageGroups/statistics) that
+ * combine their outputs with store state.
  */
 export const LiveMessagesPage = () => {
   const messageGroups = useAppStore((state) => state.messageGroups);
@@ -80,35 +59,23 @@ export const LiveMessagesPage = () => {
   const stationIds = useAppStore((state) => state.stationIds);
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
 
-  // Frozen message groups snapshot when paused
-  // This stores the message group state at the moment pause was activated
-  const [frozenMessageGroups, setFrozenMessageGroups] = useState<
-    Map<string, MessageGroupType>
-  >(new Map());
+  usePageRegistration("Live Messages", setCurrentPage);
 
-  // Filter state (persisted to localStorage)
-  const [isPaused, setIsPaused] = useState(() => {
-    const saved = localStorage.getItem("liveMessages.isPaused");
-    return saved === "true";
-  });
-
-  const [filterNoText, setFilterNoText] = useState(() => {
-    const saved = localStorage.getItem("liveMessages.filterNoText");
-    return saved === "true";
-  });
-
-  const [excludedLabels, setExcludedLabels] = useState<string[]>(() => {
-    const saved = localStorage.getItem("liveMessages.excludedLabels");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [textFilter, setTextFilter] = useState("");
-  const [showAlertsOnly, setShowAlertsOnly] = useState(false);
-
-  const [selectedStationIds, setSelectedStationIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem("liveMessages.selectedStationIds");
-    return saved ? (JSON.parse(saved) as string[]) : [];
-  });
+  const {
+    isPaused,
+    filterNoText,
+    excludedLabels,
+    textFilter,
+    showAlertsOnly,
+    selectedStationIds,
+    frozenMessageGroups,
+    handlePauseChange,
+    handleFilterNoTextChange,
+    handleExcludedLabelsChange,
+    handleTextFilterChange,
+    handleShowAlertsOnlyChange,
+    handleSelectedStationIdsChange,
+  } = useMessageFilters({ messageGroups, labels, stationIds });
 
   // Statistics state
   const [totalReceived, setTotalReceived] = useState(0);
@@ -132,21 +99,7 @@ export const LiveMessagesPage = () => {
    */
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * Height of the virtual scroll container in pixels.
-   *
-   * WHY dynamic measurement instead of CSS calc(100vh - nav-height):
-   * The nav height varies between mobile/desktop, and the page header +
-   * filter bar also consume vertical space. Measuring with ResizeObserver
-   * gives the exact remaining height without any hardcoded pixel values or
-   * CSS variable bookkeeping.
-   *
-   * Initial value: a reasonable fraction of the viewport so the first render
-   * isn't completely empty while the effect hasn't run yet.
-   */
-  const [listHeight, setListHeight] = useState(() =>
-    typeof window !== "undefined" ? Math.max(window.innerHeight, 300) : 400,
-  );
+  const listHeight = useMessageListHeight(scrollContainerRef);
 
   /**
    * Per-group active tab index, keyed by group stable key (first message UID).
@@ -158,108 +111,9 @@ export const LiveMessagesPage = () => {
    */
   const activeTabIndices = useRef<Map<string, number>>(new Map());
 
-  /**
-   * The total virtual height from the previous render, used by the scroll-
-   * anchor useLayoutEffect to calculate how much the virtual size changed and
-   * compensate scrollTop accordingly.
-   */
-  const prevTotalSize = useRef(0);
-
   // Register this page's scroll container with the global registry so the
   // scroll-to-top FAB and nav link handler target the correct element.
   useRegisterScrollContainer(scrollContainerRef);
-
-  // Persist filter settings to localStorage
-  useEffect(() => {
-    localStorage.setItem("liveMessages.isPaused", String(isPaused));
-  }, [isPaused]);
-
-  useEffect(() => {
-    localStorage.setItem("liveMessages.filterNoText", String(filterNoText));
-  }, [filterNoText]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      "liveMessages.excludedLabels",
-      JSON.stringify(excludedLabels),
-    );
-  }, [excludedLabels]);
-
-  useEffect(() => {
-    localStorage.setItem(
-      "liveMessages.selectedStationIds",
-      JSON.stringify(selectedStationIds),
-    );
-  }, [selectedStationIds]);
-
-  // Notify page change
-  useEffect(() => {
-    setCurrentPage("Live Messages");
-    socketService.notifyPageChange("Live Messages");
-  }, [setCurrentPage]);
-
-  // Dynamically measure the height available for the virtual scroll container.
-  //
-  // WHY ResizeObserver instead of CSS calc():
-  // The nav bar, page header, and filter bar all consume vertical space above
-  // the message list. Their heights vary between mobile and desktop breakpoints
-  // and change when filters are shown/hidden. A ResizeObserver on the scroll
-  // container itself measures the actual available space after all the above
-  // elements have been laid out, without requiring any hardcoded pixel values.
-  useEffect(() => {
-    const scrollEl = scrollContainerRef.current;
-    if (!scrollEl) return;
-
-    const measure = () => {
-      const rect = scrollEl.getBoundingClientRect();
-      // Available height = distance from the top of the scroll container
-      // to the bottom of the viewport. No buffer needed: overflow:hidden on
-      // .app-content (set via CSS :has selector) silently clips any subpixel
-      // overshoot so there is no risk of an outer scrollbar appearing.
-      const available = window.innerHeight - rect.top;
-      setListHeight(Math.max(available, 200));
-    };
-
-    measure();
-
-    // Re-measure when the scroll container's size changes (e.g. filter bar
-    // toggled, window resized, orientation change).
-    const ro = new ResizeObserver(measure);
-    ro.observe(scrollEl);
-    window.addEventListener("resize", measure);
-
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, []);
-
-  // Keyboard shortcut: 'p' to toggle pause
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Ignore if user is typing in an input field
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
-        return;
-      }
-
-      if (event.key === "p" || event.key === "P") {
-        event.preventDefault();
-        setIsPaused((prev) => {
-          if (!prev) {
-            // About to pause - capture current message group state
-            setFrozenMessageGroups(new Map(messageGroups));
-          }
-          return !prev;
-        });
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [messageGroups]);
 
   // Convert message groups Map to array and sort by newest first
   // Use frozen snapshot when paused, live message groups when not paused
@@ -343,7 +197,12 @@ export const LiveMessagesPage = () => {
               fieldMatches(msg.text, "text") ||
               fieldMatches(msg.data, "data") ||
               fieldMatches(msg.decoded_msg, "decoded_msg") ||
-              fieldMatches(msg.libacars, "libacars") ||
+              fieldMatches(
+                typeof msg.libacars === "object" && msg.libacars !== null
+                  ? JSON.stringify(msg.libacars)
+                  : msg.libacars,
+                "libacars",
+              ) ||
               // Identifiers
               fieldMatches(msg.tail, "tail") ||
               fieldMatches(msg.flight, "flight") ||
@@ -540,124 +399,11 @@ export const LiveMessagesPage = () => {
     paddingStart: MESSAGE_LIST_PADDING_START,
   });
 
-  // ---------------------------------------------------------------------------
-  // Scroll anchoring — keep the user's viewport stable when the virtual list
-  // size changes (new items prepended, or existing items remeasured).
-  //
-  // Algorithm:
-  //   After every render, if the total virtual size changed AND the user has
-  //   scrolled past the padding zone (i.e., they are viewing real content, not
-  //   the top breathing-room gap), adjust scrollTop by the same delta so that
-  //   the content currently on screen doesn't appear to move.
-  //
-  // Why compensate for remeasurements as well as prepends:
-  //   The old logic only fired when the *first key* changed (a prepend). But
-  //   after a prepend the new item is initially estimated at ESTIMATED_ITEM_HEIGHT
-  //   (300 px). When it is later measured at its actual height (e.g. 150 px),
-  //   the total size shrinks by 150 px. Without compensation the user drifts
-  //   150 px downward per message — compounding with every new arrival.
-  //   By reacting to *any* size delta we correct for both cases in one place.
-  //
-  // Why the threshold is MESSAGE_LIST_PADDING_START and not 0:
-  //   scrollTop > 0 but ≤ paddingStart means the user is still inside the
-  //   virtual breathing-room gap above the first card. Anchoring here would
-  //   jump them past the first message; they should instead see new messages
-  //   flow in naturally, just like when scrollTop = 0.
-  //
-  // useLayoutEffect runs synchronously after DOM mutations and before the
-  // browser paints, so corrections are invisible to the user.
-  // ---------------------------------------------------------------------------
-  useLayoutEffect(() => {
-    const newTotalSize = rowVirtualizer.getTotalSize();
-    const scrollEl = scrollContainerRef.current;
-
-    if (
-      scrollEl &&
-      scrollEl.scrollTop > MESSAGE_LIST_PADDING_START &&
-      !isScrollingToTop()
-    ) {
-      const delta = newTotalSize - prevTotalSize.current;
-      if (delta !== 0) {
-        scrollEl.scrollTop = Math.max(0, scrollEl.scrollTop + delta);
-      }
-    }
-
-    prevTotalSize.current = newTotalSize;
+  useMessageScrollAnchor({
+    virtualizer: rowVirtualizer,
+    scrollContainerRef,
+    paddingStart: MESSAGE_LIST_PADDING_START,
   });
-
-  // Handler callbacks
-  const handlePauseChange = useCallback(
-    (paused: boolean) => {
-      if (paused && !isPaused) {
-        // About to pause - capture current message group state
-        setFrozenMessageGroups(new Map(messageGroups));
-      }
-      setIsPaused(paused);
-    },
-    [isPaused, messageGroups],
-  );
-
-  const handleFilterNoTextChange = useCallback((enabled: boolean) => {
-    setFilterNoText(enabled);
-  }, []);
-
-  const handleExcludedLabelsChange = useCallback((labels: string[]) => {
-    setExcludedLabels(labels);
-  }, []);
-
-  const handleTextFilterChange = useCallback((text: string) => {
-    setTextFilter(text);
-  }, []);
-
-  const handleShowAlertsOnlyChange = useCallback((enabled: boolean) => {
-    setShowAlertsOnly(enabled);
-  }, []);
-
-  const handleSelectedStationIdsChange = useCallback((ids: string[]) => {
-    setSelectedStationIds(ids);
-  }, []);
-
-  // Expose filter props globally for Navigation
-  useEffect(() => {
-    globalFilterProps = {
-      labels,
-      excludedLabels,
-      onExcludedLabelsChange: handleExcludedLabelsChange,
-      filterNoText,
-      onFilterNoTextChange: handleFilterNoTextChange,
-      isPaused,
-      onPauseChange: handlePauseChange,
-      textFilter,
-      onTextFilterChange: handleTextFilterChange,
-      showAlertsOnly,
-      onShowAlertsOnlyChange: handleShowAlertsOnlyChange,
-      stationIds,
-      selectedStationIds,
-      onSelectedStationIdsChange: handleSelectedStationIdsChange,
-    };
-
-    // Dispatch custom event to notify Navigation
-    window.dispatchEvent(new CustomEvent("messageFiltersUpdate"));
-
-    return () => {
-      globalFilterProps = null;
-    };
-  }, [
-    labels,
-    excludedLabels,
-    handleExcludedLabelsChange,
-    filterNoText,
-    handleFilterNoTextChange,
-    isPaused,
-    handlePauseChange,
-    textFilter,
-    handleTextFilterChange,
-    showAlertsOnly,
-    handleShowAlertsOnlyChange,
-    stationIds,
-    selectedStationIds,
-    handleSelectedStationIdsChange,
-  ]);
 
   return (
     <div className="page live-messages-page" ref={pageRef}>
@@ -753,16 +499,21 @@ export const LiveMessagesPage = () => {
           <div
             className="message-list"
             ref={scrollContainerRef}
-            style={{ height: `${listHeight}px` }}
+            style={
+              {
+                "--virtual-list-height": `${listHeight}px`,
+              } as React.CSSProperties
+            }
           >
             {/* Virtual container — its height equals the sum of all (estimated +
                 measured) item heights. Items are absolutely positioned inside. */}
             <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
+              className="virtual-list"
+              style={
+                {
+                  "--virtual-list-total-height": `${rowVirtualizer.getTotalSize()}px`,
+                } as React.CSSProperties
+              }
             >
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const group = filteredMessageGroups[virtualRow.index];
@@ -779,15 +530,14 @@ export const LiveMessagesPage = () => {
                 return (
                   <div
                     key={key}
+                    className="virtual-list__row"
                     data-index={virtualRow.index}
                     ref={rowVirtualizer.measureElement}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
+                    style={
+                      {
+                        "--virtual-row-y": `${virtualRow.start}px`,
+                      } as React.CSSProperties
+                    }
                   >
                     <div className="message-list__item">
                       <MessageGroupComponent

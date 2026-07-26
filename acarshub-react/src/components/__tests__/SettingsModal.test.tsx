@@ -22,7 +22,15 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { audioService } from "../../services/audioService";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore } from "../../store/useSettingsStore";
@@ -47,6 +55,31 @@ vi.mock("../../services/audioService", () => ({
     playAlertSound: vi.fn(),
   },
 }));
+
+// PERF-BUNDLE Phase B (see agent-docs/REMEDIATION_PLAN.md §15): every
+// settings tab is now a `React.lazy()`-loaded chunk, resolved via the exact
+// same `import("./settings/XTab")` specifier `SettingsModal.tsx` itself
+// uses. Pre-warming all 7 here means Vitest's module cache already has each
+// tab resolved (a JS-runtime-level cache keyed by resolved specifier, not
+// something `vi.resetModules()` clears between `it()` blocks) before any
+// test's `render()` call — otherwise, whichever test happens to be the
+// *first* in file-execution order to touch a given tab races the Suspense
+// boundary with a synchronous `getBy*` query and fails, while every later
+// test touching that same tab passes "by accident" once the module is
+// warm. That's a real, verified flake: running this file with
+// `--sequence.shuffle` reproduces different failing tests on almost every
+// seed, since which test is "first to touch tab X" changes with order.
+beforeAll(async () => {
+  await Promise.all([
+    import("../settings/AppearanceTab"),
+    import("../settings/RegionalTab"),
+    import("../settings/AlertsTab"),
+    import("../settings/NotificationsTab"),
+    import("../settings/DataTab"),
+    import("../settings/MapTab"),
+    import("../settings/AdvancedTab"),
+  ]);
+});
 
 describe("SettingsModal", () => {
   beforeEach(() => {
@@ -162,38 +195,78 @@ describe("SettingsModal", () => {
       );
     });
 
+    it("only the active tab exposes aria-controls, pointing at a panel in the DOM", async () => {
+      // Regression: tab panels are lazily rendered (only the active tab's
+      // panel is in the DOM). A static `aria-controls="<x>-panel"` on every
+      // tab therefore referenced non-existent elements for the six inactive
+      // tabs, which axe flags as a critical "Invalid ARIA attribute value"
+      // violation. `aria-controls` must only be present when the referenced
+      // panel actually exists.
+      const user = userEvent.setup();
+      render(<SettingsModal />);
+
+      const appearanceTab = screen.getByRole("tab", { name: "Appearance" });
+      const mapTab = screen.getByRole("tab", { name: "Map" });
+
+      // Default active tab (Appearance) controls a panel that is in the DOM.
+      await screen.findByText("Theme", { selector: "legend" });
+      const appearanceControls = appearanceTab.getAttribute("aria-controls");
+      expect(appearanceControls).toBe("appearance-panel");
+      expect(
+        document.getElementById(appearanceControls as string),
+      ).not.toBeNull();
+
+      // Inactive tab exposes no dangling aria-controls reference.
+      expect(mapTab.getAttribute("aria-controls")).toBeNull();
+
+      // After switching, the invariant holds for the newly active tab and the
+      // now-inactive one drops its aria-controls.
+      await user.click(mapTab);
+      await screen.findByText("Aircraft Marker Size", { selector: "legend" });
+      const mapControls = mapTab.getAttribute("aria-controls");
+      expect(mapControls).toBe("map-panel");
+      expect(document.getElementById(mapControls as string)).not.toBeNull();
+      expect(appearanceTab.getAttribute("aria-controls")).toBeNull();
+    });
+
     it("should display correct content for each tab", async () => {
       const user = userEvent.setup();
       render(<SettingsModal />);
 
-      // Appearance tab content
+      // Appearance tab content — each tab is a lazily-loaded chunk
+      // (PERF-BUNDLE Phase B), so its content only appears after the
+      // Suspense boundary resolves; use findBy* (async) rather than
+      // getBy* (sync) after every tab switch, including the initial
+      // mount's default "appearance" tab.
       expect(
-        screen.getByText("Theme", { selector: "legend" }),
+        await screen.findByText("Theme", { selector: "legend" }),
       ).toBeInTheDocument();
 
       // Switch to Regional & Time
       await user.click(screen.getByRole("tab", { name: "Regional & Time" }));
-      expect(screen.getByLabelText("Time Format")).toBeInTheDocument();
+      expect(await screen.findByLabelText("Time Format")).toBeInTheDocument();
 
       // Switch to Alerts
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
       expect(
-        screen.getByText("Alert Terms", { selector: "h3" }),
+        await screen.findByText("Alert Terms", { selector: "h3" }),
       ).toBeInTheDocument();
 
       // Switch to Notifications
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
       expect(
-        screen.getByLabelText("Desktop Notifications"),
+        await screen.findByLabelText("Desktop Notifications"),
       ).toBeInTheDocument();
 
       // Switch to Data & Privacy
       await user.click(screen.getByRole("tab", { name: "Data & Privacy" }));
-      expect(screen.getByText(/Max Messages per Source/i)).toBeInTheDocument();
+      expect(
+        await screen.findByText(/Max Messages per Source/i),
+      ).toBeInTheDocument();
 
       // Switch to Advanced
       await user.click(screen.getByRole("tab", { name: "Advanced" }));
-      expect(screen.getByLabelText("Log Level")).toBeInTheDocument();
+      expect(await screen.findByLabelText("Log Level")).toBeInTheDocument();
     });
   });
 
@@ -202,7 +275,7 @@ describe("SettingsModal", () => {
       useAppStore.setState({ settingsOpen: true });
     });
 
-    it("should display current theme setting", () => {
+    it("should display current theme setting", async () => {
       useSettingsStore.setState({
         settings: {
           ...useSettingsStore.getState().settings,
@@ -215,7 +288,9 @@ describe("SettingsModal", () => {
 
       render(<SettingsModal />);
 
-      const latteRadio = screen.getByRole("radio", {
+      // Appearance is the default tab, but its content is still behind the
+      // Suspense boundary (PERF-BUNDLE Phase B lazy-loaded tabs) — await it.
+      const latteRadio = await screen.findByRole("radio", {
         name: /Catppuccin Latte/i,
       });
       expect(latteRadio).toBeChecked();
@@ -225,7 +300,7 @@ describe("SettingsModal", () => {
       const user = userEvent.setup();
       render(<SettingsModal />);
 
-      const latteRadio = screen.getByRole("radio", {
+      const latteRadio = await screen.findByRole("radio", {
         name: /Catppuccin Latte/i,
       });
       await user.click(latteRadio);
@@ -239,7 +314,8 @@ describe("SettingsModal", () => {
       const user = userEvent.setup();
       render(<SettingsModal />);
 
-      const animationsToggle = screen.getByLabelText("Enable Animations");
+      const animationsToggle =
+        await screen.findByLabelText("Enable Animations");
       expect(animationsToggle).toBeChecked();
 
       await user.click(animationsToggle);
@@ -257,7 +333,9 @@ describe("SettingsModal", () => {
       const user = userEvent.setup();
       render(<SettingsModal />);
 
-      const statusToggle = screen.getByLabelText("Show Connection Status");
+      const statusToggle = await screen.findByLabelText(
+        "Show Connection Status",
+      );
       expect(statusToggle).toBeChecked();
 
       await user.click(statusToggle);
@@ -278,7 +356,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Regional & Time" }));
 
-      expect(screen.getByLabelText("Time Format")).toBeInTheDocument();
+      expect(await screen.findByLabelText("Time Format")).toBeInTheDocument();
       expect(screen.getByLabelText("Date Format")).toBeInTheDocument();
       expect(
         screen.getByText("Timezone Display", { selector: "legend" }),
@@ -291,7 +369,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Regional & Time" }));
 
-      const timeFormatSelect = screen.getByLabelText("Time Format");
+      const timeFormatSelect = await screen.findByLabelText("Time Format");
       await user.selectOptions(timeFormatSelect, "24h");
 
       expect(useSettingsStore.getState().settings.regional.timeFormat).toBe(
@@ -305,7 +383,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Regional & Time" }));
 
-      const dateFormatSelect = screen.getByLabelText("Date Format");
+      const dateFormatSelect = await screen.findByLabelText("Date Format");
       await user.selectOptions(dateFormatSelect, "dmy");
 
       expect(useSettingsStore.getState().settings.regional.dateFormat).toBe(
@@ -320,7 +398,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Regional & Time" }));
 
-      const utcRadio = screen.getByRole("radio", { name: /UTC/i });
+      const utcRadio = await screen.findByRole("radio", { name: /UTC/i });
       await user.click(utcRadio);
 
       expect(useSettingsStore.getState().settings.regional.timezone).toBe(
@@ -335,7 +413,9 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Regional & Time" }));
 
-      const metersRadio = screen.getByRole("radio", { name: /Metres/i });
+      const metersRadio = await screen.findByRole("radio", {
+        name: /Metres/i,
+      });
       await user.click(metersRadio);
 
       expect(useSettingsStore.getState().settings.regional.altitudeUnit).toBe(
@@ -356,7 +436,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
       expect(
-        screen.getByLabelText("Desktop Notifications"),
+        await screen.findByLabelText("Desktop Notifications"),
       ).toBeInTheDocument();
       expect(screen.getByLabelText("Sound Alerts")).toBeInTheDocument();
       // Note: Volume slider only appears when sound is enabled
@@ -370,7 +450,9 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
-      const desktopToggle = screen.getByLabelText("Desktop Notifications");
+      const desktopToggle = await screen.findByLabelText(
+        "Desktop Notifications",
+      );
       await user.click(desktopToggle);
 
       expect(useSettingsStore.getState().settings.notifications.desktop).toBe(
@@ -384,7 +466,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
-      const soundToggle = screen.getByLabelText("Sound Alerts");
+      const soundToggle = await screen.findByLabelText("Sound Alerts");
       await user.click(soundToggle);
 
       expect(useSettingsStore.getState().settings.notifications.sound).toBe(
@@ -399,7 +481,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
       // Enable sound first
-      const soundToggle = screen.getByRole("switch", {
+      const soundToggle = await screen.findByRole("switch", {
         name: /Sound Alerts/i,
       });
       await user.click(soundToggle);
@@ -422,7 +504,7 @@ describe("SettingsModal", () => {
       // Open notifications tab
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
-      const onPageAlertsToggle = screen.getByRole("switch", {
+      const onPageAlertsToggle = await screen.findByRole("switch", {
         name: /On Page Alerts/i,
       });
 
@@ -450,7 +532,7 @@ describe("SettingsModal", () => {
       // (Setting store state before render() does not reliably trigger the
       // conditional re-render in jsdom because the persist middleware may
       // rehydrate from empty localStorage after mount, resetting the value.)
-      const soundToggle = screen.getByRole("switch", {
+      const soundToggle = await screen.findByRole("switch", {
         name: /Sound Alerts/i,
       });
       await user.click(soundToggle);
@@ -479,7 +561,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
       // Enable sound via user interaction (same reasoning as test above)
-      const soundToggle = screen.getByRole("switch", {
+      const soundToggle = await screen.findByRole("switch", {
         name: /Sound Alerts/i,
       });
       await user.click(soundToggle);
@@ -508,7 +590,9 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Data & Privacy" }));
 
-      expect(screen.getByText(/Max Messages per Source:/i)).toBeInTheDocument();
+      expect(
+        await screen.findByText(/Max Messages per Source:/i),
+      ).toBeInTheDocument();
       expect(screen.getByText(/Max Message Groups:/i)).toBeInTheDocument();
     });
 
@@ -518,7 +602,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Data & Privacy" }));
 
-      const slider = screen.getByLabelText(/Max Messages per Source:/i);
+      const slider = await screen.findByLabelText(/Max Messages per Source:/i);
       // Use fireEvent.change for range inputs
       fireEvent.change(slider, { target: { value: 100 } });
 
@@ -535,7 +619,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Data & Privacy" }));
 
-      const slider = screen.getByLabelText(/Max Message Groups:/i);
+      const slider = await screen.findByLabelText(/Max Message Groups:/i);
       // Use fireEvent.change for range inputs
       fireEvent.change(slider, { target: { value: 75 } });
 
@@ -559,7 +643,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       expect(
-        screen.getByText("Alert Terms", { selector: "h3" }),
+        await screen.findByText("Alert Terms", { selector: "h3" }),
       ).toBeInTheDocument();
     });
 
@@ -570,7 +654,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
       await user.type(inputs[0], "MAYDAY");
@@ -596,14 +680,10 @@ describe("SettingsModal", () => {
       // Wait for Socket.IO emission (async dynamic import)
       await waitFor(
         () => {
-          expect(mockSocket.emit).toHaveBeenCalledWith(
-            "update_alerts",
-            {
-              terms: ["MAYDAY"],
-              ignore: [],
-            },
-            "/main",
-          );
+          expect(mockSocket.emit).toHaveBeenCalledWith("update_alerts", {
+            terms: ["MAYDAY"],
+            ignore: [],
+          });
         },
         { timeout: 5000 },
       );
@@ -617,7 +697,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
 
@@ -649,7 +729,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
 
@@ -682,7 +762,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
       // Type multiple comma-separated terms
@@ -717,7 +797,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
       // Type with irregular spacing
@@ -755,7 +835,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
       // Type with some duplicates
@@ -794,7 +874,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, first is alert terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
       await user.type(inputs[0], "MAYDAY{Enter}");
@@ -821,7 +901,9 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
-      const maydayChip = screen.getByText("MAYDAY").closest(".alert-term-chip");
+      const maydayChip = (await screen.findByText("MAYDAY")).closest(
+        ".alert-term-chip",
+      );
       const removeButton = within(maydayChip as HTMLElement).getByRole(
         "button",
         {
@@ -838,14 +920,10 @@ describe("SettingsModal", () => {
 
       // Wait for Socket.IO emission
       await waitFor(() => {
-        expect(mockSocket.emit).toHaveBeenCalledWith(
-          "update_alerts",
-          {
-            terms: ["EMERGENCY"],
-            ignore: [],
-          },
-          "/main",
-        );
+        expect(mockSocket.emit).toHaveBeenCalledWith("update_alerts", {
+          terms: ["EMERGENCY"],
+          ignore: [],
+        });
       });
     });
 
@@ -858,7 +936,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, second is ignore terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
       // Type multiple comma-separated ignore terms
@@ -892,7 +970,7 @@ describe("SettingsModal", () => {
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
       // Get all inputs, second is ignore terms
-      const inputs = screen.getAllByPlaceholderText(
+      const inputs = await screen.findAllByPlaceholderText(
         /Enter term and press Enter/i,
       );
 
@@ -927,7 +1005,9 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Alerts" }));
 
-      const testChip = screen.getByText("TEST").closest(".alert-term-chip");
+      const testChip = (await screen.findByText("TEST")).closest(
+        ".alert-term-chip",
+      );
       const removeButton = within(testChip as HTMLElement).getByRole("button", {
         name: /Remove ignore term TEST/i,
       });
@@ -1259,7 +1339,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Advanced" }));
 
-      const logLevelSelect = screen.getByLabelText("Log Level");
+      const logLevelSelect = await screen.findByLabelText("Log Level");
       await user.selectOptions(logLevelSelect, "debug");
 
       expect(useSettingsStore.getState().settings.advanced.logLevel).toBe(
@@ -1273,7 +1353,7 @@ describe("SettingsModal", () => {
 
       await user.click(screen.getByRole("tab", { name: "Advanced" }));
 
-      const persistToggle = screen.getByLabelText(
+      const persistToggle = await screen.findByLabelText(
         /Persist Logs Across Page Refreshes/i,
       );
 
@@ -1294,7 +1374,7 @@ describe("SettingsModal", () => {
       render(<SettingsModal />);
 
       // Use the radio button for theme selection
-      const latteRadio = screen.getByRole("radio", {
+      const latteRadio = await screen.findByRole("radio", {
         name: /Catppuccin Latte/i,
       });
       await user.click(latteRadio);
@@ -1325,7 +1405,7 @@ describe("SettingsModal", () => {
       }
     });
 
-    it("should load settings from localStorage on mount", () => {
+    it("should load settings from localStorage on mount", async () => {
       const mockSettings = {
         version: 2,
         state: {
@@ -1384,7 +1464,7 @@ describe("SettingsModal", () => {
       render(<SettingsModal />);
 
       // Check that the Latte radio is selected
-      const latteRadio = screen.getByRole("radio", {
+      const latteRadio = await screen.findByRole("radio", {
         name: /Catppuccin Latte/i,
       });
       expect(latteRadio).toBeChecked();

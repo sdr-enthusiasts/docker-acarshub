@@ -21,6 +21,21 @@ import { expect, type Page, test } from "@playwright/test";
 // ---------------------------------------------------------------------------
 
 /**
+ * Force the app's "animations disabled" mode by setting
+ * `data-animations="false"` on <html> before first paint (the same attribute
+ * App.tsx toggles from the Appearance setting). This disables the settings
+ * modal's fade/slide animations so that closing the modal and immediately
+ * clicking a nav link does not race the modal's exit transition — on Firefox
+ * the fading overlay could otherwise intercept the click or delay the SPA
+ * navigation, causing waitForURL to time out.
+ */
+async function disableAnimations(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    document.documentElement.setAttribute("data-animations", "false");
+  });
+}
+
+/**
  * Open the Settings modal from any page.
  *
  * On mobile the Settings button lives inside the hamburger menu; this helper
@@ -71,6 +86,10 @@ async function clickNavLink(
 
 test.describe("Settings Persistence", () => {
   test.beforeEach(async ({ page }) => {
+    // Disable animations before first paint so modal open/close transitions
+    // don't race nav-link clicks (see disableAnimations() for the rationale).
+    await disableAnimations(page);
+
     // Start on the Live Messages page every time so the app is fully
     // initialized before tests begin.
     await page.goto("/live-messages");

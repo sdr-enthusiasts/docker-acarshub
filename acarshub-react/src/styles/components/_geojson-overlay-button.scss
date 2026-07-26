@@ -38,12 +38,6 @@
 }
 
 .geojson-overlay-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  min-width: 280px;
-  max-width: 320px;
-  max-height: 400px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
@@ -51,16 +45,28 @@
   background-color: var(--color-base);
   border: 1px solid var(--color-surface0);
 
-  // Mobile: full width, larger touch targets
-  @include breakpoint-max(md) {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    right: auto;
-    transform: translate(-50%, -50%);
-    min-width: 90vw;
-    max-width: 90vw;
-    max-height: 80vh;
+  // Mobile-first: fixed, centered modal, full width, larger touch targets
+  // (a corner-anchored dropdown risks off-screen overflow on small
+  // viewports).
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  min-width: 90vw;
+  max-width: 90vw;
+  max-height: 80vh;
+
+  // Desktop: absolute-positioned dropdown anchored below the trigger.
+  @include breakpoint(md) {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: auto;
+    right: 0;
+    transform: none;
+    min-width: 280px;
+    max-width: 320px;
+    max-height: 400px;
   }
 
   &__header {
@@ -73,12 +79,12 @@
   }
 
   &__content {
-    max-height: 350px;
+    max-height: calc(80vh - 48px); // mobile-first
     overflow-y: auto;
     @include scrollbar-thin();
 
-    @include breakpoint-max(md) {
-      max-height: calc(80vh - 48px);
+    @include breakpoint(md) {
+      max-height: 350px;
     }
   }
 }
@@ -132,15 +138,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 16px 6px 40px;
+  // Mobile-first: larger touch targets.
+  padding: 10px 16px 10px 40px;
+  min-height: 44px;
   cursor: pointer;
   user-select: none;
   transition: background-color 0.15s ease;
 
-  // Mobile: larger touch targets
-  @include breakpoint-max(md) {
-    padding: 10px 16px 10px 40px;
-    min-height: 44px;
+  @include breakpoint(md) {
+    padding: 6px 16px 6px 40px;
+    min-height: unset;
   }
 
   &:hover {
@@ -160,6 +167,10 @@
     border-radius: 2px;
     flex-shrink: 0;
     border: 1px solid var(--color-overlay0);
+    // Overlay swatch fill set by the component via the --overlay-color
+    // custom property (STYLE-INLINE-DYNAMIC). Sourced from the overlay
+    // configuration JSON — arbitrary user data, not a theme token.
+    background-color: var(--overlay-color);
   }
 
   &__name {

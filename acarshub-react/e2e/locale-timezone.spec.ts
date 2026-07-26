@@ -86,6 +86,22 @@ async function injectMessage(
  * On mobile the Settings button is inside the hamburger menu; this helper
  * opens the menu first so the button is reachable on all viewport sizes.
  */
+/**
+ * Force the app's "animations disabled" mode by setting
+ * `data-animations="false"` on <html> before first paint (the same attribute
+ * App.tsx toggles from the Appearance setting). The message-card timestamp is
+ * rendered in a virtualized list; on WebKit the settings-modal open/close
+ * transitions plus the compositor's ResizeObserver cadence can delay the
+ * reactive re-render/repaint just long enough that a timestamp assertion polls
+ * a stale value. Removing the modal transitions makes the reformatted
+ * timestamp settle promptly and deterministically across engines.
+ */
+async function disableAnimations(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    document.documentElement.setAttribute("data-animations", "false");
+  });
+}
+
 async function openSettings(page: Page): Promise<void> {
   const mobileMenu = page.locator("details.small_nav");
   if (await mobileMenu.isVisible()) {
@@ -177,6 +193,10 @@ function firstTimestamp(page: Page): Locator {
 
 test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
   test.beforeEach(async ({ page }) => {
+    // Disable animations before first paint so settings-modal transitions
+    // don't delay the reactive timestamp re-render (see disableAnimations()).
+    await disableAnimations(page);
+
     await page.goto("/live-messages");
     await expect(page.locator("header.navigation")).toBeVisible();
   });
@@ -451,8 +471,9 @@ test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
 
       const ts = firstTimestamp(page);
       await expect(ts).toBeVisible();
-      // "2024-02-01, HH:MM:SS"
-      await expect(ts).toContainText("2024-02-01");
+      // "2024-02-01, HH:MM:SS" — regex/toHaveText auto-retries against the
+      // pinned node, tolerating WebKit's late virtual-list remeasure/paint.
+      await expect(ts).toHaveText(/2024-02-01/);
     });
 
     test("mdy format shows US date (MM/DD/YYYY)", async ({ page }) => {
@@ -476,8 +497,9 @@ test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
 
       const ts = firstTimestamp(page);
       await expect(ts).toBeVisible();
-      // "02/01/2024, HH:MM:SS"
-      await expect(ts).toContainText("02/01/2024");
+      // "02/01/2024, HH:MM:SS" — regex/toHaveText auto-retries against the
+      // pinned node, tolerating WebKit's late virtual-list remeasure/paint.
+      await expect(ts).toHaveText(/02\/01\/2024/);
     });
 
     test("dmy format shows European date (DD/MM/YYYY)", async ({ page }) => {
@@ -501,8 +523,9 @@ test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
 
       const ts = firstTimestamp(page);
       await expect(ts).toBeVisible();
-      // "01/02/2024, HH:MM:SS"
-      await expect(ts).toContainText("01/02/2024");
+      // "01/02/2024, HH:MM:SS" — regex/toHaveText auto-retries against the
+      // pinned node, tolerating WebKit's late virtual-list remeasure/paint.
+      await expect(ts).toHaveText(/01\/02\/2024/);
     });
 
     test("switching date format immediately updates displayed timestamp", async ({
@@ -529,14 +552,17 @@ test.describe("Locale and Timezone Display (GAP-E2E-11)", () => {
 
       const ts = firstTimestamp(page);
       await expect(ts).toBeVisible();
-      await expect(ts).toContainText("2024-02-01");
+      await expect(ts).toHaveText(/2024-02-01/);
 
       // Switch to US (mdy) — should update reactively
       await openSettingsRegional(page);
       await setDateFormat(page, "mdy");
       await closeSettings(page);
 
-      await expect(ts).toContainText("02/01/2024");
+      // toHaveText auto-retries until the reactive reformat lands, so this
+      // also implicitly waits out the ISO->US transition before the negative
+      // assertion below.
+      await expect(ts).toHaveText(/02\/01\/2024/);
 
       // ISO format must no longer be visible
       const text = await ts.textContent();

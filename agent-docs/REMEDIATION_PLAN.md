@@ -1,0 +1,2621 @@
+# ACARS Hub — Audit Remediation Plan
+
+This document captures every finding from the senior-engineer audit performed on
+2026-05-05 and proposes a concrete remediation for each. It is intended to be
+read top-to-bottom and used as a working checklist.
+
+> **Note on scope.** This plan describes work to bring the codebase back into
+> compliance with `AGENTS.md` and `agent-docs/DESIGN_LANGUAGE.md`. It is **not**
+> itself an implementation summary or a progress tracker — per AGENTS.md
+> ("NO SUMMARIES" rule) this document should be deleted once the work is
+> complete. While work is ongoing, prefer linking PRs to the section anchors
+> below rather than editing this file with status notes.
+
+## How to use this document
+
+- Each finding has a stable ID (e.g. `SEC-01`, `FE-INLINE-03`). Reference these
+  IDs in commit messages and PR titles.
+- Severity levels: **CRITICAL** (security, data loss) > **HIGH** (correctness,
+  resource leaks, AGENTS.md violations) > **MEDIUM** (anti-pattern,
+  maintainability) > **LOW** (style, nit).
+- Effort estimates: **Trivial** (<30 min) / **Low** (<2 h) / **Medium** (half-day
+  to one day) / **High** (multi-day).
+- Every code change MUST follow the AGENTS.md testing mandate: new tests for new
+  code, regression tests for bug fixes.
+- **No punting on flakes.** Per AGENTS.md "NO PUNTING ON TEST FLAKES", any
+  sporadic test failure observed during this remediation work — full-suite
+  stress runs, `just ci` retries, parallel coverage — becomes a hard blocker.
+  Finish the current sub-task, then the **very next** action is the flake fix,
+  ahead of any planned remediation item. Reference case: NIT-08 surfaced the
+  `tcp-listener.test.ts` ephemeral-port collision and the `stats.test.ts`
+  second-boundary race while stress-testing the post-NIT-05 tree; both were
+  fixed in NIT-08 before resuming the planned Phase 7 NIT queue.
+
+## Table of contents
+
+1. [Security](#1-security)
+2. [Type safety and `any` elimination](#2-type-safety-and-any-elimination)
+3. [Logging discipline](#3-logging-discipline)
+4. [Inline styles and CSS custom properties](#4-inline-styles-and-css-custom-properties)
+5. [SCSS standards (theming, mobile-first, touch targets)](#5-scss-standards)
+6. [Module-level mutable state](#6-module-level-mutable-state)
+7. [Resource leaks](#7-resource-leaks)
+8. [Error handling consistency](#8-error-handling-consistency)
+9. [Architecture and god files](#9-architecture-and-god-files)
+10. [React effect-density refactors](#10-react-effect-density-refactors)
+11. [Testing — coverage, quality, and gaps](#11-testing)
+12. [Documentation drift](#12-documentation-drift)
+13. [Repository hygiene](#13-repository-hygiene)
+14. [Miscellaneous nits](#14-miscellaneous-nits)
+15. [User audibles (out-of-audit additions)](#15-user-audibles-out-of-audit-additions)
+16. [Suggested execution order](#16-suggested-execution-order)
+
+---
+
+## 1. Security
+
+### SEC-01 — SQL injection in RRD timeseries handler — **CRITICAL** — ✅ DONE (`c0fbc176`)
+
+**File:** `acarshub-backend/src/socket/handlers.ts:920-1019` (and the parallel
+non-downsampled block lower in the same handler).
+
+**Finding.** `params.start`, `params.end`, and `params.downsample` flow from a
+Socket.IO client straight into a `sql.raw(...)` template that interpolates
+those values into the SQL string. Concretely:
+
+```ts
+sql.raw(`... ${start} ... ${end} ... ${downsample} ...`);
+```
+
+The TypeScript signature claims `number | undefined` but the wire is untyped
+JSON. A client can send `{ start: "0; DROP TABLE timeseries_stats--" }` and
+the `??` fallback will not trigger because the value is truthy. The comment
+in `services/timeseries-cache.ts:160-161` ("never user-supplied — so there is
+no SQL-injection risk") applies only to that file, not to the handler copy.
+
+**Remediation.**
+
+1. Add a runtime validator at the top of `handleRRDTimeseries`:
+
+   ```ts
+   function isValidUnixSeconds(v: unknown): v is number {
+     return (
+       typeof v === "number" &&
+       Number.isFinite(v) &&
+       Number.isInteger(v) &&
+       v >= 0
+     );
+   }
+   function isValidDownsample(v: unknown): v is number {
+     return (
+       typeof v === "number" && Number.isInteger(v) && v >= 60 && v <= 86400
+     );
+   }
+   ```
+
+2. Reject any `params` that fails validation and emit a structured error to the
+   client.
+3. Migrate to Drizzle's tagged-template `sql` helper, which binds
+   interpolated parameters automatically. Only fall back to `sql.raw` for
+   whitelisted column/table names.
+4. Add a regression test in
+   `acarshub-backend/src/socket/__tests__/handlers.test.ts` that sends a
+   malicious string as `start` and asserts (a) the client receives an error and
+   (b) the database table still exists.
+
+**Effort:** Low. **Tests required:** regression test (mandatory per AGENTS.md
+bug-fix policy).
+
+### SEC-02 — LIKE-wildcard injection / DoS in search builder — **HIGH** — ✅ DONE (`57acc60f`)
+
+**File:** `acarshub-backend/src/db/queries/messages.ts:773, 777, 786, 791, 795,
+799, 803, 807, 819`.
+
+**Finding.** Calls of the form `like(messages.tail, '%' + params.tail + '%')`
+parameterise the _value_ (no SQL injection), but do not escape `%` and `_`
+from the user input. A client searching for `%` matches every row; a search
+for `__` produces a slow full-table scan. This is a denial-of-service vector
+and a semantic correctness bug.
+
+The custom `*` → `%` translation at `messages.ts:781-787` is also half-done —
+it leaves `_` active and unescaped, so callers cannot tell what is a literal
+versus a wildcard.
+
+**Remediation.**
+
+1. Add an `escapeLikeWildcards(input: string): string` helper that escapes
+   `%`, `_`, and `\` and use SQL `ESCAPE '\\'` clauses.
+2. Document the wildcard contract: only `*` (translated to `%`) is honoured;
+   all other characters are literals.
+3. Add tests that cover `%`, `_`, `\`, and `*` in user input.
+
+**Effort:** Low. **Tests required:** new + regression test for `%` DoS.
+
+### SEC-03 — Untyped Socket.IO inputs at handler boundaries — **HIGH** ✅ done (24c707bc)
+
+**Files:**
+
+- `acarshub-backend/src/socket/handlers.ts:364-370` (`handleQuerySearch`)
+- `acarshub-backend/src/socket/handlers.ts:451` (`handleUpdateAlerts`)
+- `acarshub-backend/src/socket/handlers.ts:721-723` (`handleAlertTermQuery`)
+- `acarshub-backend/src/socket/handlers.ts:765-766` (`handleQueryAlertsByTerm`)
+- `acarshub-backend/src/socket/handlers.ts:920-925` (`handleRRDTimeseries` — see
+  also SEC-01)
+
+**Finding.** Every `socket.on(...)` handler receives `params: { ... }` typed as
+a TypeScript interface, but Socket.IO is an untyped wire. TS type assertions on
+socket inputs are effectively lies.
+
+**Remediation.**
+
+1. Add `zod` (or a lightweight hand-rolled validator if a dependency is
+   undesirable) and define a schema per handler in a colocated
+   `acarshub-backend/src/socket/schemas/<handler>.ts` file.
+2. Wrap every `socket.on(...)` registration with a `validatedHandler(schema,
+handler)` helper that parses input, emits a structured error on failure,
+   and only invokes `handler` on success.
+3. Tests: invalid-shape inputs must emit an error and never reach the handler.
+
+**Effort:** Medium. Closes SEC-01 partially and SEC-02 partially.
+
+---
+
+## 2. Type safety and `any` elimination
+
+### TYPE-01 — Flask-SocketIO `as any` cast cluster — **HIGH** ✅ `5e9b2b76`
+
+**Files:**
+
+- `acarshub-react/src/components/SettingsModal.tsx:277, 307, 324, 362, 379`
+- `acarshub-react/src/pages/SearchPage.tsx:461`
+- `acarshub-react/src/services/socket.ts:214, 226, 259, 371, 400, 615`
+
+**Finding.** Seven `(socket as any).emit("...", payload, "/main")` casts plus
+several `any`s in the mock socket implementation. The third-argument quirk is
+documented in AGENTS.md as critical, and the workaround has been to cast
+`socket` to `any` rather than express the contract in types.
+
+**Remediation.**
+
+1. In `services/socket.ts`, declare a typed `EmitEvents` interface listing every
+   client-to-server event and its payload type.
+2. Export a single helper:
+
+   ```ts
+   export function emitToServer<E extends keyof EmitEvents>(
+     event: E,
+     payload: EmitEvents[E],
+     namespace: string = "/main",
+   ): void {
+     socket.emit(event as string, payload, namespace);
+   }
+   ```
+
+3. Replace every `(socket as any).emit(...)` call with `emitToServer(...)`.
+4. Replace the mock-socket internals' `any` usages with a typed
+   `MockSocketCallback` and a typed `EngineIoLike` interface.
+
+**Effort:** Low. Eliminates seven `any`s and centralises the namespace quirk
+that SEC-04 (below) revisits.
+
+### TYPE-02 — `any[]` and `any` in mock socket implementation — **MEDIUM** ✅ `5e9b2b76`
+
+**File:** `acarshub-react/src/services/socket.ts:214, 226, 259, 615`.
+
+**Finding.**
+
+```ts
+_callbacks: Record<string, Array<(...args: any[]) => void>> = {};
+io: any = { ... };
+emit(_event: string, ..._args: any[]): this { ... }
+(this.socket as any)._callbacks?.["$" + event]
+```
+
+**Remediation.**
+
+1. Declare `type SocketCallback = (...args: unknown[]) => void` and use it.
+2. Define a minimal `EngineIoLike { uri: string }` interface and replace the
+   `as any` casts at lines 371, 400.
+3. For line 615 (private socket.io internals access), declare a local typed
+   shape and document why we are reaching into internals.
+
+**Effort:** Low. Resolved alongside TYPE-01.
+
+### TYPE-03 — MapLibre expression cast to `any` — **MEDIUM** — ✅ DONE (`ca1ba713`)
+
+**File:** `acarshub-react/src/components/Map/HeyWhatsThatOverlay.tsx:131`.
+
+**Finding.** `"line-color": lineColorExpression as any,` — narrow to MapLibre's
+`ExpressionSpecification` type.
+
+**Remediation.** Import `ExpressionSpecification` from `maplibre-gl` and
+type-narrow the expression.
+
+**Effort:** Trivial.
+
+### TYPE-04 — React DevTools globals untyped — **LOW** — ✅ DONE (`0eea544a`)
+
+**File:** `acarshub-react/src/main.tsx:25`.
+
+**Finding.** `(console as any).__REACT_DEVTOOLS_GLOBAL_HOOK__` — has a
+`biome-ignore` but uses `any`. Replace with a typed `declare global` augmentation
+on the `Window` interface.
+
+**Effort:** Trivial.
+
+### TYPE-05 — Unchecked DB row casts in migration runner — **MEDIUM** — ✅ DONE (`ab8c615d`)
+
+**Files:** `acarshub-backend/src/db/migrate.ts:105, 128, 165, 367, 451, 657,
+678, 752, 769, 951, 959, 1064, 1078, 1129` (30+ similar sites).
+
+**Finding.** `db.prepare(...).get()` returns `unknown` and is cast to
+`{ sql: string }` etc. without validation. A column rename produces silent
+`undefined` access.
+
+**Remediation.**
+
+1. Add a small `assertRow<T>(row: unknown, keys: ReadonlyArray<keyof T>): T`
+   helper in `db/helpers.ts`.
+2. Replace bare `as` casts with `assertRow(...)` calls.
+3. Where applicable, define Zod schemas for migration inspection queries.
+
+**Effort:** Medium. Mechanical refactor.
+
+### TYPE-06 — `workerData` not validated — **MEDIUM** — ✅ DONE (`f3584597`)
+
+**File:** `acarshub-backend/src/db/migrate-worker.ts:124`.
+
+**Finding.** `const typedWorkerData = workerData as MigrateWorkerData | null;`
+— if invoked oddly, you get a misleading "no dbPath provided" rather than a
+type error.
+
+**Remediation.** Add a runtime guard `isMigrateWorkerData(value: unknown)`
+before the cast.
+
+**Effort:** Trivial.
+
+### TYPE-07 — Locale-sensitive lowercase mismatch — **LOW** — ✅ DONE (`f8feca9b`)
+
+**File:** `acarshub-backend/src/config.ts:398-399`.
+
+**Finding.** Line 398 uses `toLocaleLowerCase()`, line 399 uses
+`toLowerCase()`. In the Turkish locale (`I` → `ı`) the validation can pass with
+a value the cast then returns differently.
+
+**Remediation.** Use `toLowerCase()` in both places (we explicitly want
+ASCII-locale behaviour for log-level identifiers).
+
+**Effort:** Trivial.
+
+### TYPE-08 — `zmq-listener` socket typed as `unknown` — **LOW** — ✅ DONE (`765d8f0f`)
+
+**File:** `acarshub-backend/src/services/zmq-listener.ts:65`.
+
+**Finding.** `private socket: unknown = null;` then cast to
+`{ close(): void }` at line 146. A `ZmqSubscriberLike` interface is later
+declared locally at line 167.
+
+**Remediation.** Hoist `ZmqSubscriberLike` and use it as the field type.
+
+**Effort:** Trivial.
+
+---
+
+## 3. Logging discipline
+
+### LOG-01 — `console.*` calls outside the logger — **HIGH** — ✅ DONE (`b80454b9`)
+
+**Files:**
+
+- `acarshub-react/src/components/LogsViewer.tsx:108` — `console.error("Failed to copy logs:", err)`
+- `acarshub-react/src/store/useAppStore.ts:189` — `console.error(...)`
+- `acarshub-react/src/store/useSettingsStore.ts:755, 770` — two `console.error`s
+- `acarshub-react/src/utils/decoderUtils.ts:255` — `console.error("Error parsing libacars data:", error)`
+- `acarshub-react/src/components/Map/RangeRings.tsx:189` — `console.error(...)`
+- `acarshub-backend/src/db/client.ts:88` — `verbose: process.env.NODE_ENV === "development" ? console.log : undefined`
+
+**Allowed exceptions** (do not change):
+
+- `acarshub-react/src/utils/logger.ts:179, 200` — the logger's own
+  storage-failure fallback.
+- `acarshub-react/src/test/setup.ts:114-131` — test-only intercept.
+
+**Remediation.**
+
+1. Replace each call with `createLogger("<module>")` plus `logger.error(message,
+{ error })`.
+2. For the SQLite verbose hook, route through `logger.trace` with a small
+   adapter: `verbose: NODE_ENV === "development" ? (msg) => logger.trace(msg) : undefined`.
+
+**Effort:** Trivial per site, ~30 min total.
+
+### LOG-02 — Backend logger namespace inconsistency — **MEDIUM** — ✅ DONE (`e708f332`)
+
+**Finding.** Three conventions in use across backend modules:
+
+- Colon-namespaced: `socket:handlers`, `db:statistics`, `db:messages`,
+  `db:transform`, `db:helpers`
+- Kebab-cased: `adsb-poller`, `stats-writer`, `message-ring-buffer`,
+  `migrate-worker`, `tcp-listener`, `udp-listener`, `zmq-listener`,
+  `rrd-migration`, `scheduler`, `startup-state`, `timeseries-cache`,
+  `services:station-ids`
+- Single token: `server`, `config`, `database`, `app`, `message-queue`
+
+**Remediation.**
+
+1. Standardise on **colon-namespaced**: `<area>:<module>` (e.g. `db:migrate`,
+   `services:adsb-poller`, `socket:handlers`, `server:metrics`).
+2. Update every `createLogger(...)` call site.
+3. Document the convention in AGENTS.md "Logging Standards" section.
+
+**Effort:** Low (mechanical, one PR).
+
+### LOG-03 — `console.warn` in tests for skip conditions — **LOW** — ✅ DONE (`718ed991`)
+
+**File:** `acarshub-backend/src/db/__tests__/config-integration.test.ts:56,
+121, 168, 314`.
+
+**Remediation.** Replace with proper `test.skip(...)` with reason strings (or a
+custom `skipIfMissingFile()` helper). Logger is not the right tool here — the
+skip metadata should appear in vitest output.
+
+**Effort:** Trivial.
+
+### LOG-04 — `alert()` calls in `LogsViewer` — **MEDIUM** ✅ done (4addb948)
+
+**File:** `acarshub-react/src/components/LogsViewer.tsx:106, 109`.
+
+**Finding.** Native `alert()` for "copied to clipboard" / "copy failed". The
+Toast system already exists; there's even a TODO comment acknowledging this.
+
+**Remediation.** Replace with `useToastStore().show(...)` calls (or whatever
+the existing API is — see `components/Toast.tsx`). Add a unit test for the
+copy-success and copy-failure paths.
+
+**Effort:** Trivial.
+
+---
+
+## 4. Inline styles and CSS custom properties
+
+### STYLE-INLINE-STATIC — Static inline styles must move to SCSS — **HIGH** — ✅ DONE (`f9732120`)
+
+**Files & lines:**
+
+- `acarshub-react/src/pages/StatusPage.tsx:290` — `style={{ marginBottom: "1rem" }}`
+- `acarshub-react/src/pages/AboutPage.tsx:293` — image sizing
+- `acarshub-react/src/pages/AboutPage.tsx:340` — `color: "var(--color-warning)", fontWeight: 600`
+- `acarshub-react/src/components/SettingsModal.tsx:1217` — `width: "100%"`
+- `acarshub-react/src/components/SettingsModal.tsx:1333-1337` — flex/gap layout
+- `acarshub-react/src/components/SettingsModal.tsx:1353` — `width: "120px"`
+- `acarshub-react/src/components/Map/Map.tsx:453` — `width: "100%", height: "100%"`
+- `acarshub-react/src/components/Map/AircraftMarkers.tsx:942-946` — image sizing
+
+**Remediation.** Each callsite gets a dedicated SCSS class; the file's
+companion `.scss` module gets the rule. Naming: BEM-style, e.g.
+`.about-page__warning`, `.settings-form-field__row`, `.map__container--full`.
+
+**Effort:** Low (mechanical).
+
+### STYLE-INLINE-DYNAMIC — Dynamic inline styles must use CSS custom properties — **MEDIUM** — ✅ DONE `cf8ee727`
+
+**Files:**
+
+- `acarshub-react/src/components/LogsViewer.tsx:205` — `maxHeight`
+- `acarshub-react/src/pages/LiveMessagesPage.tsx:756, 761, 784` — virtualizer
+- `acarshub-react/src/pages/AlertsPage.tsx:581, 643, 664, 712, 726` — virtualizer
+- `acarshub-react/src/pages/SearchPage.tsx:982, 991` — virtualizer
+- `acarshub-react/src/components/Toast.tsx:105` — animation duration
+- `acarshub-react/src/components/ContextMenu.tsx:179` — position
+- `acarshub-react/src/components/Map/AnimatedSprite.tsx:107-115` — sprite
+  position/rotation
+- `acarshub-react/src/components/Map/AircraftMarkers.tsx:717, 726, 800, 878,
+942, 955` — marker positioning, rotation, z-index, tooltip alignment
+- `acarshub-react/src/components/Map/GeoJSONOverlayButton.tsx:192` —
+  `backgroundColor: overlay.color`
+
+**Remediation.** Replace inline positional styles with CSS custom properties.
+Instead of:
+
+```tsx
+<div style={{ left: `${x}px`, top: `${y}px` }} />
+```
+
+Pass the values via custom properties and consume them in SCSS:
+
+```tsx
+<div style={{ "--ctx-menu-x": `${x}px`, "--ctx-menu-y": `${y}px` }} />
+```
+
+```scss
+.context-menu {
+  position: absolute;
+  left: var(--ctx-menu-x);
+  top: var(--ctx-menu-y);
+}
+```
+
+This keeps "values that must compute at runtime" but takes layout/styling out
+of JSX.
+
+**Effort:** Medium (many sites, but each is a local change).
+
+---
+
+## 5. SCSS standards
+
+### SCSS-COLOR-01 — Hardcoded `#ffffff` and `#000` — **HIGH** — ✅ DONE (`74e353ba`)
+
+**Files:**
+
+- `acarshub-react/src/styles/components/_toggle.scss:104, 114` —
+  `background-color: #ffffff;`
+- `acarshub-react/src/styles/components/_radio.scss:161` —
+  `background-color: #ffffff;`
+- `acarshub-react/src/styles/pages/_live-messages.scss:711` —
+  `border: 1px solid #000;`
+
+**Finding.** Hardcoded white knob breaks the Latte theme (low contrast against
+near-white surfaces). All other `#xxxxxx` matches in SCSS are inside
+WCAG-contrast-ratio comments — they are fine.
+
+**Remediation.**
+
+1. Add a new variable `--color-toggle-thumb` (and `--color-radio-thumb` if
+   needed) to `styles/_themes.scss`, with appropriate values per theme.
+2. Use `var(--color-base)` for the `_live-messages.scss` border, or a new
+   `--color-message-border-strong` if a stronger border is intentional.
+
+**Effort:** Trivial.
+
+### SCSS-MOBILE — Desktop-first media queries (structural anti-pattern) — **MEDIUM** — ✅ DONE
+
+**Finding.** ~30+ `@media (max-width: ...)` queries across the SCSS tree.
+DESIGN_LANGUAGE.md mandates mobile-first (`min-width`). The mixin file
+`styles/_mixins.scss:237-253` actively codifies the anti-pattern with `down(...)`
+helpers.
+
+**High-traffic offenders:**
+
+- `styles/components/_settings-modal.scss` — 11 occurrences
+- `styles/pages/_stats.scss` — 6 occurrences
+- `styles/components/_select.scss:139`, `_toggle.scss:201`, `_radio.scss:202`
+
+**Remediation.** This is real work; do it as a phased plan, not a single PR:
+
+1. Add `up(...)` mixins to `_mixins.scss`. Mark `down(...)` deprecated with a
+   SCSS `@warn` (or remove if unused).
+2. For each component SCSS file: invert the breakpoints. Base (mobile) styles
+   become the default; tablet/desktop styles move into `@include up(tablet) {
+... }` blocks.
+3. Visual-regression test each component before/after via Playwright
+   screenshots at 320px / 375px / 768px / 1024px / 1920px viewports.
+4. Schedule one component per PR to keep diffs reviewable.
+
+**Effort:** High. Tracked component-by-component; create a parent issue with
+sub-tasks.
+
+### SCSS-TOUCH — Touch targets below 44×44 px — **HIGH** — ✅ DONE (`abbd7123`; `_aircraft-list.scss` gap fixed in `be670f53`)
+
+**Files:**
+
+- `acarshub-react/src/styles/components/_message-group.scss:272-273, 318-319`
+  — `min-width: 36px; min-height: 36px;`
+- `acarshub-react/src/styles/components/_aircraft-list.scss:84-85, 143-144` —
+  36×36
+- `acarshub-react/src/styles/pages/_search.scss:348, 398` — `min-width: 36px`
+- `acarshub-react/src/styles/components/_tab-switcher.scss:168` —
+  `min-height: 36px`
+- `acarshub-react/src/styles/components/_context-menu.scss:125` —
+  `min-height: 36px`
+
+**Remediation.** Bump to ≥44 px. If layout density is the concern, gate the
+smaller value behind a desktop media query while keeping mobile at 44 px.
+
+**Effort:** Trivial. **Tests:** add a Playwright a11y/touch-target check.
+
+**Resolution.** `abbd7123` fixed every file above except
+`_aircraft-list.scss` — the commit's own message lists the other four files
+but never touched this one, despite the plan marking SCSS-TOUCH done in
+full. The gap was found (not yet fixed) while doing the unrelated
+SCSS-MOBILE pass over the same file (`16f2427b`) and closed in `be670f53`:
+`.aircraft-list__pause-button`/`__collapse-button` now use
+`touch-target(44px)` unconditionally rather than the usual
+`touch-target(44px, 36px)` hybrid, because the containing sidebar
+(`.live-map-page__sidebar`) is `display: none` below the same 768px
+breakpoint the hybrid's desktop branch keys off — a hybrid size would
+always have resolved to 36px since the buttons never render below that
+threshold. New E2E regression coverage in `e2e/touch-targets.spec.ts` ("SCSS-TOUCH:
+44px touch-target floor (tablet sidebar)"), gated to a 768px viewport
+override since this component is the only SCSS-TOUCH target that doesn't
+render on phone-width viewports.
+Verified failing (36px) without the fix and passing (44px) with it via a
+Docker Playwright rebuild + `git stash` round-trip.
+
+---
+
+## 6. Module-level mutable state
+
+### STATE-01 — Mutable named exports cause stale snapshots — **HIGH** — ✅ DONE (`ede55f53`)
+
+**File:** `acarshub-backend/src/config.ts:415-416`.
+
+**Finding.**
+
+```ts
+export let alertTerms: string[] = [];
+export let alertTermsIgnore: string[] = [];
+```
+
+The handler code at `socket/handlers.ts:474-476` literally documents the bug:
+
+> "Read back from the DB cache AFTER the update — `config.alertTerms` is a
+> stale snapshot from before setAlertTerms() was called and would send the old
+> values back to clients."
+
+**Remediation.**
+
+1. Replace with `getAlertTerms(): string[]` and `getAlertTermsIgnore(): string[]`
+   getters backed by an internal mutable state object.
+2. Update every call site to use the getter.
+3. Add a regression test that mutates the value and reads it back through the
+   getter from another module.
+
+**Effort:** Low.
+
+### STATE-02 — Module-level booleans, counters, and caches — **MEDIUM** — ✅ DONE (5 files, see Phase 7 table)
+
+**Files:**
+
+- `acarshub-backend/src/socket/handlers.ts:511` — `let alertRegenInProgress = false;`
+- `acarshub-backend/src/db/queries/statistics.ts:47, 59` — `messageCounters`,
+  `countersInitialized`
+- `acarshub-backend/src/db/queries/messages.ts:51` — `unsavedMessageCounter`
+- `acarshub-backend/src/db/queries/alerts.ts:51-62` — three cache vars
+- `acarshub-backend/src/services/heywhatsthat.ts:147` — `cachedUrl`
+
+**Finding.** Each is the "ambient singleton" pattern. Acceptable in isolation;
+pervasive use leaks state across tests and is hard to reason about.
+
+**Remediation.**
+
+1. Per file, encapsulate the mutable state in a small class or factory:
+
+   ```ts
+   export function createAlertCache() {
+     let terms: string[] = [];
+     let ignore: string[] = [];
+     return { setTerms, getTerms, setIgnore, getIgnore, reset };
+   }
+   ```
+
+2. Export a singleton instance from the module (preserves the call shape) but
+   expose a `reset()` for tests.
+3. Wire test setup (`test-setup.ts`) to call all `reset()` functions in
+   `beforeEach`.
+
+**Effort:** Medium (one file per PR is reasonable).
+
+---
+
+## 7. Resource leaks
+
+### LEAK-01 — Alignment-window `setTimeout` handles not captured — **HIGH** — ✅ DONE (`4b414b30`)
+
+**Files:**
+
+- `acarshub-backend/src/services/stats-writer.ts:128`
+- `acarshub-backend/src/services/stats-pruning.ts:141-154`
+- `acarshub-backend/src/services/scheduler.ts:361-370` (`startTaskAt`)
+
+**Finding.** Each schedules a `setTimeout` to align to the next minute boundary,
+then starts a `setInterval`. The outer `setTimeout` handle is **never stored**.
+If `stop*()` is called during the alignment window (up to 60 s), the deferred
+callback still fires and registers a fresh `setInterval` after shutdown.
+
+**Remediation.**
+
+1. Capture the handle:
+
+   ```ts
+   this.alignmentTimer = setTimeout(() => {
+     this.alignmentTimer = null;
+     this.writeStats();
+     this.writeInterval = setInterval(...);
+   }, delay);
+   ```
+
+2. In `stop()`, `clearTimeout(this.alignmentTimer)` before `clearInterval(this.writeInterval)`.
+3. Add tests that call `start()` immediately followed by `stop()` and assert
+   no timers remain on `process._getActiveHandles()` (or use vitest fake
+   timers).
+
+**Effort:** Low.
+
+### LEAK-02 — Reconnect timers in TCP/UDP listeners — **MEDIUM** — ✅ DONE (`62c983d6`)
+
+**Files:**
+
+- `acarshub-backend/src/services/tcp-listener.ts:266` — `reconnectTimer`
+- `acarshub-backend/src/services/udp-listener.ts:223` — `retryTimer`
+
+**Finding.** Verify these are cleared in their respective `stop()` methods.
+This is a flagged audit item, not a confirmed bug.
+
+**Remediation.** Audit each file; if the timer is not cleared on stop, capture
+and clear it. Add a `stop()` regression test similar to LEAK-01.
+
+**Effort:** Low.
+
+### LEAK-03 — Bare `catch {}` swallows errors — **HIGH** — ✅ DONE (`7ca13e0b`)
+
+**File:** `acarshub-backend/src/services/zmq-listener.ts:147`.
+
+**Finding.**
+
+```ts
+try {
+  (this.socket as { close(): void }).close();
+} catch {
+  /* Ignore errors closing an already-closed socket. */
+}
+```
+
+Any error including OOM or TypeError is invisible.
+
+**Remediation.**
+
+```ts
+catch (err) {
+  logger.trace("Error closing zmq socket (likely already closed)", { err });
+}
+```
+
+**Effort:** Trivial.
+
+### LEAK-04 — Backup DB partial-init state — **MEDIUM** — ✅ DONE (`7088cfff`)
+
+**File:** `acarshub-backend/src/db/client.ts:164-169`.
+
+**Finding.** If `new Database()` succeeds but a subsequent `pragma` call throws,
+`drizzleBackupClient` and `sqliteBackupConnection` are left in inconsistent
+partial state.
+
+**Remediation.** Wrap the entire init in a try/catch that nulls both refs on
+any failure.
+
+**Effort:** Trivial.
+
+---
+
+## 8. Error handling consistency
+
+### ERR-01 — Mixed `catch (error)` / `catch (err)` naming — **LOW** — ✅ DONE (`0421dfa3`)
+
+**Finding.** `services/index.ts` uses `err`; `socket/handlers.ts` uses `error`;
+`services/timeseries-cache.ts` uses `err`; `db/queries/messages.ts` uses
+`error`.
+
+**Remediation.** Pick one — recommend `error` since it matches the AGENTS.md
+example. Add a Biome rule (`useNamingConvention` or a custom one) to enforce.
+
+**Effort:** Low (mechanical via Biome auto-fix once rule is added).
+
+### ERR-02 — Fire-and-forget async in `setImmediate` — **MEDIUM** — ✅ DONE (`4ca74830`)
+
+**File:** `acarshub-backend/src/socket/handlers.ts:567`.
+
+**Finding.** `setImmediate(async () => { ... })` for
+`handleRegenerateAlertMatches`. Inner try/catch covers most cases, but if the
+inner `catch` itself throws (e.g. socket disconnect during emit), the
+rejection becomes an unhandled rejection at process level.
+
+**Remediation.** Wrap the whole IIFE: `Promise.resolve(asyncFn()).catch((err)
+=> logger.error("regen failed unexpectedly", { err }))`.
+
+**Effort:** Trivial.
+
+### ERR-03 — Async `setInterval` callbacks — **LOW** — ✅ DONE (`171cd2f4`)
+
+**File:** `acarshub-backend/src/services/scheduler.ts:339, 361, 365`.
+
+**Finding.** `setInterval(async () => { ... })` is fragile if the inner
+function rejects. `executeTask` already has a try/catch (verified at line
+383+), so this is acceptable, but the pattern is brittle.
+
+**Remediation.** Document the invariant ("`executeTask` must never throw") in
+a comment, or wrap the interval callback in a `.catch()` chain explicitly.
+
+**Effort:** Trivial.
+
+---
+
+## 9. Architecture and god files
+
+### GOD-01 — `socket/handlers.ts` (1223 lines) — **MEDIUM** — ✅ DONE (`6e5a4bcb`)
+
+**File:** `acarshub-backend/src/socket/handlers.ts`.
+
+**Remediation.** Split into per-domain modules:
+
+- `socket/handlers/connect.ts` — `handleConnect`, `handleDisconnect`
+- `socket/handlers/search.ts` — `handleQuerySearch`
+- `socket/handlers/alerts.ts` — `handleUpdateAlerts`,
+  `handleRegenerateAlertMatches`, `handleAlertTermQuery`,
+  `handleQueryAlertsByTerm`
+- `socket/handlers/stats.ts` — frequency / signal / message-count handlers
+- `socket/handlers/timeseries.ts` — `handleRRDTimeseries`
+- `socket/handlers/index.ts` — thin `registerHandlers(io)` orchestrator
+
+Move shared module-level state (`alertRegenInProgress`) into a small service
+object passed to handlers, or into `services/alert-regen.ts`.
+
+**Effort:** Medium. Tests stay valid; structure improves.
+
+### GOD-02 — `db/migrate.ts` (1652 lines) — **MEDIUM** — ✅ DONE (`166541ae`)
+
+**Remediation.** One file per migration step (`migrations/v1.ts`,
+`migrations/v2.ts`, ...) plus a registry; `migrate.ts` becomes a small runner
+that imports and dispatches. This is more aligned with a "custom migration
+runner" architecture than a monolith.
+
+**Effort:** Medium-to-high. Schedule alongside any new migration so the work
+isn't pure churn.
+
+### GOD-03 — `db/queries/messages.ts` (1212 lines) — **MEDIUM** — ✅ DONE (`56256cb5`)
+
+**Remediation.** Split into `queries/messages/search.ts`, `insert.ts`,
+`update.ts`, `delete.ts`, `prune.ts`, `range.ts`, `transform.ts`. Re-export
+from a barrel.
+
+**Effort:** Medium.
+
+### GOD-04 — `services/index.ts` (848 lines) — **MEDIUM** — ✅ DONE (`8bf9ee72`)
+
+**Remediation.** Split into:
+
+- `services/background-services.ts` — top-level lifecycle
+- `services/listener-manager.ts` — TCP/UDP/ZMQ listener wiring
+- `services/system-status.ts` — status emission
+
+`services/index.ts` becomes a barrel.
+
+**Effort:** Medium.
+
+### GOD-05 — `components/SettingsModal.tsx` (1553 lines) — **HIGH** — ✅ DONE (`f5d16be9`)
+
+**File:** `acarshub-react/src/components/SettingsModal.tsx`.
+
+**Remediation.** Extract per-tab subcomponents:
+
+- `components/settings/AppearanceTab.tsx`
+- `components/settings/RegionalTab.tsx`
+- `components/settings/AlertsTab.tsx`
+- `components/settings/NotificationsTab.tsx`
+- `components/settings/DataTab.tsx`
+- `components/settings/MapTab.tsx`
+- `components/settings/AdvancedTab.tsx`
+
+Resolves five `as any` socket emits (TYPE-01) and three static inline styles
+(STYLE-INLINE-STATIC) in passing.
+
+**Effort:** Medium-to-high.
+
+### GOD-06 — `utils/aircraftIcons.ts` (1510 lines) — **MEDIUM** — ✅ DONE (`81d94f2c`)
+
+**Finding.** Likely a large lookup table — verify; if so it's data, acceptable,
+but should split data from any logic.
+
+**Remediation.** If pure data, extract to a JSON file and a small loader. If
+mixed with logic, separate the two.
+
+**Effort:** Low (mostly mechanical).
+
+### GOD-07 — `store/useAppStore.ts` (1217 lines) — **HIGH** — ✅ DONE (`2add10af`)
+
+**Remediation.** Split into:
+
+- `store/useMessagesStore.ts` — message groups, message ingestion
+- `store/useAlertsStore.ts` — alert terms, alert counts
+- `store/useReadStateStore.ts` — read/unread tracking
+- `store/useConnectionStore.ts` — connection state
+
+Use Zustand's slice pattern if a single combined store is preferred.
+
+**Effort:** High. Touches every consumer.
+
+### GOD-08 — `components/Map/AircraftMarkers.tsx` (1098 lines) with duplicated tooltip code — **MEDIUM** — ✅ DONE (`924822ae`)
+
+**File:** `acarshub-react/src/components/Map/AircraftMarkers.tsx:739-862` vs
+`866-948`.
+
+**Finding.** ~150 lines duplicated between sprite-branch and SVG-branch
+tooltip positioning.
+
+**Remediation.**
+
+1. Extract `useTooltipPositioning(...)` custom hook.
+2. Extract `<MarkerButton sprite={...} svg={...}>` shared component.
+3. Branches reduce to selecting which child to render; positioning logic is
+   shared.
+
+**Effort:** Medium.
+
+### GOD-09 — `services/rrd-migration.ts` (1246 lines) — **LOW**
+
+**Finding.** Long because of fallback paths in legacy RRD format reading.
+Reasonable but trending toward god-file territory.
+
+**Remediation.** Defer unless changes are needed; if touched, split format
+parsers from the migration driver.
+
+**Effort:** Medium when scheduled.
+
+---
+
+## 10. React effect-density refactors
+
+### EFFECT-01 — `LiveMapPage.tsx` has 12 `useEffect`s — **MEDIUM** — ✅ DONE (`7835350b`)
+
+**File:** `acarshub-react/src/pages/LiveMapPage.tsx:137, 151, 274, 309, 330,
+342, 354, 360, 386, 400, 519, 530`.
+
+**Remediation.** Extract domain-specific hooks:
+
+- `useMapViewSync()` — view state ↔ store sync
+- `useAircraftSelection()` — selected aircraft, follow mode
+- `useFollowMode()` — auto-pan when followed aircraft updates
+- `useMapSidebarLayout()` — sidebar open/close, layout effects
+- `useMapKeyboardShortcuts()`
+
+**Effort:** Medium.
+
+### EFFECT-02 — `LiveMessagesPage.tsx` has 9 `useEffect`s — **MEDIUM** — ✅ DONE (`d3c8868f`)
+
+**File:** `acarshub-react/src/pages/LiveMessagesPage.tsx:173, 177, 181, 188,
+196, 209, 238, 495, 621`.
+
+**Remediation.** Extract `useMessageVirtualization()`,
+`useMessageScrollAnchor()`, `useMessageFilterSync()`.
+
+**Effort:** Medium.
+
+### EFFECT-03 — `SearchPage.tsx` has 6 `useEffect`s — **LOW** — ✅ DONE (`202b761c`)
+
+**Remediation.** Combine related effects; extract a `useSearchParamsSync()` hook.
+
+**Effort:** Low.
+
+### EFFECT-04 — `AlertsPage.tsx` has 5 `useEffect`s — **LOW** — ✅ DONE (`afe96db9`)
+
+**Remediation.** Same approach as EFFECT-03.
+
+**Effort:** Low.
+
+---
+
+## 11. Testing
+
+### TEST-CFG-01 — Backend has zero coverage thresholds — **HIGH** — ✅ DONE (`88d44730`)
+
+**File:** `acarshub-backend/vitest.config.ts`.
+
+**Finding.** `coverage` block exists with reporters but **no `thresholds`** at
+all. AGENTS.md mandates 80% services / 90% formatters; nothing enforces this.
+
+**Remediation.** Add path-scoped thresholds:
+
+```ts
+thresholds: {
+  lines: 80, functions: 80, branches: 75, statements: 80,
+  perFile: true,
+  "src/formatters/**/*.ts": { lines: 90, functions: 90, branches: 85, statements: 90 },
+  "src/services/**/*.ts": { lines: 80, functions: 80, branches: 75, statements: 80 },
+  "src/db/queries/**/*.ts": { lines: 80, functions: 80, branches: 75, statements: 80 },
+}
+```
+
+**Effort:** Trivial. Will fail CI immediately if coverage is below — coordinate
+with TEST-GAP-\* fixes.
+
+### TEST-CFG-02 — Frontend thresholds don't enforce per-area goals — **HIGH** — ✅ DONE (`dbed992a`)
+
+**File:** `acarshub-react/vitest.config.ts:57-62`.
+
+**Finding.** Flat `lines: 70, functions: 70, branches: 65, statements: 70`
+across `src/`. AGENTS.md requires:
+
+- Utilities: 90 %
+- Stores: 80 %
+- Components: 70 %
+
+**Remediation.** Add per-path thresholds:
+
+```ts
+thresholds: {
+  lines: 70, functions: 70, branches: 65, statements: 70,
+  perFile: true,
+  "src/utils/**/*.ts": { lines: 90, functions: 90, branches: 85, statements: 90 },
+  "src/store/**/*.ts": { lines: 80, functions: 80, branches: 75, statements: 80 },
+}
+```
+
+**Effort:** Trivial.
+
+### TEST-SKIP-01 — Four unjustified `it.skip` in scheduler tests — **HIGH** — ✅ DONE (`768074a7`)
+
+**File:** `acarshub-backend/src/services/__tests__/scheduler.test.ts:369, 450,
+487, 511`.
+
+**Finding.** No comments, no linked issues. Tests cover completion events,
+async error handling, lastRun tracking, metadata after each execution — all
+important runtime behaviour.
+
+**Remediation.** Either fix and unskip, or document each with a tracking issue
+URL and a one-line justification. Prefer fixing.
+
+**Effort:** Low to medium (depends on the underlying fake-timer interaction).
+
+### TEST-GAP-BE — Backend untested files — **HIGH** — ✅ DONE (`server.ts` closed in `885a5e68`; `db/schema.ts` closed in `8f91e142`)
+
+**Files:**
+
+- `acarshub-backend/src/utils/logger.ts` — no test
+- `acarshub-backend/src/services/decoder-listener.ts` — no test (the **primary
+  message ingest service**)
+- `acarshub-backend/src/services/station-ids.ts` — no test
+- `acarshub-backend/src/db/migrate.ts` — top-level orchestrator has no
+  dedicated test (sub-pieces are tested)
+- `acarshub-backend/src/db/schema.ts` — no smoke test that tables/indexes
+  match expectations
+- `acarshub-backend/src/server.ts` — no direct test (E2E/integration only)
+- `acarshub-backend/src/startup-state.ts` — covered transitively via
+  socket-integration test, but no own-state-machine unit test
+
+**Acceptable to leave untested:** `socket/types.ts`, `db/index.ts`,
+`db/queries/index.ts` (all barrels/types).
+
+**Remediation.** Add `__tests__/<name>.test.ts` for each. Prioritise
+`logger.ts` (used by every other module) and `decoder-listener.ts` (primary
+ingest path).
+
+**Effort:** Medium (one test file per PR).
+
+### TEST-GAP-FE — Frontend untested files — **HIGH** — ✅ DONE (all files covered; `LogsViewer.tsx` closed last via NIT-10 `8cf6f063`)
+
+**Services & infra (critical):**
+
+- `acarshub-react/src/services/socket.ts` — Socket.IO client wrapper, including
+  the namespace quirk
+- `acarshub-react/src/services/audioService.ts` — alert-sound playback
+- `acarshub-react/src/utils/logger.ts` — the mandated logger
+- `acarshub-react/src/utils/spriteLoader.ts`
+- `acarshub-react/src/utils/version.ts`
+- `acarshub-react/src/utils/aircraftIcons.ts`
+- `acarshub-react/src/utils/index.ts`
+- `acarshub-react/src/hooks/useThemeAwareMapProvider.ts`
+- `acarshub-react/src/config/geojsonOverlays.ts`
+- `acarshub-react/src/config/mapProviders.ts`
+- `acarshub-react/src/App.tsx`
+
+**Pages with no unit test (E2E only):**
+
+- `acarshub-react/src/pages/AboutPage.tsx`
+- `acarshub-react/src/pages/LiveMapPage.tsx`
+- `acarshub-react/src/pages/StatsPage.tsx`
+- `acarshub-react/src/pages/StatusPage.tsx`
+
+**Foundational design-system primitives (untested):**
+
+- `Modal.tsx` (focus-trap logic)
+- `Toggle.tsx`, `Select.tsx`, `RadioGroup.tsx`, `TabSwitcher.tsx`
+- `Toast.tsx`, `ToastContainer.tsx`
+- `Navigation.tsx`
+- `ConnectionStatus.tsx`
+- `ContextMenu.tsx`
+- `ThemeSwitcher.tsx`
+- `LogsViewer.tsx`
+- `MessageFilters.tsx`
+- `AlertSoundManager.tsx`
+
+**Map subsystem (15 of 21 components untested):**
+
+Status (Phase 6 TEST-GAP-FE Map):
+
+- Bundle 1 DONE (merge `811b9c39`, 45 tests):
+  `MapControlButton`, `MapContextMenu` (pins NIT-09 double-`onClose`),
+  `MapLegend`, `GeoJSONOverlayButton`.
+- Bundle 2 DONE (merge `27ddf67a`, 82 tests):
+  `AircraftContextMenu` (pins onClose-fires-once, no NIT-09 smell),
+  `AircraftMessagesModal` (mark-as-read dedup + body scroll lock + ARIA),
+  `AnimatedSprite` (manual RAF + `Date.now` drivers for frame cycling),
+  `MapControls` (backend-gated range-rings/HeyWhatsThat; ACARS/Unread
+  mutual exclusion; all store-setter wiring).
+- Bundle 3 DONE (merge `25b313b1`, 73 tests): all 7 react-map-gl
+  integrations. Used inline `vi.mock("react-map-gl/maplibre")` with
+  `vi.hoisted()` capture buffers (rejected separate harness — Vitest
+  hoisting + cross-file coupling made it uglier than per-file inlining).
+  - `StationMarker` (8): privacy gating on `decoders.adsb.range_rings`;
+    user settings (`stationLat`/`stationLon`) override backend when
+    non-(0,0); both (0,0) renders nothing.
+  - `OpenAIPOverlay` (6): TMS via adsbexchange proxy; max-zoom 12;
+    300ms opacity fade.
+  - `NexradOverlay` (9): Iowa Mesonet WMS EPSG:3857, 256x256, 5-min
+    refresh via `vi.useFakeTimers`; `renderTimestampOnly` prop.
+  - `HeyWhatsThatOverlay` (10): Catppuccin mocha vs latte palettes
+    (`#a6e3a1` vs `#40a02b`); requires `decoders.adsb.heywhatsthat_url`;
+    `resolvePathOrUrl` stubbed.
+  - `RainViewerOverlay` (9): fetches `RainViewer` API tile path; empty
+    `past` array and fetch failures render nothing.
+  - `RangeRings` (13): 64-point Polygon (65 closed coords) × 3 rings
+    - 4 cardinal labels = 12 features; nice-form bases (1/2/5×10^n);
+      falls back to `settings.map.rangeRings` when no map ref.
+  - `AircraftMarkers` (18): viewport culling (incl. antimeridian
+    crossing, west>east), 10% buffer; settings filters (showOnlyAcars,
+    showOnlyUnread, dbFlags additive); skips aircraft missing lat/lon;
+    `onViewportBoundsChange` raw-bounds on move + null on unmount;
+    marker click opens modal only when `hasMessages`; right-click opens
+    context menu. Uses `externalAircraft` prop to bypass the internal
+    ADS-B→ACARS pairing pipeline (covered separately by
+    `aircraftPairing.test.ts`).
+
+Gotchas captured:
+
+- user-event v14 stomps `navigator.clipboard` at `setup()`; install
+  clipboard mock AFTER `userEvent.setup()` (same as `LogsViewer.test.tsx`).
+- For fake-timer tests with `useEffect`: assert captured-array
+  `length >= 1` (not `=== 1`) since effects re-render and Source/Layer
+  props are re-captured per render.
+- For timestamp-comparison tests: pin `vi.setSystemTime()` BEFORE first
+  render so the initial value is deterministic.
+- `react-map-gl/maplibre` `<Marker>` exposes no `className` prop — only
+  `style`; AGENTS.md inline-style rule has a library-API exception here
+  (already documented inline in `AircraftMarkers.tsx`).
+
+Cumulative Map subsystem coverage: 15 of 15 covered, 200 tests.
+
+- `Map/AircraftContextMenu.tsx` — covered (bundle 2)
+- `Map/AircraftMarkers.tsx` — covered (bundle 3)
+- `Map/AircraftMessagesModal.tsx` — covered (bundle 2)
+- `Map/AnimatedSprite.tsx` — covered (bundle 2)
+- `Map/GeoJSONOverlayButton.tsx` — covered (bundle 1)
+- `Map/HeyWhatsThatOverlay.tsx` — covered (bundle 3)
+- `Map/MapContextMenu.tsx` — covered (bundle 1)
+- `Map/MapControlButton.tsx` — covered (bundle 1)
+- `Map/MapControls.tsx` — covered (bundle 2)
+- `Map/MapLegend.tsx` — covered (bundle 1)
+- `Map/NexradOverlay.tsx` — covered (bundle 3)
+- `Map/OpenAIPOverlay.tsx` — covered (bundle 3)
+- `Map/RainViewerOverlay.tsx` — covered (bundle 3)
+- `Map/RangeRings.tsx` — covered (bundle 3)
+- `Map/StationMarker.tsx` — covered (bundle 3)
+
+**Charts (3 of 6 untested):** ✅ ALL DONE — merge `1502309b`
+(commit `f9290954`), 27 tests across 3 files.
+
+- `components/charts/ChartContainer.tsx` — covered (8 tests)
+- `components/charts/MessageCountChart.tsx` — covered (10 tests)
+- `components/charts/SignalLevelChart.tsx` — covered (9 tests)
+
+**Remediation.** Track in a parent issue with sub-issues per area:
+
+1. Test infra (`socket.ts`, `audioService.ts`, both `logger.ts`) — week 1
+2. Form primitives — week 1
+3. Toast/notification system, `Modal`, `Navigation`, `ConnectionStatus` — week 2
+4. Pages — week 3 (vitest unit + RTL)
+5. Map subsystem — week 3-4
+6. Charts — week 4
+
+**Effort:** High overall; each individual file is Low.
+
+### TEST-QUALITY-01 — `Card.test.tsx` and `Button.test.tsx` are coverage padding — **MEDIUM** — ✅ DONE (`c3d59458`)
+
+**Files:**
+
+- `acarshub-react/src/components/__tests__/Card.test.tsx` (504 lines)
+- `acarshub-react/src/components/__tests__/Button.test.tsx` (492 lines)
+
+**Finding.** Mostly `it("renders X variant")` micro-tests asserting class names.
+Real behavioural tests (focus, keyboard activation, ARIA states, disabled
+behaviour) are missing.
+
+**Remediation.**
+
+1. Consolidate variant matrix tests with `it.each(variantTable)`.
+2. Add behavioural tests: focus management, keyboard activation
+   (Enter/Space → onClick), `disabled` prevents click, ARIA pressed/expanded
+   states.
+
+**Effort:** Low. Use `acarshub-backend/src/socket/__tests__/handlers.test.ts`
+as the quality template — 64 tests in 14 `describe` blocks with 8 explicit
+`regression:` entries.
+
+### TEST-MISSING-INTEGRATION — No backend ingestion-pipeline integration test — **MEDIUM** — ✅ DONE (`28dc9e27`)
+
+**Finding.** Each component (UDP/TCP/ZMQ listener → message-queue → enrichment
+→ DB write → ring-buffer → socket emit) is unit-tested in isolation but the
+seam between them isn't exercised end-to-end.
+
+**Remediation.** Add `acarshub-backend/src/__tests__/ingestion.integration.test.ts`
+that fires a fake UDP datagram, asserts a message lands in the DB, lands in
+the ring buffer, and emits via a mock socket.
+
+**Effort:** Medium.
+
+### TEST-MISSING-FE — No regression test for `/main` namespace quirk — **MEDIUM** — ✅ DONE (folded into `socket.ts` suite, `c30e8dd1`)
+
+**Finding.** AGENTS.md flags this as critical, but no test locks in the
+behaviour. Closely related to TYPE-01.
+
+**Remediation.** When adding `services/socket.ts` tests (TEST-GAP-FE), include
+explicit assertions that `emitToServer(event, payload)` calls the underlying
+emit with `("event", payload, "/main")` and that the namespace can be
+overridden.
+
+**Effort:** Trivial (rolls into TEST-GAP-FE).
+
+### TEST-MISSING-A11Y — No component-level a11y unit tests — **LOW** — ✅ DONE
+
+**Finding.** Accessibility is only tested via Playwright + axe-core in
+`e2e/accessibility.spec.ts`. Component-level `vitest-axe` checks would catch
+regressions earlier.
+
+**Remediation.** Add `vitest-axe` and a small `expectNoA11yViolations(<Component
+/>)` helper. Apply it to the design-system primitives.
+
+**Effort:** Low.
+
+**Resolution (merge `97d78627`, commit `3900b752`).** Wired axe-core directly
+instead of `vitest-axe` — the latter is at 0.1.0 and stale, while axe-core
+(4.11.4) is already a direct dep used by the E2E sweep. New helper at
+`acarshub-react/src/test/a11y.ts` exports `runAxe()` and
+`expectNoA11yViolations()` with WCAG 2.0/2.1 A + AA tag selection matching
+the E2E suite. Applied across 14 tests in
+`acarshub-react/src/components/__tests__/formPrimitives.a11y.test.tsx`
+covering Button, Card, Toggle, Select, RadioGroup, TabSwitcher, Modal,
+Toast, ToastContainer. All primitives pass WCAG 2.1 AA today; future
+regressions caught at unit-test speed.
+
+---
+
+## 12. Documentation drift
+
+### DOC-ARCH — `agent-docs/ARCHITECTURE.md` describes a deleted Python stack — **HIGH** — **DONE**
+
+**Resolved on `remediation` via merge `2a7ed6b1` (branch `phase-5/doc-arch`,
+commit `9e3fdb1c`).** Full rewrite of `agent-docs/ARCHITECTURE.md` against
+the actual Node.js/Fastify/Socket.IO/Drizzle/better-sqlite3 stack:
+system diagram updated (nginx port 80 → Fastify port 8888); backend
+section rewritten with real dependencies and directory tree; database
+schema matches `src/db/schema.ts` (FTS5 noted as migration-defined, not
+Drizzle-modelled); data-flow steps reference real module paths
+(`services/{tcp,udp,zmq}-listener.ts`, `formatters/index.ts`, etc.);
+HTTP endpoints enumerated; deployment section reflects s6-overlay
+services (`nginx`, `webapp`, `01-acarshub`) running the esbuild
+`server.bundle.mjs` artefact under the SDR Enthusiasts baseimage; UDP
+ports corrected to 5550-5558 (matching `Dockerfile` `EXPOSE` lines);
+env-var name corrected to `<TYPE>_CONNECTIONS` (matching `config.ts`);
+Socket.IO namespace-emit rule folded in from DOC-FLASK with pointer to
+`AGENTS.md:342-349`. Cross-references added to `DECODER_CONNECTIONS`,
+`DB_OPTIMIZATION`, `MEMORY_OPTIMIZATION`, `MESSAGE_RING_BUFFER`,
+`V4.2`, `TESTING`, and this plan.
+
+---
+
+#### Original audit (DOC-ARCH)
+
+**File:** `agent-docs/ARCHITECTURE.md`.
+
+**Stale claims:**
+
+| Line              | Stale                                                                             | Reality                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 25-26             | "Proxies → Python backend"                                                        | Node/Fastify backend                                                                                                    |
+| 32                | "Python Flask Backend (Port 8888)"                                                | Node Fastify on 8888                                                                                                    |
+| 35                | "Decoders (libacars)" inside backend                                              | Backend stores already-decoded text                                                                                     |
+| 146-154           | "Python 3.x / Flask / Flask-SocketIO / SQLAlchemy / Alembic / RRDtool / libacars" | Node 22+ / Fastify / `socket.io` / Drizzle / better-sqlite3 / Pino / zeromq; custom migration runner                    |
+| 158-169           | `rootfs/webapp/acarshub.py` etc.                                                  | `acarshub-backend/src/{server.ts,socket/,db/,services/,formatters/}`; Drizzle migrations in `acarshub-backend/drizzle/` |
+| 217-222           | "Flask-SocketIO Quirk" attribution                                                | See DOC-FLASK below                                                                                                     |
+| 235-260, 279      | "Python backend" prose                                                            | Node backend                                                                                                            |
+| 334               | base image `:python`                                                              | actual Dockerfile uses `:base`                                                                                          |
+| 339, 350, 360-361 | "Python Flask backend" services / proxy targets                                   | Node                                                                                                                    |
+| 416               | "Flask-SocketIO with gevent"                                                      | Fastify + Node Socket.IO event loop                                                                                     |
+| 441               | "SQL injection: protected by SQLAlchemy parameterized queries"                    | Drizzle / better-sqlite3 prepared statements                                                                            |
+| 481-484           | "Python logging with rotating file handler"                                       | Pino                                                                                                                    |
+| 488               | "Prometheus: /metrics endpoint (Gunicorn stats)"                                  | Custom Node metrics in `services/metrics.ts`                                                                            |
+| 496-501           | "Tauri can bundle Python backend as sidecar process"                              | Node sidecar                                                                                                            |
+| 505-513           | "Run multiple Python backend instances"                                           | Node instances                                                                                                          |
+
+**Remediation.** Wholesale rewrite of every backend-touching paragraph.
+Frontend section (lines 50-141) is accurate and can be left alone. Add a
+"backend tech stack" subsection that mirrors the actual `acarshub-backend/package.json`.
+
+**Effort:** Medium.
+
+### DOC-FEAT — `agent-docs/FEATURES.md` partially stale — **MEDIUM** — ✅ DONE
+
+**Resolution.** Two stale passages rewritten:
+
+- **Lines 16-21 ("Server-Side Decoding (libacars)")** — the original
+  text implied the Node.js backend itself decodes CPDLC/frequency
+  data with libacars. It does not. The backend has no libacars
+  binding (`grep -r libacars acarshub-backend/src` only matches
+  schema/test fixtures and the `libacars` _field name_). The actual
+  flow is: the upstream decoder daemons (acarsdec, vdlm2dec,
+  dumpvdl2, dumphfdl, etc.) link libacars and emit ARINC622 / SPDU /
+  freq_data / CPDLC JSON; the backend's `formatters/` (see
+  `formatters/index.ts:594-768`, `369-371`, `974-976`,
+  `517-518`) extract those substructures from inbound JSON and
+  re-serialise them into the message's `libacars` field; the React
+  frontend's `parseAndFormatLibacars` (in `MessageCard.tsx:485`)
+  parses and renders them. The new section heading is "Server-Side
+  Decoded Data (libacars, upstream)" and the bullets accurately
+  describe each leg with a cross-reference to
+  `agent-docs/DECODER_CONNECTIONS.md` for the ingestion pipeline.
+- **Line 532 ("Non-blocking I/O (Flask-SocketIO with gevent)")** —
+  reworded to "Node.js event loop on Fastify + Socket.IO 4.x" to
+  match the actual runtime.
+
+**Effort:** Low.
+
+### DOC-FLASK — Re-investigate the "Flask-SocketIO 3rd-arg quirk" — **MEDIUM** — ✅ DONE (resolved with TYPE-01/02)
+
+**Files:** `AGENTS.md:342-349` (resolved), `agent-docs/ARCHITECTURE.md:217-222`
+(stale — folded into DOC-ARCH), `dev-docs/CODING_STANDARDS.md:684-687`
+(stale — folded into DOC-DEV-DOCS).
+
+**Resolution.** Closed during Phase 2 as part of TYPE-01/02 (commit
+`5e9b2b76`). The investigation determined option (2) from the original
+finding: the trailing `, "/main"` namespace argument on every `socket.emit`
+call was a historical workaround for a Flask-SocketIO Python-client
+behaviour that became dead-but-harmless code once the backend was ported
+to Node `socket.io` v4. The Node server binds namespace handlers via
+`io.of("/main")` at construction time, so the per-emit argument was
+silently dropped as an unused handler parameter.
+
+TYPE-01/02 removed all 13 dead `, "/main"` arguments along with the
+associated `as any` cast cluster, and rewrote the `AGENTS.md` rule to
+document the actual constraint: emits do **not** pass a namespace
+argument, because the namespace is bound at construction.
+
+The two remaining doc references in `agent-docs/ARCHITECTURE.md` and
+`dev-docs/CODING_STANDARDS.md` are covered by DOC-ARCH and DOC-DEV-DOCS
+respectively — they are tracked there rather than re-fixed in isolation
+because both surrounding documents need broader rewrites in Phase 5
+anyway.
+
+**Effort:** Low.
+
+### DOC-AGENTS — `AGENTS.md` references Playwright as flake-managed — **LOW** — ✅ DONE
+
+**File:** `AGENTS.md:198-206` (Nix Flakes section).
+
+**Resolution.** Rewrote the section to accurately reflect what `flake.nix`
+actually provides. The old list claimed "Node.js, npm, TypeScript / Python,
+PDM / Biome, Playwright / Pre-commit hooks" — three of those were wrong:
+Playwright is npm-managed (in `acarshub-react/package.json` and run from
+`Dockerfile.e2e`), and Python/PDM were dropped when the Python backend was
+retired. The new list enumerates the actual `flake.nix` contents
+(`nodejs`, `typescript`, `biome`, `just`, `rrdtool`, `sqlite`, `cmake`,
+`pkg-config`, `docker` + plugins, `qemu`) and adds an explicit note about
+Playwright and Python being out-of-flake.
+
+**Effort:** Trivial.
+
+### DOC-AGENTS-LIST — `AGENTS.md` documentation index is incomplete — **LOW** — ✅ DONE
+
+**File:** `AGENTS.md:14-28` (Documentation Structure section).
+
+**Resolution.** Added the four missing `agent-docs/` entries to the index
+with one-line descriptions: `DECODER_CONNECTIONS.md`, `DB_OPTIMIZATION.md`,
+`MEMORY_OPTIMIZATION.md`, `MESSAGE_RING_BUFFER.md`. The fifth file
+referenced in the original audit (`DESKTOP_AND_NATIVE_INSTALL_PLAN.md`)
+does not exist on disk — that finding was stale and is dropped without
+action. `REMEDIATION_PLAN.md` (this document) is deliberately not listed:
+it is scheduled for deletion in Phase 9 per the AGENTS.md "no summary
+docs" rule.
+
+**Effort:** Trivial.
+
+### DOC-DEV-DOCS — `dev-docs/` is the largest source of drift — **HIGH** — **DONE**
+
+**Resolved on `remediation` via merge of branch `phase-5/doc-dev-docs`
+(commit `1eb9d02f`).** Per-file audit by the explore agent found the
+directory's drift was even broader than the original plan listed:
+12 of 15 files were either pre-migration scratchpads, completed-migration
+trackers (violating the AGENTS.md no-summary rule), or pure duplicates
+of canonical docs. The 3 keepers were promoted to their proper homes
+and the directory was retired entirely.
+
+**Deleted (12):** `API_PARITY.md`, `BACKEND_SETUP_DECISIONS.md`,
+`CODING_STANDARDS.md`, `DEVELOPMENT.md`, `ENV_VARS_AUDIT.md`,
+`NODEJS_MIGRATION_PLAN.md`, `PYTHON_DEPENDENCIES.md`, `README.md`,
+`SETUP.md`, `TESTING_AUDIT.md`, `TESTING_GUIDE.md`,
+`V4_DATABASE_SUMMARY.md`. Migration-era artefacts were deleted outright
+rather than archived under `dev-docs/historical/` (per user direction)
+since git history preserves them and the `historical/` directory would
+itself violate the no-summary-docs rule.
+
+**Promoted to `agent-docs/`:** `TIMESERIES_STRATEGY.md` (Mar 17,
+accurate description of current SQLite time-series design with
+historical RRD context); `TYPESCRIPT_CHECKING.md` (current
+`tsc --build` + project-references reference).
+
+**Promoted to repo root (GitHub convention):** `CONTRIBUTING.md`,
+rewritten to drop `pdm install`, the Flask-WTF CSRF item, the
+"Python/Flask" backend scope label, and stale links to deleted docs
+(`TESTING_GUIDE.md`, `CODING_STANDARDS.md`, `TROUBLESHOOTING.md`).
+
+**Side-effects cleaned up in the same commit:**
+`DEV-QUICK-START.md:251-263` More Documentation section rewritten to
+drop the dev-docs/ listing and add the promoted destinations;
+`acarshub-backend/README.md:10` stale `dev-docs/historical/` line
+removed; `acarshub-backend/src/socket/__tests__/integration.test.ts:1005-1006`
+code comment referencing deleted `API_PARITY.md` rewritten without the
+reference. Final state: `dev-docs/` directory no longer exists.
+
+---
+
+#### Original audit (DOC-DEV-DOCS)
+
+**Files to delete:**
+
+- `dev-docs/PYTHON_DEPENDENCIES.md` — describes deleted `requirements.txt` /
+  `pdm.lock`
+- `dev-docs/V4_DATABASE_SUMMARY.md` — orphaned + **violates AGENTS.md
+  "no summary docs" rule** by filename
+
+**Files to move to `dev-docs/historical/`** (migration is complete, retain for
+context):
+
+- `dev-docs/NODEJS_MIGRATION_PLAN.md`
+- `dev-docs/API_PARITY.md`
+- `dev-docs/TESTING_AUDIT.md`
+
+**Files to rewrite:**
+
+- `dev-docs/DEVELOPMENT.md` — 15+ Flask references (lines 47, 53, 75, 105,
+  110-111, 116, 121, 133, 143, 165, 169-173, 206, 226, 230, 232, 238, 243,
+  268, 282, 286, 308, 338, 355)
+- `dev-docs/README.md` — lines 205-208 list Python stack as the backend
+- `dev-docs/SETUP.md:468-472` — references `rootfs/webapp/alembic/versions/`
+- `dev-docs/CODING_STANDARDS.md:684-687` — Flask-SocketIO quirk (see DOC-FLASK)
+- `dev-docs/ENV_VARS_AUDIT.md:295-300` — Python files as configuration sources
+
+**Files unverified (light review needed):** `BACKEND_SETUP_DECISIONS.md`,
+`CONTRIBUTING.md`, `TESTING_GUIDE.md`, `TYPESCRIPT_CHECKING.md`,
+`TIMESERIES_STRATEGY.md`.
+
+**Effort:** Medium.
+
+### DOC-ROOT — Repo-root docs drift — **MEDIUM** — ✅ DONE
+
+**Resolution.** All four files rewritten/fixed to reflect the
+post-migration reality (Node.js + Fastify + Socket.IO backend; Vite
+dev server; Drizzle migrations; no Python/PDM/Flask/Alembic).
+
+- **`DEV-QUICK-START.md`** — full rewrite. Removed every Python/PDM,
+  Flask, Alembic, `pdm run dev`, `pdm run build-frontend*`,
+  `requirements.txt`, `rootfs/webapp/static`, `rootfs/webapp/templates`,
+  `rootfs/webapp/alembic/versions`, `just db-init`, `just db-migrate`,
+  `just test-a11y`, `just update-py`, `just bump-py`, `just update-all`,
+  and `dev-docs/TROUBLESHOOTING.md` reference. Replaced with the actual
+  current workflow: `npm install` at repo root, `just web` (Vite dev
+  server) + `just server` (`tsx watch src/server.ts`), `just seed-test-db`,
+  `npm run migrate --workspace=acarshub-backend`, and the actual just
+  recipes that exist (`just web`, `server`, `update`, `bump`, `test*`,
+  `test-backend*`, `lighthouse`, `analyze`, `check`, `ci`, `add`,
+  `commit`, `seed-*`). Nix Flakes section now matches `flake.nix`
+  reality (the same fix as DOC-AGENTS).
+- **`dev-watch.sh`** — fixed the misleading header comment. It no
+  longer claims to "rebuild and copy assets to the Flask static
+  directory"; the new comment accurately describes it as the Vite dev
+  server entry point with HMR, with a pointer to `just server` for the
+  backend.
+- **`acarshub-backend/README.md`** — full rewrite in present tense.
+  Removed the "🚧 Under Development", "Phase 0 placeholder", and
+  "TODO: Week N" markers. Removed the `dev-docs/NODEJS_MIGRATION_PLAN.md`
+  pointer (that doc is queued for `historical/` in DOC-DEV-DOCS) and
+  replaced it with pointers to the actually-current `agent-docs/`.
+  Architecture tree matches the real `src/` layout
+  (`server.ts`, `config.ts`, `startup-state.ts`, `db/`, `socket/`,
+  `services/`, `formatters/`, `utils/`, `__tests__/`) rather than the
+  Week-N aspirational layout. Logging snippet updated to use
+  `createLogger("module-name")` (the actual helper) rather than the
+  stale top-level `logger` import. Node.js version bumped to 22+ to
+  match the bundle build target.
+- **`acarshub-types/README.md`** — section title changed to "Migration
+  Notes (historical)" with a note that the migration is complete and
+  legacy type aliases are retained for backward compatibility with
+  stored database records.
+
+**Effort:** Low.
+
+### DOC-V4.2 — `agent-docs/V4.2.md` self-aware about drift — **LOW**
+
+**Finding.** Lines 26-27 and 514 explicitly acknowledge the documentation
+drift. Phase 0 of that document already calls for an audit — never executed.
+
+**Remediation.** Once DOC-ARCH and DOC-FEAT are complete, mark V4.2 Phase 0 as
+done (or remove that phase entirely if V4.2 is itself a historical plan).
+
+**Effort:** Trivial (tracking only).
+
+---
+
+## 13. Repository hygiene
+
+### REPO-01 — Multi-gigabyte binary files at repo root — ❌ FALSE FINDING
+
+**Status:** Audit error. The original finding claimed these files were
+"untracked but not gitignored" — wrong. `.gitignore` lines 152-158 already
+cover `*.db`, `*.db-shm`, `*.db-wal`, `*.rrd`, `*.rrd.back`, `*.rrd.back2`,
+with explicit `!test-fixtures/` allowlist exceptions for the committed
+fixtures. Verified with `git check-ignore -v` against every file listed
+below; all are properly ignored. No code change required.
+
+**Files (all correctly ignored by existing rules):**
+
+- `acarshub.rrd.back` — ignored by `*.rrd.back` (line 153)
+- `messages.db`, `test.db`, `test_back.db`, `messages_large.db` — ignored by `*.db` (line 156)
+
+### REPO-02 — Dead lint configs at repo root — **LOW** — ✅ DONE
+
+**Files:**
+
+- `.eslintrc` — Biome is the linter; ESLint is not invoked anywhere
+- `.eslintignore` — sole entry references a path that doesn't exist
+  (`rootfs/webapp/static/js/other/*`)
+
+**Resolution.** Both files deleted. `.dockerignore` entry for `.eslintignore`
+also removed. Biome config in `biome.json` is the source of truth. Two
+inline `eslint-disable-next-line` comments in source (`useSocketIO.ts`,
+`zmq-listener.ts`) are inert under Biome and left in place — they document
+historical intent without affecting current lint behaviour.
+
+**Effort:** Trivial.
+
+### REPO-03 — `.stylelintrc.json` is unenforced — **LOW** — ✅ DONE
+
+**File:** `.stylelintrc.json` (106 lines).
+
+**Resolution.** File deleted. Confirmed not referenced by `justfile`,
+`package.json`, `.pre-commit-config.yaml`, or any CI workflow — stylelint
+was never installed or invoked anywhere in the repo. SCSS standards remain
+enforced via design-language review (AGENTS.md / DESIGN_LANGUAGE.md) and
+the existing Biome + Prettier pre-commit pipeline on TS/JS sources.
+
+If SCSS linting becomes a priority later, the right entry point is a fresh
+config tied to whatever rule set the team agrees on at that time — the
+106-line config that was sitting in the repo was unowned and untested
+against the current SCSS surface.
+
+**Effort:** Trivial.
+
+### REPO-04 — Large `geo.json` at repo root — **LOW** — ✅ CLOSED (no-op)
+
+**Files:** `geo.json` (101 KB), `geo.json.meta.json`.
+
+**Resolution.** Both files are listed in `.gitignore` (lines 183-184) and
+are local-only artifacts downloaded by the local dev server when running
+the development workflow. They appear at repo root by design — the dev
+server expects them there — and are never committed. No action required.
+
+### REPO-05 — `.dictionary.txt` orphan check — **LOW** — ✅ CLOSED (no-op)
+
+**File:** `.dictionary.txt` (single line).
+
+**Resolution.** Actively wired into pre-commit as the `codespell` ignore-words
+list (`.pre-commit-config.yaml`: `codespell --ignore-words=.dictionary.txt`).
+Deletion would break the codespell hook. No action required.
+
+---
+
+## 14. Miscellaneous nits
+
+### NIT-01 — Hardcoded magic numbers — **LOW** — ✅ DONE (`ed3fc2fc`)
+
+**Locations:**
+
+- `acarshub-backend/src/socket/handlers.ts:240` — `const chunkSize = 25;`
+- `acarshub-backend/src/socket/handlers.ts:383, 736, 779` — `limit = 50`
+- `acarshub-backend/src/services/heywhatsthat.ts:314` — `30_000` (30 s timeout)
+- `acarshub-backend/src/services/tcp-listener.ts:189` — `setTimeout(1000)`
+- `acarshub-backend/src/db/client.ts:124, 139, 158, 160` — pragmas
+  (`cache_size = -10000`, `wal_autocheckpoint = 200`,
+  `mmap_size = 268435456`)
+
+**Remediation.** Move into `config.ts` with documented defaults and env-var
+overrides for ops tunability.
+
+**Effort:** Low.
+
+### NIT-02 — `⚠️` emoji used as semantic warning indicator — **LOW**
+
+**File:** `acarshub-react/src/pages/AboutPage.tsx:341`.
+
+**Finding.** Screen readers announce "warning warning". Should be wrapped or
+replaced with the `WarningIcon` component.
+
+**Remediation.**
+
+```tsx
+<span aria-hidden="true">⚠️</span> {/* or use the icon component */}
+```
+
+**Effort:** Trivial.
+
+### NIT-03 — `MessageGroup.tsx:187` `aria-label` biome-ignore — **LOW**
+
+**File:** `acarshub-react/src/components/MessageGroup.tsx:187`.
+
+**Finding.** Suppression for an a11y rule on a `role="group"`. Verify the
+suppression is genuinely required; if not, prefer `aria-roledescription`.
+
+**Effort:** Trivial.
+
+### NIT-04 — Dead/unused exports to verify — **LOW** — ✅ DONE (`27c6992e`)
+
+- `acarshub-backend/src/db/migrate-worker.ts:111-114` — `MigrateWorkerResult`
+  exported; verify external consumers (probably tests).
+- `acarshub-backend/src/services/heywhatsthat.ts:158, 211` — `computeConfigHash`
+  and `feetAltListToMeters` exported; confirm callers.
+- `acarshub-backend/src/services/stats-writer.ts:153` — `writeStatsNow` used
+  only in tests; document with a "test/manual trigger" tag.
+
+**Remediation.** Audit each. If used only in tests, mark with a comment or
+move to a `__test_helpers__` re-export.
+
+**Effort:** Low.
+
+### NIT-05 — Verify circular imports stay clean — **LOW** — DONE `34eaafe2`
+
+**Finding.** Spot check showed no circular imports. As the codebase splits
+god files (GOD-01 through GOD-08), re-verify with `madge --circular` or similar.
+
+**Remediation.** Add a `just check-circular` target running `madge --circular
+acarshub-backend/src acarshub-react/src` and wire into CI.
+
+**Effort:** Trivial.
+
+**Resolution.**
+
+- `madge@^8.0.0` installed as workspace-root devDependency (`package.json`).
+- `just madge` recipe added (`justfile`): scans `acarshub-types/src`,
+  `acarshub-backend/src`, `acarshub-react/src` with `--circular
+--extensions ts,tsx --ts-config <subproject>/tsconfig.json`.
+- Wired into `just ci` between `biome check` and the test runs so cycles
+  fail fast before the multi-minute coverage stage.
+- Initial scan revealed 5 backend cycles in one cluster:
+  `decoder-listener.ts` <-> {`tcp-listener.ts`, `udp-listener.ts`,
+  `zmq-listener.ts`}. Root cause: factory + concrete listeners
+  cross-imported `MessageType` / `DecoderListenerEvents` /
+  `DecoderListenerStats` / `IDecoderListener`. Fixed by hoisting all four
+  types into new module `acarshub-backend/src/services/listener-types.ts`;
+  `decoder-listener.ts` and `tcp-listener.ts` re-export the moved symbols
+  so existing callers keep working without churn (`message-queue.ts`,
+  `services/index.ts`, `ingestion.integration.test.ts`).
+- Final scan: 0 cycles across all three projects.
+
+**Pre-commit-hook integration deferred.** The repo's `.pre-commit-config.yaml`
+is a Nix store symlink generated by the upstream `FredSystems/pre-commit-checks`
+flake (`# DO NOT MODIFY`). Wiring `madge` into that chain requires a flake
+change, which is out of scope today. Cyclic imports are a whole-project
+property — not a per-file property — so the natural gating point is `just
+ci` anyway (which is what GitHub Actions runs). When the upstream flake
+is next touched, add a hook there and the `just ci` invocation can stay
+or be dropped (it's idempotent either way).
+
+### BUG-SETTINGS-SCROLL — Settings → Advanced auto-scrolls to bottom on open — **LOW** — ✅ DONE `42d21fb1`
+
+**File:** `acarshub-react/src/components/SettingsModal.tsx` (Advanced
+section, log-viewer area).
+
+**Finding.** When the user opens the Settings modal and navigates to the
+Advanced tab, the panel auto-scrolls to the bottom to reveal the embedded
+log viewer. This is a long-standing UX annoyance: settings appearing above
+the log viewer become invisible without a manual scroll, and there is no
+user-facing reason for the modal to begin focused on the logs rather than
+the top of the panel.
+
+**Remediation.**
+
+- Identify and remove the auto-scroll behaviour (likely an `useEffect`
+  with `scrollIntoView({ block: "end" })` or similar on the LogsViewer
+  mount inside the modal).
+- Confirm the LogsViewer itself still auto-scrolls _within its own
+  container_ when new log entries arrive (that behaviour is desirable and
+  in scope of the viewer's own logic — only the modal-level scroll is
+  wrong).
+
+**Tests required.**
+
+- Regression: mount the Settings modal at the Advanced tab and assert the
+  scroll container's `scrollTop` is `0` after mount and after navigating
+  to the tab. Must fail without the fix.
+
+**Effort:** Trivial. Scheduled at the end of Phase 3 alongside the other
+small polish items.
+
+---
+
+## 15. User audibles (out-of-audit additions)
+
+The senior-engineer audit covered correctness, security, design-language
+compliance, testing, and architecture. The items below were called as audibles
+by the user after the audit closed — they are product/UX features and
+performance improvements rather than remediation of pre-existing violations,
+but they are tracked here so the same workflow (atomic PRs, regression tests,
+plan-updates) applies.
+
+These IDs are deliberately scheduled in their own phase (Phase 8) so they
+neither delay the correctness-focused phases nor get absorbed into them.
+
+### FEAT-MARKER-SIZE — User-configurable aircraft marker size — **FEATURE** — ✅ DONE
+
+**Motivation.** Map readability varies by display density and user preference:
+desktop users with high-DPI screens want larger markers for at-a-glance
+identification; users tracking high-traffic areas (e.g. near major hubs) want
+smaller markers to reduce visual overlap. Currently marker size is hardcoded.
+
+**Scope.**
+
+1. Add a new setting under Settings → Map → Marker Appearance:
+   `markerSize: "small" | "medium" | "large"` (or a numeric scale 0.5–1.5).
+   Default: current behaviour (medium / 1.0).
+2. Persist via `useSettingsStore` alongside the other map settings.
+3. Wire through to `AircraftMarkers.tsx` — the marker image dimensions
+   currently live in `_aircraft-markers.scss` and (post STYLE-INLINE-STATIC)
+   on the `.aircraft-marker img` rule. Pass the scale via a CSS custom
+   property on the map container (e.g. `--aircraft-marker-scale`) and let
+   SCSS multiply through `transform: scale(...)` or apply to width/height.
+4. Affects hit-testing — verify clickability scales with visual size and
+   meets the ≥44 px touch-target floor at the smallest setting on mobile
+   (SCSS-TOUCH overlap — coordinate).
+5. UI surface: radio buttons or slider in the existing Map settings tab of
+   `SettingsModal.tsx`.
+
+**Tests required.**
+
+- Settings store: persists/restores the new value.
+- `SettingsModal` integration: selecting a size updates the store.
+- `AircraftMarkers` snapshot/computed-style: scale prop / CSS var reaches
+  the marker element.
+- E2E (Playwright): change size in settings, verify markers visibly resize
+  on the live map.
+
+**Effort:** Medium. Net-new feature, straightforward but touches store,
+modal UI, map rendering, SCSS, and tests.
+
+**Resolution.** `MarkerSize = "small" | "medium" | "large"` added to
+`MapSettings`, default `"medium"` (unchanged rendering), settings-store
+version bumped 9 -> 10 with a migration backfilling the field on every
+older-version path. `RadioGroup` control added to `MapTab.tsx`'s existing
+"Map Display" card, matching the `AppearanceTab`/`RegionalTab` convention.
+
+**Deviated from the plan's literal `--aircraft-marker-scale` CSS
+transform/calc() suggestion** after investigation surfaced two correctness
+problems with a pure-CSS approach: (1) sprite-atlas cropping —
+`background-position`/`background-size` are exact pixel offsets into a
+shared spritesheet image, so scaling only the box via `calc()` without
+recomputing the crop offset/size from the same factor would misalign the
+visible sprite; (2) touch-target/transform composition — `transform:
+scale()` applies after layout, so it would shrink a box that already has a
+`min-width`/`min-height` touch-target floor, defeating the floor at
+"small". Instead, `utils/markerSize.ts`'s `getMarkerSizeScale()` multiplier
+is baked into the _generation_ math for both rendering paths:
+`spriteLoader.getSpritePosition()` (now accepts a `scale` param, default
+0.6 preserved for backward compatibility) and `getCSSBackgroundSize()`, and
+the SVG path's `svgShapeToURI()` scale factor. The 44px floor is then a
+plain SCSS `min-width`/`min-height` (`touch-target(44px, auto)` — 44px
+mobile, no floor on desktop so the "small" setting's visual-density benefit
+isn't defeated for mouse users), which composes correctly with an explicit
+smaller `width` since both resolve in the same layout pass.
+
+**Decoupled the clickable hit target from the visual icon** (new
+`.aircraft-marker-hit` wrapper button in `_aircraft-markers.scss`,
+replacing the previous design where the `<button>` itself was sized to the
+visual icon): the visual sprite/SVG lives on a purely decorative
+(`aria-hidden`) inner `<span>` inside the hit-target button. This was
+necessary because growing the _visual_ sprite box for touch-target
+purposes (rather than a separate wrapper) would have revealed neighbouring
+atlas art at the edges — cropping math is exact-pixel, not
+`background-size: contain`-safe. `AnimatedSprite.tsx` (multi-frame/animated
+sprites) got the same wrapper split, plus a new `scale` prop (default 0.6,
+backward compatible) forwarded from `AircraftMarkers.tsx`.
+
+**Two real bugs found and fixed during interactive verification** (not
+caught by unit tests, since both are pure-CSS-cascade / prop-wiring issues
+invisible to jsdom):
+
+1. A second, parallel stylesheet (`AircraftSprite.scss`, imported _after_
+   `_aircraft-markers.scss` in `AircraftMarkers.tsx`) hardcoded
+   `width: 43.2px; height: 43.2px;` on `.aircraft-sprite` — a leftover from
+   before this rework that happened to silently match the dynamic value at
+   the only scale ever used (0.6), until FEAT-MARKER-SIZE introduced other
+   scales and exposed the conflict: the later-imported rule won the
+   cascade, freezing the visual box size while `background-position`/
+   `background-size` kept scaling — visually, "small" revealed a sliver of
+   the neighbouring sprite in the atlas and "large" clipped the icon. Fixed
+   by removing the hardcoded values (with an explanatory comment marking
+   them do-not-reintroduce) and a stray `cursor: pointer` + dead
+   `:focus-visible` rule left over from before `.aircraft-sprite` became
+   non-interactive.
+2. `AircraftMarkers.tsx`'s `<AnimatedSprite>` JSX call site never actually
+   passed the new `scale` prop (the prop was added to `AnimatedSprite.tsx`
+   itself and its internal spriteLoader calls, but the parent forgot to
+   pass it) — every animated (multi-frame, e.g. rotating-propeller)
+   aircraft silently rendered at the default 0.6 scale regardless of the
+   setting, while single-frame static sprites scaled correctly, making
+   small propeller aircraft appear relatively larger than jets at the
+   "small"/"large" settings. Fixed by passing `scale={0.6 *
+markerSizeScale}`; pinned by a regression test in
+   `AircraftMarkers.test.tsx` that fails (prop is `undefined`) without the
+   fix and passes with it (verified via `git stash`).
+
+**Tests:** unit tests across `markerSize.test.ts` (pure scale-lookup),
+`spriteLoader.test.ts` (new `scale` param on `getSpritePosition`),
+`AnimatedSprite.test.tsx` (hit-target/visual split, `scale` prop
+threading), `AircraftMarkers.test.tsx` (SVG-path and sprite-path scale
+threading, the AnimatedSprite-prop regression above), `useSettingsStore.test.ts`
+(default, setter, full migration-chain coverage), `MapTab.test.tsx`
+(RadioGroup wiring). E2E: new `e2e/marker-size.spec.ts` — visible resize
+(small < medium < large, measured on the real rendered marker, Chromium/
+Mobile Chrome/Mobile Safari; Firefox skipped with a documented reason —
+its headless WebGL implementation does not reliably render the MapLibre
+canvas at all in this environment, verified via screenshot, unrelated to
+this feature) and the 44px touch-target floor holding at every size on
+mobile viewports (`Mobile Chrome`/`Mobile Safari`).
+
+### PERF-BUNDLE — Bundle analysis & code-splitting for faster cold loads — **FEATURE / PERFORMANCE**
+
+**Motivation.** The current production build emits:
+
+```text
+dist/assets/map-D3U2OQtb.js                          1,050.01 kB │ gzip: 280.38 kB
+dist/assets/charts-Cjp6rztx.js                         253.60 kB │ gzip:  83.18 kB
+dist/assets/index-BBQWSWnZ.js                          216.71 kB │ gzip:  63.17 kB
+dist/assets/react-BL8qq4oS.js                          178.34 kB │ gzip:  56.34 kB
+dist/assets/LiveMapPage-D0JSutxw.js                    166.38 kB │ gzip:  57.09 kB
+dist/assets/socketio-DGJ2U8cq.js                        41.16 kB │ gzip:  12.85 kB
+```
+
+Vite logs a chunk-size warning on the 1 MB `map` chunk
+(maplibre-gl + plugins) and an `INEFFECTIVE_DYNAMIC_IMPORT` warning for
+`services/socket.ts` (statically imported elsewhere, defeating the dynamic
+import from `SettingsModal.tsx`). First-load payload for users landing on a
+non-map route (Live Messages, Search, Stats) currently includes more than
+they need.
+
+**Phase A — Audit (deliverable: a written analysis, not code yet).**
+
+1. Generate a bundle visualisation with `rollup-plugin-visualizer` (already
+   referenced in AGENTS.md performance section: `npm run analyze`).
+2. Inventory each chunk: what modules dominate, which are route-specific,
+   which are shared.
+3. Identify candidates for dynamic import (route-level + heavy-but-rare
+   features like the map provider configurator).
+4. Quantify expected cold-load wins (gzipped bytes saved per entry path:
+   `/` (live messages), `/map`, `/search`, `/stats`, `/about`, `/alerts`).
+5. List code-splitting risks: shared state, suspense boundaries needed,
+   loading UX, SSR/CSR mismatch (n/a here — CSR only).
+
+**Phase B — Implementation (only after Phase A is reviewed).**
+
+1. Convert each viable page to `React.lazy` + `<Suspense>` with a
+   theme-aware loading skeleton (DESIGN_LANGUAGE.md compliant).
+2. Resolve the `socket.ts` static/dynamic import conflict: either keep it
+   fully static and drop the lazy import, or audit all static importers
+   and convert them (likely keep static — socket service is shared).
+3. Reorganise vendor chunking via `build.rolldownOptions.output.codeSplitting`
+   (or `manualChunks` if we stay on vite-rollup): separate maplibre,
+   charts (chart.js/recharts/whatever is in `charts-*.js`), react, and
+   socket.io into their own chunks so cache invalidation is granular.
+4. Add a `chunkSizeWarningLimit` only after legitimate wins are exhausted,
+   not to silence the warning.
+5. Verify with Lighthouse — AGENTS.md targets are documented in the
+   Performance Standards section (`just lighthouse`).
+
+**Tests required.**
+
+- Build smoke: assert critical chunks are below documented thresholds (a
+  CI step that parses `dist/assets/*.js` sizes and fails on regression).
+- Existing component/page tests must still pass under lazy-loading (they
+  may need `<Suspense>` wrappers in the test setup).
+- E2E: cold-load flows for each route still render without console errors
+  and below a documented FCP/LCP budget.
+
+**Effort:** Phase A: 1-2 days. Phase B: 3-5 days (one route per PR, plus
+the vendor-split commit).
+
+**Phase A findings (this session — audit only, no code changed).**
+
+**1. Route-level lazy-loading already exists — the motivation section's
+premise is stale.** `App.tsx` already wraps `AboutPage`, `AlertsPage`,
+`LiveMapPage`, `SearchPage`, and `StatsPage` in `React.lazy()` + a shared
+`<Suspense>`/`PageLoader` (only `LiveMessagesPage`, the default landing
+route, stays eager). `git log` traces this to `dc8a5c5e` ("perf: bundle
+size optimizations"), merged **before** the audit that produced this
+plan — the audit's dist listing (`LiveMapPage-D0JSutxw.js` as its own
+166 KB chunk) was already showing the post-lazy-loading state, not a
+"nothing is split" starting point. `manualChunks` in `vite.config.ts`
+also already isolates `react`, `charts` (chart.js + plugins),
+`map` (maplibre-gl), and `socketio` into their own vendor chunks. Most
+of Phase B's original item 1 and item 3 are therefore **already done**;
+the real remaining problem is different from (and larger than) what the
+motivation section describes.
+
+**2. Headline finding: the existing lazy-loading isn't actually saving
+any network bytes, because Vite's default `modulePreload` behavior (and
+its CSS-linking behavior) eagerly fetch the "map" and "charts" vendor
+chunks on _every_ route regardless of whether that route uses them.**
+Inspecting the generated `dist/index.html` (Vite 8 / Rolldown-vite
+build) shows:
+
+```html
+<script type="module" crossorigin src="./assets/index-Dip0cLim.js"></script>
+<link
+  rel="modulepreload"
+  crossorigin
+  href="./assets/rolldown-runtime-QTnfLwEv.js"
+/>
+<link rel="modulepreload" crossorigin href="./assets/charts-Cz7gDwvo.js" />
+<link rel="modulepreload" crossorigin href="./assets/map-Bis6jIMz.js" />
+<link rel="modulepreload" crossorigin href="./assets/react-DshHmojZ.js" />
+<link rel="modulepreload" crossorigin href="./assets/socketio-DWbYxwoO.js" />
+<link rel="modulepreload" crossorigin href="./assets/socket-jPxSwaSw.js" />
+<link rel="modulepreload" crossorigin href="./assets/useAppStore-DVmewl6a.js" />
+<link rel="modulepreload" crossorigin href="./assets/dateUtils-CvTo5sJh.js" />
+<link rel="stylesheet" crossorigin href="./assets/map-B2k4QVOw.css" />
+<link rel="stylesheet" crossorigin href="./assets/index-DoSTZqrU.css" />
+```
+
+Every single page load — including the default Live Messages landing
+route, which never touches the map or charts — modulepreloads the full
+1,050 KB `map-*.js` (280.41 KB gzip) and 253 KB `charts-*.js` (83.20 KB
+gzip) chunks, **and** blocking-loads `map-*.css` (69.8 KB / 10.10 KB
+gzip) as a render-blocking `<link rel="stylesheet">` before first paint.
+Confirmed empirically, not just by documentation: I traced
+`{ chartsJs, mapJs, mapCss }` back to Vite's `build.modulePreload`
+default (`true`, which preloads the entire async-import dependency graph
+reachable from the entry, not just what the current route needs — an
+[experimental but public API](https://vite.dev/config/build-options.html#build-modulepreload),
+`build.modulePreload.resolveDependencies`, exists precisely to filter
+this) and verified by a scratch (unstaged, reverted) edit to
+`vite.config.ts` adding a `resolveDependencies` filter that strips
+`map-*`/`charts-*` from the preload list — rebuilding immediately
+dropped both `<link rel="modulepreload">` lines from `index.html`,
+proving the current behavior is exactly this default, not some other
+cause. The `map-*.css` blocking-stylesheet link persisted even with that
+filter (`resolveDependencies` only governs `<link rel="modulepreload">`
+script hints, not CSS) — the CSS half of this needs a different fix in
+Phase B (candidates below).
+
+**Quantified per-route impact (gzip, from `npm run build` output).**
+Shared/unavoidable baseline present on every route
+(`index` + `react` + `socketio` + `socket` + `useAppStore` + `dateUtils`
+
+- `index.css`) = 159.78 KB. Currently every route also eagerly pays for
+  `map-*.js` (280.41 KB) + `charts-*.js` (83.20 KB) + `map-*.css`
+  (10.10 KB) = **373.71 KB of completely unneeded bytes**, except on the
+  one route that actually needs each:
+
+| Route               | Current total (gzip) | Ideal total (gzip)      | Wasted today    |
+| ------------------- | -------------------- | ----------------------- | --------------- |
+| `/` (Live Messages) | ~533.5 KB            | 159.78 KB               | 373.71 KB (70%) |
+| `/search`           | ~537.4 KB            | 163.66 KB               | 373.71 KB (70%) |
+| `/alerts`           | ~536.7 KB            | 162.96 KB               | 373.71 KB (70%) |
+| `/about`            | ~538.1 KB            | 164.35 KB               | 373.71 KB (70%) |
+| `/status` (Stats)   | ~540.6 KB            | 250.07 KB (charts kept) | 290.51 KB (54%) |
+| `/adsb` (Map)       | ~597.3 KB            | 514.06 KB (map kept)    | 83.20 KB (14%)  |
+
+This is the dominant Phase A finding by a wide margin — an order of
+magnitude larger than any other candidate found this session, and it's
+a pure build-configuration fix (no component risk) rather than a
+refactor.
+
+**3. `services/socket.ts` static/dynamic conflict confirmed still
+live** (the plan's original `INEFFECTIVE_DYNAMIC_IMPORT` note, though
+that exact warning string no longer prints under the current Vite/
+Rolldown version — the underlying architecture issue is unchanged).
+`SettingsModal.tsx` and `AlertsTab.tsx` both wrap `socket.ts` access in
+`import("../services/socket").then(...)` (5 call sites in `AlertsTab.tsx`
+alone), presumably to defer loading the socket client until Settings is
+opened. This is dead weight: `useSocketIO.ts` — called unconditionally
+in `App.tsx`, the eager root component — already statically imports
+`socket.ts`, so it's bundled into the main chunk regardless. The dynamic
+`import()` calls add a promise-indirection with zero bundle-size
+benefit. Recommendation (matches the plan's own stated preference):
+drop the dynamic-import wrapping in both files and import `socket.ts`
+statically — this is pure dead-code removal, not a behavior change.
+
+**4. Settings-modal tab lazy-loading — a smaller, real secondary win.**
+`SettingsModal.tsx` statically imports all 7 tab components
+(`AppearanceTab`, `RegionalTab`, `AlertsTab`, `DataTab`,
+`NotificationsTab`, `MapTab`, `AdvancedTab`), and `SettingsModal.tsx`
+itself is mounted unconditionally and eagerly in `App.tsx`
+(`<SettingsModal />`, always rendered so the modal can open instantly
+from any page). That means every user downloads all 7 tabs' code
+(including `AdvancedTab.tsx`'s `LogsViewer.tsx`, a debug log viewer) on
+every page load, whether or not they ever open Settings. Using the
+bundle visualizer's per-module breakdown, the deferrable subtree
+(`SettingsModal.tsx` + 7 tabs + `LogsViewer.tsx` + `RadioGroup.tsx` +
+`Select.tsx` — the latter two used _only_ by settings tabs, unlike
+`Toggle`/`Modal` which are also used by the eager `MessageFilters.tsx`)
+is ~19.3% of the main eager chunk's pre-minification module weight;
+scaling that fraction against the real post-build gzip size of
+`index-*.js` (53.85 KB) estimates **~10.4 KB gzip saved on every route**
+by lazily loading the Settings modal's internals (e.g. `React.lazy` per
+tab, or lazy-loading the whole tab set behind the modal's first open).
+Real terms: modest compared to finding 2, but free of the CSS-linking
+complication and lower-risk to implement (Settings already has its own
+open/close lifecycle to hang a `Suspense` boundary off).
+
+**5. Minor nit (not worth a dedicated Phase B slot, but free to fix in
+passing): `react-map-gl`'s compatibility shim isn't captured by the
+`manualChunks` matcher.** `react-map-gl@8.1.1` is now a thin re-export
+shim pointing to the real implementation package,
+`@vis.gl/react-maplibre` — the app imports from `"react-map-gl/maplibre"`,
+which resolves to `node_modules/react-map-gl/dist/maplibre.js` (the thin
+shim) re-exporting from `@vis.gl/react-maplibre` (the real ~10 KB
+wrapper, correctly grouped into the `map` vendor chunk since its path
+does contain the substring `"react-maplibre"`). The shim file itself
+does **not** match either `id.includes("maplibre-gl")` or
+`id.includes("react-maplibre")` (its own path is
+`.../react-map-gl/dist/maplibre.js`, missing both substrings), so it
+falls through to default chunking and lands in `LiveMapPage-*.js`
+instead of the `map` vendor chunk. Verified via the bundle visualizer:
+133 bytes. Genuinely negligible impact, but a one-line
+`manualChunks` fix (`id.includes("node_modules/react-map-gl/")`) removes
+the inconsistency for free whenever `vite.config.ts` is next touched.
+
+**6. Lighthouse not run this session.** `just lighthouse` (via `lhci
+autorun`) launches a real Chrome instance and wasn't run — the
+build-artifact analysis above (exact `dist/assets/*` byte counts,
+before/after `resolveDependencies` scratch-test) gives precise,
+reproducible numbers without it. Recommend running `just lighthouse`
+as part of Phase B verification once the `modulePreload`/CSS fix lands,
+to confirm the FCP win the render-blocking `map-*.css` removal should
+produce on the non-map routes.
+
+**Code-splitting risks for Phase B (per the plan's ask).**
+
+- **`resolveDependencies` is a Vite-documented "experimental" API** —
+  low practical risk (it's been stable in the public API surface across
+  recent Vite majors) but worth a comment noting it should be
+  re-verified on the next Vite major bump.
+- **The CSS eager-linking fix is the trickiest part.** Three viable
+  directions to evaluate in Phase B: (a) a small custom Vite plugin
+  hooking `transformIndexHtml` to strip route-specific stylesheet
+  `<link>` tags from the generated `index.html` and let the browser
+  discover them at runtime via the dynamically-imported chunk's own CSS
+  injection (Vite normally does this automatically for genuinely
+  route-only CSS — needs investigation into why `map-*.css` specifically
+  is being hoisted); (b) move the
+  `import "maplibre-gl/dist/maplibre-gl.css"` side-effect import to a
+  dynamic import colocated with the `LiveMapPage` lazy factory instead of
+  `Map.tsx`'s static top-level import; (c) accept the blocking CSS cost
+  on `/adsb` specifically (it's already the heaviest route) and only fix
+  the JS-side `modulePreload` waste, which is the larger of the two
+  numbers anyway. No implementation decision made this session — Phase B
+  should prototype (a) and (b) and pick whichever doesn't regress FOUC
+  on the Map/Stats routes themselves.
+- **Suspense boundaries** for lazily-loaded Settings tabs: `SettingsModal.tsx`
+  would need its own small `<Suspense>` around the active tab's panel,
+  with a loading fallback matching `PageLoader`'s pattern
+  (DESIGN_LANGUAGE.md-compliant, no bespoke spinner).
+- **Existing test suite impact:** `SettingsModal.test.tsx` (50 tests)
+  currently renders tabs synchronously; lazy-loading tabs would need
+  either `await screen.findBy...` conversions or a test-environment
+  `React.lazy` shim — a real but bounded cost, not a blocker.
+- **No SSR/CSR mismatch risk** — confirmed CSR-only (no SSR entry point
+  in this codebase).
+
+**Recommendation for Phase B ordering (highest ROI / lowest risk
+first).** (1) `modulePreload.resolveDependencies` fix — pure build
+config, ~290-374 KB gzip saved per route depending on route, zero
+component risk. (2) The `map-*.css` eager-stylesheet fix — same finding,
+second half of the win, moderate implementation risk (needs the FOUC
+investigation above). (3) Drop the dead `socket.ts` dynamic-import
+wrapping in `SettingsModal.tsx`/`AlertsTab.tsx` — trivial, zero risk,
+pure cleanup. (4) Lazy-load the Settings modal's tab subtree — real but
+smaller win (~10.4 KB/route), needs Suspense wiring and test updates.
+(5) The `react-map-gl` shim `manualChunks` nit — free, do it opportunistically
+alongside (1).
+
+**Phase B implementation (this session — all five items landed, none
+deferred).**
+
+**1 + 5 (build.modulePreload + react-map-gl shim nit).** Both applied
+directly to `vite.config.ts`. The `resolveDependencies` filter strips
+`map-`/`charts-` from `hostType: "html"` preloads only (leaves
+`hostType: "js"` alone, so navigating into `/adsb` or `/status` still
+correctly preloads its own vendor chunk the moment the route's own
+`import()` fires). The `react-map-gl` shim now matches an explicit
+`node_modules/react-map-gl/` clause.
+
+**A materially bigger, previously-undiscovered root cause surfaced
+while verifying finding 1: the eager preload `<link>` tags were only
+a symptom.** Inspecting the built entry chunk's own `import` statements
+(not just `index.html`'s `<link>` tags) showed the eagerly-loaded entry
+chunk contained a **hard, unconditional static `import` of both
+`map-*.js` and `charts-*.js`** — meaning the browser had no choice but
+to fetch and execute both 1 MB+253 KB vendor chunks on every single
+page load, regardless of `modulePreload` configuration, since ES module
+semantics require a fully-imported chunk's entire file before its
+exports can be used. Root-caused via the file-size-sensitive nature of
+the bug (isolated by testing without `manualChunks`'s "react" bucket,
+which changed but didn't fix it) and confirmed as a **currently open,
+actively-tracked upstream Rolldown bug**
+(rolldown/rolldown#6083, #9291, #9331, #9407, #9441 — several distinct
+GitHub issues describing the exact same underlying chunk-optimizer
+defect: when a module — most often a CJS-interop wrapper for packages
+like `react`/`react-dom`, which are themselves CJS-only with no ESM
+entry point — is needed by more than one manually-named chunk group,
+Rolldown's optimizer assigns the single shared instance to whichever
+chunk claims it _first_ and forces every other consumer, including the
+eagerly-loaded entry, to statically import it back out). Confirmed the
+documented workaround from rolldown/rolldown#9291 applies here too: the
+classic `rollupOptions.output.manualChunks` callback form (equivalent
+to Rolldown's `codeSplitting.groups[].name()` under the hood) hits the
+bug; the native `codeSplitting.groups[].test` regex-matcher form does
+not. Migrated `vite.config.ts` off `manualChunks` entirely onto
+`rollupOptions.output.codeSplitting.groups` with `test` regex patterns
+for `react`, `charts`, `map`, and `socketio`. This fixed the
+react/react-dom half of the problem immediately, but surfaced one more
+instance of the _same_ bug for a different shared module: Vite's own
+internal `vite/preload-helper.js` runtime (the `__vitePreload` helper
+used by every dynamic `import()` call, both `App.tsx`'s route-level
+ones and an internal one inside `maplibre-gl`/`@vis.gl/react-maplibre`)
+was landing inside the `map` chunk and being statically imported back
+by the entry for the exact same reason. Added an explicit
+`vite-runtime-helpers` group (matching classic Vite/Rollup's own
+documented list of shared-helper ids prone to this, per
+vitejs/vite#5189) to claim it. After all three groups were in place,
+the entry chunk's own `import` list dropped to only
+`rolldown-runtime`, `vite-runtime-helpers`, `react`, `socket`,
+`useAppStore`, and `dateUtils` — no more `map`/`charts` — verified both
+by inspecting the built chunk's literal `import` statements and by a
+real-browser network trace (Docker Playwright): Live Messages/Search/
+Alerts/About routes now load zero bytes of `map-*`/`charts-*`; `/adsb`
+loads `map-*` but not `charts-*`; `/status` loads `charts-*` but not
+`map-*`.
+
+**2 (map-\*.css eager stylesheet).** `modulePreload.resolveDependencies`
+only governs `<link rel="modulepreload">` script hints, not CSS asset
+linking, which Vite handles through a separate, non-configurable code
+path — the static `import "maplibre-gl/dist/maplibre-gl.css";` at the
+top of `Map.tsx` was still landing in the unconditionally-linked
+`map-*.css` asset regardless of the JS-side fixes above. Resolved by
+moving the CSS import out of `Map.tsx` into `App.tsx`'s `LiveMapPage`
+lazy factory, fetched in parallel with the page's own JS chunk
+(`Promise.all([import(page), import(css)])`) so the chunk becomes
+genuinely async instead of tied to a manually-named vendor group; a
+second, small `transformIndexHtml` build plugin
+(`strip-eager-route-only-css`) strips the resulting `<link
+rel="stylesheet" href=".../map-*.css">` from the generated `index.html`
+(build-mode only). Verified no FOUC on `/adsb` itself (Suspense keeps
+`PageLoader` visible until both promises settle — the same fallback
+window that already existed while only the JS chunk was fetching) via
+a Docker Playwright screenshot showing fully-styled MapLibre controls
+on first paint.
+
+**3 (dead `socket.ts` dynamic-import removal).** `SettingsModal.tsx`'s
+`handleConfirmRegenerate` and all 5 call sites in `AlertsTab.tsx`
+replaced `import("../services/socket").then((m) => ...)` with a
+top-level `import { socketService } from "../services/socket"` plus a
+direct call — `useSocketIO.ts` (called unconditionally in the eager
+`App.tsx`) already statically imports `socket.ts`, so the dynamic
+wrapper never deferred any bytes; it was pure dead-weight promise
+indirection.
+
+**4 (Settings-tab lazy loading).** All 7 tab components
+(`AppearanceTab`, `RegionalTab`, `AlertsTab`, `NotificationsTab`,
+`DataTab`, `MapTab`, `AdvancedTab`) converted to `React.lazy()`, wrapped
+in a `<Suspense fallback={<TabLoader />}>` around the tab-panel render
+block (footer/Import/Export/Reset buttons stay outside the boundary —
+they don't depend on any tab's code). `TabLoader` reuses
+`App.tsx`'s `PageLoader` markup (`.loading`/`.loading__spinner` from
+`_common.scss`) with a new `.settings-tab-loading` modifier
+(`min-height: 200px` instead of the full-page `300px`) since it renders
+inside a modal tabpanel, not a page — no bespoke spinner introduced.
+Confirmed the real byte saving: `index-*.js` dropped from 180.02 KB to
+146.33 KB (gzip 53.43 KB → 45.36 KB, ~8.1 KB), each tab now its own
+tiny chunk (1.3 KB `AppearanceTab` up to 7.3 KB `AdvancedTab`
+pre-gzip) — smaller than the Phase A ~10.4 KB estimate but directionally
+confirming it; the estimate was based on pre-minification proportional
+scaling and is inherently approximate.
+
+**Test fallout from lazy-loading tabs — a real, verified, order-dependent
+flake, not just a one-off assertion fix.** `SettingsModal.test.tsx`'s 50
+tests mostly query tab content immediately after a synchronous
+`user.click(tab)` or right after `render()` (Appearance is the default
+tab, now also lazy). Since `React.lazy()` caches its resolved payload
+per component instance for the lifetime of the test _file_ (not
+per-test), whichever test happens to be first-in-execution-order to
+touch a given tab races the Suspense boundary and fails, while every
+later test touching the same tab passes "by accident" once the module
+is warm — confirmed by running the file with `--sequence.shuffle`
+across 15 seeds pre-fix: different tests failed on almost every seed (3
+to 7 failures, never the same set twice). Fixed by (a) a `beforeAll`
+that pre-imports all 7 tab modules directly (reduces perceived latency,
+alone insufficient — Suspense still needs one resolve-then-rerender
+pass even against an already-resolved promise) and, the actually
+load-bearing fix, (b) converting every first `getBy*`/`getAllBy*` query
+immediately following a tab switch (or initial mount, for Appearance)
+to `findBy*`/`findAllBy*` across the file (~35 call sites; two
+previously-synchronous tests promoted to `async`). Re-verified stable
+across the same 15 shuffle seeds post-fix: 50/50 every time.
+
+**Full verification.** `just ci` green. Full frontend suite: 2343/2343.
+Full Playwright E2E suite (chromium project): 109 passed, 18 skipped
+(pre-existing viewport/browser-specific skip conditions), 5 failed —
+confirmed via a `git stash` round-trip that all 5 failures
+(4 in `accessibility.spec.ts`'s `finishAnimations()` helper hitting
+`InvalidStateError: Cannot finish Animation with an infinite target
+effect end`, 1 flaky `settings-sound-alerts.spec.ts` autoplay test) are
+**pre-existing on the unmodified baseline**, not introduced by this
+work — identical failure set and count before and after. Not
+investigated further this session (out of scope for PERF-BUNDLE); worth
+a dedicated flaky-tests-are-bugs session.
+
+**Not investigated this session:** the `experimental.strictExecutionOrder`
+Rolldown option some of the referenced upstream issues mention as an
+alternative/complementary workaround — the `codeSplitting.groups` +
+explicit-group approach fully resolved the observed symptom without
+needing it, and `strictExecutionOrder` trades bundle size for the
+guarantee, which would work against this exact effort's goal.
+
+---
+
+### FEAT-RANGE-RINGS — Dynamic range-ring sizing on the map — **FEATURE**
+
+**Motivation.** The map currently renders three range rings sized to the
+display range. In practice the algorithm favours smaller rings — at typical
+zoom-out levels users see three closely-spaced inner rings and the outer
+edge of the visible area is unannotated. Two hypotheses to investigate
+before writing code:
+
+1. The clipping-buffer threshold is too conservative — rings that _would_
+   fit are being dropped to keep them away from the viewport edge.
+2. The fixed count of three is wrong for wide ranges — a fourth (or fifth)
+   ring should appear dynamically as the visible area grows.
+
+These are not mutually exclusive; the fix may be both.
+
+**Phase A — Audit (deliverable: a written analysis with screenshots, not
+code yet).**
+
+1. Identify the current implementation site(s) (likely
+   `acarshub-react/src/components/Map/RangeRings.tsx` or similar) and
+   document the exact sizing algorithm: ring count, spacing strategy,
+   clipping logic, and any zoom-level branching.
+2. Reproduce the favours-small-rings behaviour at several zoom levels and
+   capture screenshots at 320px, 768px, 1024px, and 1920px viewport
+   widths.
+3. Quantify the clipping buffer: at what viewport-fraction does a ring get
+   dropped? Is the buffer expressed in pixels, viewport-percentage, or
+   nautical miles?
+4. Survey comparable tooling (tar1090, dump1090 web UI) for ring-sizing
+   strategies and document differences.
+5. Decide between three candidate strategies:
+   - (a) reduce the clipping buffer (keep ring count fixed at 3)
+   - (b) keep the buffer but allow ring count to grow with viewport size
+   - (c) both — adaptive count _and_ a more permissive buffer
+
+**Phase B — Implementation (only after Phase A is reviewed).**
+
+1. Implement the chosen strategy.
+2. Preserve Catppuccin theming and existing ring-label styling — sizing
+   changes must not regress visual design.
+3. Ensure mobile (320px) still renders sensibly — possibly fewer rings on
+   small viewports.
+
+**Tests required.**
+
+- Unit tests for the ring-sizing algorithm covering: small/medium/large
+  display ranges, narrow/wide viewports, zoom-level transitions, and the
+  clipping-buffer boundary.
+- Regression test capturing the original behaviour (so we can prove the
+  before/after difference numerically, not just visually).
+- Visual E2E check (Playwright snapshot) at canonical viewport widths.
+
+**Effort:** Phase A: 0.5-1 day. Phase B: 1-2 days.
+
+**Phase A findings (this session — audit only, no code changed).**
+
+**1. Implementation site confirmed.** `acarshub-react/src/components/Map/RangeRings.tsx`
+is the sole implementation; `RangeRings.test.tsx`'s existing 13-test suite
+already pins the nice-form-base and settings-fallback behavior described
+below, so no new unit-test infrastructure is needed for Phase B — the
+existing suite is the regression harness.
+
+The exact algorithm (`RangeRings.tsx:127-208`):
+
+1. If there's no live map ref or `viewState` (SSR/first-paint/tests), fall
+   back to `settings.map.rangeRings` (default `[100, 200, 300]`) — not
+   itself part of the bug, just the static-fallback path.
+2. Otherwise, read `map.getBounds()` and compute the great-circle distance
+   (haversine, NM) from the station to each of the four edge midpoints
+   (north/south/east/west), **not** the corners.
+3. `minEdgeDistance = min(north, south, east, west)` — the single shortest
+   of the four edge distances.
+4. `maxDistance = minEdgeDistance * 0.7` — a flat 30% safety margin,
+   applied on top of the already-shortest edge.
+5. `spacing = maxDistance / 3`, rounded to a "nice" `1/2/5 × 10^n` interval
+   (`roundToNiceInterval`).
+6. Rings are always exactly `[spacing, spacing * 2, spacing * 3]` — a
+   hardcoded count of 3, unconditionally, at every zoom level and viewport
+   size. There is no zoom-level branching at all; the only inputs are
+   `stationLat/Lon`, `map.getBounds()`, and the constant `0.7` / `3`.
+
+**2. Live reproduction (Docker Playwright, `mcr.microsoft.com/playwright:v1.61.1-noble`,
+matching `Dockerfile.e2e`'s pinned version).** Built `acarshub-types` +
+`acarshub-react` (`VITE_E2E=true`) inside a throwaway container, served via
+`vite preview`, and drove screenshots with an ad-hoc script (not committed)
+using the same injection pattern as `e2e/marker-size.spec.ts`
+(`window.__ACARS_STORE__.getState().setDecoders(...)` for a non-`(0,0)`
+station) plus a `localStorage.setItem("map.viewState", ...)` pre-seed
+(`Map.tsx:100-140` reads this in a `useState` lazy initializer, so it must
+be set via `addInitScript` before the app's first render, not after —
+setting decoders alone races the initial camera placement). Station fixed
+at `(40, -75)`, `zoom=7` (`Map.tsx`'s own default once `decoders.adsb`
+is known), captured at all four required viewport widths with the real
+`.live-map-page__map` canvas sizes (sidebar included):
+
+| Viewport (page) | Map canvas (measured) | Rendered rings  |
+| --------------- | --------------------- | --------------- |
+| 320×658         | 320×544               | 5 / 10 / 15 NM  |
+| 768×1024        | 375×899               | 10 / 20 / 30 NM |
+| 1024×768        | 631×661               | 20 / 40 / 60 NM |
+| 1920×1080       | 1527×955              | 20 / 40 / 60 NM |
+
+At every width the screenshot shows the reported bug exactly: three
+tightly-clustered rings occupying a small disc near the station marker,
+surrounded by a large unannotated band out to the actual edge of the
+visible map. The effect is most dramatic on the two widest viewports
+(1024×768, 1920×1080) where the rings visually read as "the whole map is
+basically empty except a small circle in the middle."
+
+**3. Clipping buffer quantified — confirmed by cross-checking a standalone
+reimplementation of `RangeRings.tsx`'s exact formulas against the real
+screenshots (predicted ring set matched the rendered labels exactly at
+all four viewports above).** The buffer is expressed as a **unitless
+fraction (`0.7`) of `minEdgeDistance`, which is itself in nautical
+miles** — not pixels, not a viewport percentage in the CSS sense. Two
+independent effects compound to waste far more than the nominal 30%:
+
+- **The 30% cut itself.** By construction, the outer ring can never
+  exceed 70% of `minEdgeDistance` even before rounding.
+- **Nice-interval rounding loses more.** `roundToNiceInterval` snaps down
+  to the nearest `1/2/5 × 10^n`, which can discard a further 10-30
+  percentage points depending on where `spacing` falls between two nice
+  steps (observed outer-ring/`minEdgeDistance` ratios ranged from 37% to
+  89% across the tested scenarios — the nominal 70% target is rarely hit
+  exactly).
+- **Using `minEdgeDistance` (the shortest of 4 directions) as the sole
+  basis, on a landscape/wide map container (the overwhelmingly common
+  case — sidebar-adjacent map area is wider than it is tall on tablet+
+  viewports), the shortest direction is consistently the vertical
+  (north/south) extent, not the horizontal one.** The rings are sized to
+  fit the _short_ axis, then look tiny against the _long_ axis. Measured
+  outer-ring-radius as a fraction of the true visible corner distance
+  (the actual reach of the visible map, diagonally): **19-53% across the
+  four tested viewports**, worst on mobile portrait (320×658 → 19%) and
+  ultrawide desktop (2560×1080 → 17% in the pre-screenshot analytical
+  pass) — i.e. **the majority of the visible map, in every tested
+  configuration, has no ring anywhere near its edge.**
+
+**4. Comparable tooling survey (tar1090 / dump1090-fa / dump1090-mutability).**
+All three use a fundamentally different design: range rings are **static,
+user-configured physical distances** (`SiteCirclesDistances` /
+`TAR1090_RANGERINGSDISTANCES`, e.g. dump1090's long-standing default
+`[100, 150, 200]` NM, tar1090's default `[100, 150, 200, 250]` NM — 4
+rings), drawn at a fixed real-world radius regardless of current zoom or
+viewport size. There is **no dynamic recomputation, no clipping buffer,
+and no guarantee the rings fit inside the visible frame at all** — at
+high zoom the rings are simply off-screen or only their innermost arc is
+visible; the tool doesn't try to solve that problem, and users are
+expected to zoom out if they want to see their configured rings. Rings
+are allowed to be **clipped by the viewport edge** exactly like any other
+map overlay (a polygon or point layer just stops rendering past the
+canvas bounds) — this is treated as normal cartography, not a bug to
+engineer around.
+
+This is the crux of why ACARS Hub's implementation ends up so
+conservative: it is solving a harder, self-imposed problem (guarantee
+all `N` rings are fully visible, uncut, at every zoom level) that none of
+the comparison tools attempt. Relaxing that self-imposed
+full-visibility requirement is itself a valid, precedented design choice
+(see recommendation below).
+
+**5. Recommendation: (c) — both, but reframed around one root cause
+rather than two independent tweaks.** The dominant contributor is not
+"the constant should be 0.8 instead of 0.7" — it's the underlying
+assumption that a ring must never be clipped by the viewport frame at
+all, which forces the whole calculation onto the single shortest edge
+and then pads it further for safety. Every comparable tool (tar1090,
+dump1090-fa, dump1090-mutability) accepts ring clipping at the frame
+edge as ordinary behavior — a `Layer`/`Source` GeoJSON polygon that
+extends past the visible canvas simply stops rendering past the edge,
+the same as any other MapLibre overlay; nothing breaks. Once that
+constraint is relaxed:
+
+- The extent basis can move from `minEdgeDistance * 0.7` (short-axis,
+  heavily padded) toward something close to the corner/diagonal distance
+  (or at minimum a generous ~90-95% of `minEdgeDistance`, keeping _some_
+  margin so the innermost invariant — "at least one full ring is always
+  fully visible" — still holds), which alone recovers most of the
+  17-56% currently wasted in the tested scenarios.
+- Ring count can then grow from a hardcoded 3 to an adaptive 3-5,
+  keeping the existing `roundToNiceInterval` step logic but choosing the
+  step so that `count = floor(extent / step)` lands in `[3, 5]` rather
+  than always dividing the extent into exactly 3 parts — this keeps ring
+  spacing visually consistent as the extent grows across zoom levels,
+  instead of 3 rings getting proportionally sparser-looking at every
+  zoom-out step.
+
+Both changes are needed together: a more generous buffer alone (option a)
+still leaves the "only 3 datapoints regardless of scale" sparseness at
+very wide zooms; more rings alone (option b) without relaxing the buffer
+just clusters 4-5 rings into the same too-small disc instead of 3.
+Neither sub-fix addresses the actual root cause (the no-clipping
+assumption) in isolation.
+
+**Not yet decided (defer to Phase B design, not blocking Phase A
+sign-off):** the precise new buffer fraction, the exact `count`-selection
+rule, and whether "at least one ring always fully visible" should key off
+`minEdgeDistance` (current behavior) or something more permissive. These
+are implementation details appropriately resolved when Phase B is
+actually scoped, not audit findings.
+
+**Phase B implementation (this session).** Strategy (c) implemented in
+`RangeRings.tsx`:
+
+- New exported `getMaxRingCount(containerWidthPx)`: `< 400px` -> 3 rings,
+  `400-899px` -> 4, `>= 900px` -> 5 (read via `map.getContainer().clientWidth`,
+  a real MapLibre API). Mobile viewports keep the original fixed-3
+  behavior; wider containers get more reference rings.
+- New exported `calculateRangeRingRadii(minEdgeDistance,
+minCornerDistance, maxRingCount, roundFn)`: outer-ring target is
+  `max(minCornerDistance * 0.9, minEdgeDistance * 0.7)` — the corner-based
+  term dominates in virtually every real aspect ratio (a rectangle's
+  corner distance is always >= its shortest edge distance by the
+  Pythagorean relationship), so the outer ring now reaches toward the
+  true visible diagonal instead of being capped at 70% of the shortest
+  edge. The loop tries `maxRingCount` down to 3, picking the largest
+  count whose nice-interval step still keeps the _innermost_ ring `<=
+minEdgeDistance` (the one invariant preserved from the original
+  algorithm — the innermost ring is never clipped). A final fallback
+  (only reachable on near-square aspect ratios where rounding pushes
+  every candidate step just over `minEdgeDistance`) reverts to the
+  original edge-only formula.
+- Pulled both functions out of the component as pure, directly
+  unit-testable functions (previously the whole calculation was inlined
+  in a single `useMemo`).
+
+**Regression found and fixed during implementation (live-verification,
+not caught by the unit tests above until added afterward).** The pure
+functions above only fixed the buffer/count logic; a second, more
+fundamental defect surfaced through manual testing in a real browser
+after the first pass: **ring size was being computed as
+`station -> viewport edge/corner distance`, not `viewport center ->
+edge/corner distance`.** Since the ground station is a fixed real-world
+point but the map's visible frame moves independently as the user pans,
+any pan that left the station off-center caused `minEdgeDistance` to
+collapse toward the (now short) station-to-nearest-edge distance —
+producing rings that visibly shrank, changed count, or nearly vanished
+from panning alone, with no zoom change at all. This is a strictly worse
+regression than the original Phase A finding, since it made ring
+behavior actively unstable during normal map interaction rather than
+just conservatively small.
+
+**Fix:** the edge/corner distances that determine ring _size_ are now
+measured from the map's own current center (`viewState.latitude`/
+`viewState.longitude`), completely decoupled from the station's
+position. The rings are still _drawn_ centered on the station's
+real-world coordinates (`createCircle`/`createLabelPoints` unchanged) —
+only the size calculation moved off the station. This makes ring
+size/count depend only on zoom (+ the smooth, latitude-dependent
+Mercator scale factor), stable under any pure pan, and correct
+regardless of where the station happens to sit within the current view.
+
+Verified via a temporary revert (swapping the two `viewState.latitude/
+longitude` reads back to `stationLat/stationLon`, matching the pre-fix
+code) that two new regression tests fail without the fix and pass with
+it restored:
+
+- `"ring size/count is identical regardless of where the station sits
+within a fixed viewport"` — same bounds/viewState, station moved from
+  centered to near a corner; pre-fix produced `[5, 10, 15]` vs. the
+  centered case's `[50, 100, 150]` (nearly 10x smaller), post-fix
+  produces identical rings in both cases.
+- `"ring size/count is unaffected by a pure pan (same zoom, viewport
+translated east)"` — same station, bounds/viewState translated 10° of
+  longitude east (a pure pan at constant latitude, so the great-circle
+  geometry is exactly congruent); pre-fix produced `[100, 200, 300]`
+  before the pan and `[50, 100, 150]` after (rings changed purely from
+  panning, zero zoom change); post-fix produces identical rings before
+  and after.
+
+Also re-verified live in a rebuilt Docker Playwright image (same
+`mcr.microsoft.com/playwright:v1.61.1-noble` setup as Phase A):
+screenshots before a pan, after a moderate pan, and after panning far
+enough that the station marker leaves the visible frame entirely all
+show the identical ring set (`50/100/150/200/250 NM` in the tested
+scenario) — only the portion of each ring visible within the frame
+changes, never the ring radii themselves.
+
+**Tests:** `RangeRings.test.tsx` grew from 13 to 24 tests. New coverage:
+`getMaxRingCount` (all three width bands + `undefined`), `calculateRangeRingRadii`
+(count-selection boundary, no-clip invariant across near-square and
+elongated ratios, the fallback path using the real 768px-tablet-portrait
+fixture from Phase A, and a before/after numeric proof that the new
+outer ring reaches materially farther than the pre-Phase-B formula on
+the same fixture), plus the two pan/off-center-station regression tests
+above. All 13 pre-existing tests pass unchanged (same fixtures where
+`viewState` center coincides with the station, so the size-basis change
+is a no-op for those cases). Full frontend suite (2343 tests) and
+`just ci` green.
+
+---
+
+## 16. Suggested execution order
+
+This sequence keeps each PR small, testable, and independently reviewable. It
+front-loads correctness/security and test infrastructure so later refactors
+have a safety net.
+
+### Phase 1 — Stop the bleeding (1-2 days)
+
+| ID           | Description                                        | Status                     |
+| ------------ | -------------------------------------------------- | -------------------------- |
+| SEC-01       | SQL injection fix + regression test                | ✅ `c0fbc176`              |
+| REPO-01      | `.gitignore` root-level `*.db` / `*.rrd*` patterns | ❌ false (already ignored) |
+| TEST-SKIP-01 | Address 4 unjustified scheduler `it.skip`          | ✅ `768074a7`              |
+| TEST-CFG-01  | Add backend coverage thresholds                    | ✅ `88d44730`              |
+| TEST-CFG-02  | Add per-area frontend coverage thresholds          | ✅ `dbed992a`              |
+
+### Phase 2 — High-impact correctness (3-5 days)
+
+| ID                | Description                                                | Status        |
+| ----------------- | ---------------------------------------------------------- | ------------- |
+| SEC-02            | Escape LIKE wildcards                                      | ✅ `57acc60f` |
+| SEC-03            | Zod input validation at every `socket.on(...)`             | ✅ done       |
+| LOG-01            | Replace `console.*` with logger (7 sites)                  | ✅ `b80454b9` |
+| TYPE-01 + TYPE-02 | Drop dead `, "/main"` 3rd-arg, kill 13 cast sites          | ✅ `5e9b2b76` |
+| STATE-01          | Convert `export let alertTerms` to getter                  | ✅ `ede55f53` |
+| LEAK-01           | Capture alignment-window `setTimeout` handles (3 services) | ✅ `4b414b30` |
+| LEAK-03           | Replace bare `catch {}` in zmq-listener                    | ✅ `7ca13e0b` |
+| LOG-04            | Replace `alert()` calls in LogsViewer with Toast           | ✅ done       |
+
+### Phase 3 — Design-language compliance (3-5 days)
+
+| ID                   | Description                                                     | Status        |
+| -------------------- | --------------------------------------------------------------- | ------------- |
+| SCSS-COLOR-01        | Fix hardcoded `#ffffff` / `#000`                                | ✅ `74e353ba` |
+| SCSS-TOUCH           | Bump touch targets to ≥44 px                                    | ✅ `abbd7123` |
+| STYLE-INLINE-STATIC  | Move 8 static inline-style sites to SCSS                        | ✅ `f9732120` |
+| STYLE-INLINE-DYNAMIC | Convert 18+ dynamic inline-style sites to CSS custom properties | ✅ `cf8ee727` |
+| NIT-02               | `⚠️` `aria-hidden` fix                                          | ✅ `1c968297` |
+| NIT-03               | Verify `MessageGroup` biome-ignore                              | ✅ `2d4ef6c1` |
+| BUG-SETTINGS-SCROLL  | Settings → Advanced no longer auto-scrolls to bottom            | ✅ `42d21fb1` |
+
+### Phase 4 — Test infrastructure backfill (1-2 weeks)
+
+| ID                             | Description                                                                                                        | Status                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TEST-GAP-FE (services & infra) | `services/socket.ts`, `audioService.ts`, `utils/logger.ts`, `utils/spriteLoader.ts`, `utils/version.ts`, `App.tsx` | ✅ ALL DONE — `socket.ts` merge `804ef64f` (`39afd95d`); `audioService.ts` merge `4269acf7` (`3a6bd47f`); `utils/logger.ts` merge `92873b1b` (`4003166f`); `utils/spriteLoader.ts` merge `e2dfa52f` (`6c2ac583`, unreachable error branch flagged); `utils/version.ts` merge after version commit (`c2e4fcfc`); `App.tsx` merge after app commit (`cc47e423`)                                                                                                                    |
+| TEST-GAP-FE (form primitives)  | `Toggle`, `Select`, `RadioGroup`, `TabSwitcher`, `Modal`, `Toast`, `ToastContainer`                                | ✅ ALL DONE — `Toggle` merge `965d41e1` (`7f0cc038`); `Select` merge `a0fb2c3f` (`c6329b19`); `RadioGroup` merge `ec1c354d` (`6872b02f`); `TabSwitcher` merge `34d8d621`; `Modal` merge `70a651c6`; `Toast` merge `1da0364a` (`b17fc843`); `ToastContainer` merge (`051ec956`)                                                                                                                                                                                                   |
+| TEST-GAP-BE (services)         | `services/decoder-listener.ts`, `services/station-ids.ts`, `utils/logger.ts`                                       | `decoder-listener.ts` ✅ merge `c19cffd2` (`8e7d4594`); `station-ids.ts` ✅ merge `ea749db1` (`0058cbba`) + prod fix (getDatabase moved inside try/catch); `logger.ts` ✅ merge `20664b9c` (`ff672f10`)                                                                                                                                                                                                                                                                          |
+| TEST-MISSING-FE                | `/main` namespace regression test                                                                                  | ✅ folded into `socket.ts` suite (merge `804ef64f`)                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| TEST-MISSING-INTEGRATION       | Backend ingestion-pipeline integration test                                                                        | ✅ DONE — merge `ea8865e3` (test commit `28dc9e27`). 10 integration tests in `acarshub-backend/src/__tests__/ingestion.integration.test.ts` covering formatter → DB → enrichment → ring buffer → socket emit seam. Full backend suite 1181/1181 pass.                                                                                                                                                                                                                            |
+| TEST-QUALITY-01                | Refactor `Card.test.tsx` and `Button.test.tsx`                                                                     | ✅ DONE — merge `182423d8` (commit `c3d59458`). Button: 492 → 285 lines, variant/size/state matrix collapsed into `it.each`, new behavioural tests for keyboard activation + Tab-skipping disabled + loading-forces-disabled + ARIA forwarding + type='button' default. Card: 504 → 230 lines, variant/modifier matrices collapsed into `it.each`, kept structural invariants (header/footer omission, h3 title, p subtitle, .card\_\_content wrapper). FE suite 1717/1717 pass. |
+
+### Phase 5 — Documentation (3-5 days)
+
+| ID                           | Description                                                             |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| DOC-FLASK                    | Re-investigate Flask-SocketIO namespace requirement — DONE (TYPE-01/02) |
+| DOC-ARCH                     | Rewrite ARCHITECTURE.md backend sections — DONE                         |
+| DOC-FEAT                     | Update FEATURES.md (libacars, Flask references) — DONE                  |
+| DOC-DEV-DOCS                 | Delete/move/rewrite `dev-docs/` files — DONE                            |
+| DOC-ROOT                     | Fix `DEV-QUICK-START.md`, `dev-watch.sh`, backend README — DONE         |
+| DOC-AGENTS + DOC-AGENTS-LIST | AGENTS.md Playwright + doc index — DONE                                 |
+| REPO-02                      | Delete `.eslintrc`, `.eslintignore` — DONE                              |
+| REPO-03                      | Decide on `.stylelintrc.json` — DONE (deleted, unenforced)              |
+| REPO-04                      | `geo.json` orphan check — DONE (gitignored dev-server artifact)         |
+| REPO-05                      | `.dictionary.txt` orphan check — DONE (wired into pre-commit codespell) |
+
+### Phase 6 — Continuing test backfill (1-2 weeks)
+
+| ID                            | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TEST-GAP-FE (pages)           | ✅ ALL DONE — 3 parts merged. Parts 1-2 ✅ `AboutPage` + `StatusPage` + `StatsPage` — merge `5ec972ad` (Part 1, 38 tests: AboutPage augmented to 7 covering mount effects + version-card gate + external-link `rel="noopener noreferrer"` safety; StatusPage new suite of 31 covering loading branch, mount side effects, polling cadence (exact 10 000 ms + cleanup on unmount), `getStatusVariant` mapping for every status string, overall-system badge, `getDecoderRate` precedence including unknown-name fallthrough, conditional Threads/Errors/Configuration cards, Errors-card variant flip, locale count formatting). Part 2: StatsPage new suite of 36 tests covering mount effects + dual-poller cadence (30 000 ms stats / 10 000 ms status, both cleared on unmount), section navigation, Reception/Frequency sub-tab strips (enabled-decoder filtering), `freq_type` backend→internal mapping, frequency stale-state guard (resets `selectedFreqDecoder` when previously-selected decoder is disabled remotely), System Status conditionals (threads/errors/Configuration), errors-card warning-variant gate, locale Count formatting with optional-chain fallback. Part 3 ✅ `LiveMapPage` — commit `f6a1c8a4`, 33 tests across initial render (map/sidebar/separator presence, loading-overlay onLoad gate, `socketService.notifyPageChange` + `setCurrentPage` registration, theme badge gated on `userSelectedProvider`), aircraft data flow (paired counts surface in map + sidebar; store-driven updates propagate), pause (button toggle, localStorage persistence write + read-on-mount, `p`/`P` keyboard shortcut, regression test for text-input-focus ignore branch, frozen-snapshot semantics), sidebar (collapse/expand round-trip, persistence to settings store, separator hidden while collapsed, ArrowRight/ArrowLeft/Home keyboard resize with clamping, store commit on keyboard resize), aircraft interactions (list click → `mapRef.flyTo` with correct center/zoom, missing-coords branch, hover hex propagation, follow control appearance via `onFollowAircraft` callback, unfollow click clears it, auto-unfollow when followed hex disappears from ADS-B), URL focus (`?aircraft=HEX` triggers flyTo after onLoad, case-insensitive hex match, no-match no-op, auto-follow side effect), zoom freeze (`onViewStateChange` freezes `displayedAircraft` during zoom and unfreezes after 200 ms cooldown). Real Zustand stores retained; only the heavy MapLibre tree (`MapComponent`, `MapControls`, `MapLegend`, `AircraftList`) and Socket.IO service are mocked. Pattern note: `vi.hoisted()` required for spies referenced inside `vi.mock()` factories; helper wrappers `fireMapLoad`/`fireFollow`/`fireZoom`/`seedAircraft` wrap state-mutating callbacks in `act()` so React flushes effects before assertions run. |
+| TEST-GAP-FE (Map subsystem)   | Bundle 1 ✅ — 4 pure-React Map components, 45 tests across 4 new files: `MapControlButton` (7 tests: aria-label tooltip, active modifier, extra className, click, disabled, hover tooltip show/hide), `MapContextMenu` (10 tests: pause/resume label gate, follow-aware item, click handlers, item ordering, plus a regression pin that documents NIT-09 — the double-`onClose` smell where `ContextMenu` already auto-closes on item click), `MapLegend` (10 tests: toggle open/close via toggle + close button, colorByDecoder branch, per-decoder swatches, ground altitude threshold interpolation), `GeoJSONOverlayButton` (18 tests: trigger active modifier + badge count, dropdown open/close via trigger, click-outside, Escape (Escape-only — other keys don't close), category checkbox tri-state including DOM `indeterminate` property, individual overlay toggles isolating siblings; uses a module-level `vi.mock` of `../../../config/geojsonOverlays` because Vite's `?url` import suffix doesn't resolve in Vitest, mock also wires through `getOverlaysByCategory` since the settings store imports it from the same module). ✅ Bundle 2 DONE (merge `27ddf67a`, 82 tests): `AircraftContextMenu`, `AircraftMessagesModal`, `AnimatedSprite`, `MapControls`. ✅ Bundle 3 DONE (merge `25b313b1`, 73 tests): all 7 react-map-gl integrations (`AircraftMarkers`, `HeyWhatsThatOverlay`, `NexradOverlay`, `OpenAIPOverlay`, `RainViewerOverlay`, `RangeRings`, `StationMarker`). Cumulative: 15 of 15 Map components covered, 200 tests. This row was stale for a while after bundles 2-3 actually landed — see the full breakdown in the TEST-GAP-FE finding write-up above, which stayed current while this table row did not.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| TEST-GAP-FE (charts)          | ✅ ALL DONE — merge `1502309b` (commit `f9290954`), 27 tests across 3 files: `ChartContainer` (8 tests covering conditional header rendering for title/subtitle/both/neither, className pass-through, canvas/children slot wiring), `MessageCountChart` (10 tests covering data/empty variant toggle, good = total - errors math, no-data fallback for null + zero-total, title text per variant, three-color palette ordering, and a regression that empty variant must not read `non_empty_*` fields even when those dominate), `SignalLevelChart` (9 tests covering the legacy whole-number filter / acarsdec spike workaround, ascending x-axis sort, per-decoder dataset construction with 0-fill for missing levels, unknown decoder color fallback, empty-after-filter case). All three follow the established chart pattern: inline `vi.mock` of `react-chartjs-2` capturing `data`/`options` props, plus minimal `useSettingsStore` mock returning `theme: 'mocha'` — no canvas rendering required.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| TEST-GAP-FE (everything else) | ✅ ALL DONE — 9 parts merged, 164 tests total: `ConnectionStatus` merge `ba8c4a31` (7 tests); `ThemeSwitcher` merge `a810acd9` (10 tests); `useThemeAwareMapProvider` merge `842d8a97` (7 tests); `AlertSoundManager` merge `84928036`/`57228c4a` (13 tests); `ContextMenu` merge `a33e76a2`/`4a9eae02` (22 tests); `mapProviders` config merge `8ebec597`/`5d6e62c6` (25 tests); `geojsonOverlays` config merge `31169ee4`/`1e149451` (20 tests); `MessageFilters` merge `8f70262d`/`3642030b` (31 tests); `Navigation` merge `2eaa04ca` (29 tests, also clears 2 pre-existing non-null assertions in `ContextMenu.test.tsx`). `LogsViewer` — originally deferred (heavyweight virtualized component, worth a dedicated bundle) — closed via NIT-10, commit `8cf6f063`: 28 new tests (35 total in the file), 98.24% stmt / 96.29% branch / 100% funcs / 100% lines.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| TEST-GAP-BE (the rest)        | ✅ `db/migrate.ts` 97.31% stmt / 87.30% br / 100% func — 4 parts merged: orchestrator (`8e4ffde5`→`444f0928`), initial-state-negatives (`06038113`→`e592f17a`), per-migration-edges (`8e4ffde5`→merge), worker-fallback (`ff53ba48`→merge). `startup-state.ts` already covered. `db/schema.ts` smoke test DONE `8f91e142`: introspects a real migrated database via `PRAGMA table_info`/`sqlite_master` against every column/index Drizzle's `getTableColumns`/`getTableName` declare — caught schema.ts still declaring six single-column `messages` indexes (depa/dsta/flight/freq/label/tail) that migration 15 had already dropped; fixed schema.ts to match. `server.ts` DONE `885a5e68`: exported `createServer()` + guarded the `main()` auto-invoke behind an `import.meta.url` entry-point check, 13 new route tests via Fastify `.inject()`. Remaining uncovered migrate.ts lines (225-226, 417, 664-665, 1582, 1595) documented unreachable-from-userland guards.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| TEST-MISSING-A11Y             | ✅ DONE — merge `97d78627` (commit `3900b752`). Wired axe-core (already installed at 4.11.4) directly via a `src/test/a11y.ts` helper exporting `runAxe()` + `expectNoA11yViolations()`. The original plan called for `vitest-axe` but that package is at 0.1.0 and stale; the direct-axe approach has zero new install surface and uses the same engine as the Playwright E2E sweep. Coverage: 14 tests in `formPrimitives.a11y.test.tsx` across 9 design-system primitives — Button (default/disabled/danger), Card, Toggle (checked/unchecked/with helpText), Select (with label/with helpText), RadioGroup, TabSwitcher (with `scrollIntoView` stub), Modal (scanned via `document.body` to catch the portalled dialog), Toast, ToastContainer (empty + populated with `clearAllToasts()` reset between cases). All primitives pass WCAG 2.1 AA today; future regressions caught at unit-test speed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+
+### Phase 7 — Architecture refactors (2-4 weeks)
+
+These are independent and can run in parallel branches. Each must keep tests
+passing throughout.
+
+| ID                          | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TYPE-03 through TYPE-08     | Misc TS strictness fixes. TYPE-03 DONE `ca1ba713`: `HeyWhatsThatOverlay.tsx` now imports `ExpressionSpecification` from `maplibre-gl` and types the per-ring `match` expression precisely; removed the `as any` paint-prop cast (which had a `biome-ignore noExplicitAny` waiver). MapLibre's variadic `match` tuple can't be expressed statically, so the runtime-built array is asserted once via `as unknown as ExpressionSpecification` — strictly better than `any` because (a) consumer sites see the correct MapLibre type and would fail `tsc` on misuse, (b) any future MapLibre API drift surfaces at the constructor, not at every paint-prop callsite. Existing 10-test `HeyWhatsThatOverlay.test.tsx` continues to assert the runtime expression shape (`["match", ["get", "ring_index"], …]`, length 15 = 2 + 6×2 + 1); annotated the line-color block with a TYPE-03 anchor comment explaining the test is the runtime half of the contract whose type half is gated by `tsc --noEmit` in `just ci`. TYPE-04 DONE `0eea544a`: `main.tsx` React-DevTools-suppression hook no longer needs `as any`. Added a global `declare global { interface Console { __REACT_DEVTOOLS_GLOBAL_HOOK__?: ReactDevToolsGlobalHook } }` augmentation alongside a `ReactDevToolsGlobalHook` interface matching the property shape React inspects. Removed the dead `...console` spread that was leaking every console method into the hook object for no reason. Regression gate is `tsc --noEmit` in `just ci` — any future `(console as any)` reintroduction is a type error, not a runtime issue, so no separate runtime test is added (consistent with AGENTS.md regression-test mandate scope: bug fixes, not pure type-safety lint fixes). TYPE-05 DONE `ab8c615d`: New `assertRow<T>(row, keys, context?)` + `assertRowOrUndefined<T>(...)` helpers added to `db/helpers.ts` for narrowing better-sqlite3's `unknown`-typed `Statement.get()` returns. Both reject non-plain-object rows (null, arrays, primitives) with descriptive errors and enumerate every missing key. All 9 `... as { ... }` casts in `db/migrate.ts` replaced (hasExistingTables.count, isFtsSchemaCorrect.sql, areFtsTriggersCorrect.sql[trigger], migration05_convertIcaoToHex.icao, and five SELECT-COUNT-AS-n call sites in the dedup + migration-12 paths). Test coverage: 14 new tests in `db/__tests__/helpers.test.ts` cover the success path, error-context propagation, and every rejection path (undefined / null / primitive / array / partial-keys), plus an explicit TYPE-05 regression test simulating the original footgun (`renamedRow.cnt` instead of `count` → assertRow throws loudly instead of silently propagating undefined). 70 migration tests still green. TYPE-06 DONE `f3584597`: `db/migrate-worker.ts` no longer casts `workerData as MigrateWorkerData \| null`. Runtime shape validation extracted into a new `db/migrate-worker-validate.ts`module exporting`validateWorkerData(raw: unknown): MigrateWorkerData \| undefined`: returns undefined for legitimate child-process invocations (workerData null/undefined, dbPath comes from argv[2]); returns a narrowed `{ dbPath: string }`for well-formed worker_threads invocations; throws TypeError with a descriptive message for any other shape (primitive, array, missing`dbPath`, non-string `dbPath`, empty `dbPath`). Validator deliberately lives in its own module so unit tests can import it without triggering migrate-worker.ts's top-level "open DB / run migrations / exit" script body (esbuild `--bundle`in Dockerfile:83-91 inlines the new module — no Dockerfile change required). Test coverage: 12 new tests in`db/**tests**/migrate-worker-validate.test.ts`cover every legitimate input (null, undefined, well-formed, extra keys) and every rejection (string, number, array, missing key, wrong-type dbPath, null/undefined dbPath, empty dbPath), plus an explicit TYPE-06 regression test simulating the original footgun:`validateWorkerData({ databasePath: "/tmp/x.db" })`now throws`missing required key 'dbPath'`instead of silently masquerading as`{ dbPath: undefined }`and falling through to the "no dbPath provided" branch. Existing 11-test`migrate-worker.test.ts` (spawn-side) still green. TYPE-07 DONE `f8feca9b`: `config.ts` parseLogLevel now uses `toLowerCase()` for both the validation check and the returned value (was `toLocaleLowerCase()` for the check, `toLowerCase()` for the return) — eliminates the Turkish-locale dotless-i mismatch. Regression test spies on `String.prototype.toLocaleLowerCase` to prove it is never called. TYPE-08 DONE `765d8f0f`: hoisted the `ZmqSubscriberLike`/`ZmqModuleLike` interfaces in `zmq-listener.ts` from a local declaration inside `connectAndReceive()` to module scope, and retyped the `socket` field as `ZmqSubscriberLike \| null` instead of `unknown`, removing the inline cast in `closeSocket()`. Existing 19-test suite covers behavior unchanged. |
+| LOG-02                      | Logger namespace standardisation. Renamed every backend `createLogger(...)` call to `<area>:<module>` form: `services:*` for everything under `services/` (adsb-poller, tcp/udp/zmq-listener, scheduler, stats-writer, stats-pruning, timeseries-cache, message-queue, message-ring-buffer, rrd-migration, heywhatsthat, metrics); `db:client` (was `database`), `db:migrate` (was `migrations`), `db:migrate-worker`; `socket:validation` (was `socket-validation`); `formatters:enrichment` (was `enrichment`); `server:startup-state` (was `startup-state`). Single-token namespaces preserved only for true aggregators per AGENTS.md: `app` (root default), `config`, `server`, `services`, `formatters`. Convention codified in AGENTS.md "Logging Standards > Namespace convention". Regression coverage: new `utils/__tests__/logger-namespaces.test.ts` walks the backend src tree and asserts every literal `createLogger("...")` arg matches `^[a-z][a-z0-9-]*:[a-z][a-z0-9-]*$` OR is in the single-token whitelist; the test fails if anyone reintroduces a kebab-only or bare-area namespace (verified by temporarily reverting `services:adsb-poller` → `adsb-poller`). DONE `e708f332`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| LOG-03                      | Test skip-condition cleanup. DONE `718ed991`: `config-integration.test.ts` computes `hasGroundStations`/`hasMetadata`/`hasAirlines`/`hasAllData` booleans once via `existsSync` at describe scope and uses `it.skipIf(...)` instead of an inline `if (!existsSync(...)) { console.warn(...); return; }` guard, so vitest reports these as properly skipped tests instead of tests that silently do nothing.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| STATE-02                    | Encapsulate module-level mutable state (one file per PR) — DONE, all 5 files: (1) `socket/handlers.ts` `alertRegenInProgress` -> `createAlertRegenState()` factory + `resetAlertRegenStateForTesting()`, commit `0f030ac8`. (2) `db/queries/statistics.ts` `messageCounters`/`countersInitialized` -> `createMessageCounterState()`, commit `d3060aad`. (3) `db/queries/messages.ts` `unsavedMessageCounter` -> `createUnsavedMessageCounterState()`, commit `9c4a3c1a`. (4) `db/queries/alerts.ts` three cache vars -> `createAlertCacheState()`, commit `0e82b43c`. (5) `services/heywhatsthat.ts` `cachedUrl` -> `createCachedUrlState()` + `resetCachedUrlForTesting()`, commit `06cdeab` — this last one also removed a real test-coupling wart where `heywhatsthat.test.ts` had no direct reset and worked around it via an async side-channel call to `initHeyWhatsThat("", ...)`. Every file already had (or gained) a synchronous `resetXForTesting()` export wired into its own test file's `beforeEach`/`afterEach` — no shared global reset registry was needed since each test file already imports exactly the reset(s) it uses. No behavior change; full backend suite (1248 tests) green after each commit.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| LEAK-02                     | TCP/UDP listener reconnect-timer audit. DONE `62c983d6`: audit confirmed both `stop()` methods already correctly captured and cleared their timer handle (a flagged-not-confirmed item that turned out fine). Added precise regression tests to both `tcp-listener.test.ts` and `udp-listener.test.ts` using `vi.useFakeTimers()` (enabled only after the real socket connect/bind-failure fires, so I/O is unaffected) plus `vi.getTimerCount()`, since `connect()`/`bind()` both early-return on `!isRunning` and so a naive behavioral "does it reconnect" test cannot distinguish a cleared timer from a dangling-but-harmless one. Verified both regression tests fail with the clearing code removed and pass restored; stable across 5 repeated runs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| LEAK-04                     | Backup DB partial-init guard. DONE `7088cfff`: on any backup-init failure (`new Database()` succeeded but a later pragma or the `drizzle()` wrap threw), `initDatabase()` now closes the raw handle if one was opened and nulls both `sqliteBackupConnection` and `drizzleBackupClient`, so backup-DB state is all-or-nothing — previously `sqliteBackupConnection` could be left live-but-partially-configured while `drizzleBackupClient` stayed null, so `hasBackupDatabase()` correctly reported "disabled" but `checkpointBackup()` (which checks `sqliteBackupConnection` directly) would still use the stale connection. Regression test mocks `better-sqlite3` so the backup connection's `synchronous` pragma throws after opening; confirmed `checkpointBackup()` returned bogus non-null data before the fix and `null` after.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ERR-01                      | Standardise `catch (error)` naming. DONE `0421dfa3`: renamed `catch (err)` to `catch (error)` across 12 backend files (server.ts, db/migrate.ts, services/{zmq,tcp,udp}-listener.ts, message-ring-buffer.ts, adsb-poller.ts, heywhatsthat.ts, metrics.ts, scheduler.ts, index.ts, timeseries-cache.ts); the rest of the backend already used `error`. Three sites (adsb-poller.ts, heywhatsthat.ts, scheduler.ts) had a local `const error = err instanceof Error ? err : new Error(...)` normalization that would have collided with the renamed catch parameter — renamed that local to `normalizedError` instead. No Biome rule added: `useNamingConvention` only enforces case style, not a specific literal identifier, so enforcing this mechanically would need a custom GritQL plugin, judged disproportionate for a closed mechanical sweep.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ERR-02                      | Wrap fire-and-forget `setImmediate`. DONE `4ca74830`: `handleRegenerateAlertMatches` in `socket/handlers.ts` wraps the `setImmediate(async () => {...})` IIFE call in an explicit `.catch((error) => { logger.error(...); alertRegenInProgress = false; })` backstop, so a failure inside the existing try/catch/finally (e.g. `socket.emit()` throwing because the client disconnected mid-run) can no longer become an unhandled rejection at process level. Regression test in `handlers.test.ts` makes `socket.emit()` throw from within the catch block; confirmed it surfaces an Unhandled Rejection error before the fix and passes cleanly after.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ERR-03                      | Document `executeTask` no-throw invariant. DONE `171cd2f4`: added a JSDoc invariant comment on `executeTask` explaining it must never reject, and — matching the ERR-02 fix — wrapped all three `setInterval`/`setTimeout` call sites in `startTask()`/`startTaskAt()` with an explicit `.catch(...)` backstop, since `this.emit(...)` runs listeners synchronously and a throwing `taskError` listener would otherwise escape as an unhandled rejection. Regression test installs a throwing `taskError` listener; confirmed it surfaces an Unhandled Rejection error before the fix and passes after.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| GOD-01                      | Split `socket/handlers.ts`. DONE `6e5a4bcb`: split the 1332-line file into `socket/handlers/{connect,search,alerts,stats,timeseries}.ts` per the plan's proposed boundaries, plus a thin `index.ts` orchestrator that wires every `socket.on(...)` registration and re-exports `handleConnect` (used directly by `server.ts` for migration-deferred sockets) and `resetAlertRegenStateForTesting` (STATE-02 test isolation, now living in `alerts.ts` alongside `handleRegenerateAlertMatches`). Updated the two external consumers (`server.ts`, `socket/index.ts`) and the test file's import to `socket/handlers/index.js`; the test file itself did not need restructuring since Vitest's `vi.mock()` intercepts by resolved module path, not literal specifier text. Renamed each split file's logger namespace from a three-segment `socket:handlers:<name>` to two-segment `socket:handlers-<name>` to satisfy the LOG-02 namespace-convention regression test (exactly one colon). No behavior change; full backend suite (1248 tests) green; 0 circular imports (madge); clean tsc build.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| GOD-02                      | Split `db/migrate.ts` (1688 lines). DONE `166541ae`: split into a `db/migrations/` directory, one file per migration step (`migration01.ts` through `migration15.ts`, named for revision order per the user's guidance that each migration is already its own clean seam), plus `fts-helpers.ts` (FTS schema/trigger helpers shared by migration04, migration10, and the unconditional startup integrity check), `state-detection.ts` (`getAlembicVersion`/`setAlembicVersion`/`hasAnyTables`/`isAtInitialMigrationState`, used only by the orchestrator), `types.ts` (`MigrationStep`), and `index.ts` (assembles the ordered `MIGRATIONS` array + derives `LATEST_REVISION` from it, preserving the NIT-07 invariant). `db/migrate.ts` itself shrinks to 323 lines and becomes the pure orchestrator (`runMigrationsInWorker`/`runMigrations`). Zero test changes required — every one of the 6 `migrate-*.test.ts` files only ever imported the two public orchestrator functions, never an individual migration step. No behavior change; full backend suite 1267/1267 green; 0 circular imports (madge); clean tsc build; per-migration coverage 75-100%.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| GOD-03                      | Split `db/queries/messages.ts` (1281 lines). DONE `56256cb5`: split into a `db/queries/messages/` directory — `insert.ts` (`addMessage()` + `AlertMetadata` + unsaved-uid counter state), `search.ts` (`databaseSearch()` + FTS5/LIKE strategy + `SearchParams`/`SearchResult`), `range.ts` (`grabMostRecent`/`showAll`/`getRowCount`/`getMessageByUid`/`getMessageCountByTimeRange`), `delete.ts` (`deleteOldMessages()`), `prune.ts` (`pruneDatabase()`), `optimize.ts` (`optimizeDbRegular`/`optimizeDbFts`/`optimizeDbMerge` — not one of the plan's original boundary names since `messageTransform.ts` already covers the 'transform.ts' slot as a pre-existing sibling file); `index.ts` is a barrel re-exporting the full public API 1:1. Updated 4 external consumers + 3 test-file imports to go through `messages/index.js`. Test file relocated (not split) to `messages/__tests__/messages.test.ts` — every scenario shares one in-memory SQLite fixture, so splitting the tests would duplicate that fixture six times for no behavioural benefit. No behavior change; full backend suite 1267/1267 green; 0 circular imports (madge); clean tsc build.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| GOD-04                      | Split `services/index.ts` (854 lines). DONE `8bf9ee72`: split into `services/background-services.ts` (BackgroundServices class — lifecycle, message-processing pipeline, scheduled-task wiring, ADS-B polling), `services/listener-manager.ts` (`ListenerManager` — TCP/UDP/ZMQ fan-in wiring + any-of-N connection-status tracking), `services/system-status.ts` (pure `buildSystemStatus()`/`buildMessageRate()` payload builders, no side effects); `services/index.ts` is now a 33-line barrel. New direct unit tests: `listener-manager.test.ts` (14 tests), `system-status.test.ts` (7 tests); renamed `services-index.test.ts` -> `background-services.test.ts` (kept as the ListenerManager integration seam through BackgroundServices public API). No behavior change; full backend suite 1267/1267 green (was 1248); 0 circular imports (madge); clean tsc build.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| GOD-05                      | Split `SettingsModal.tsx` (1553 lines) per-tab. DONE `f5d16be9`: split into `components/settings/` — `AppearanceTab.tsx`/`RegionalTab.tsx`/`DataTab.tsx` (no props, self-contained via `useSettingsStore`), `AlertsTab.tsx` (alert/ignore term state + handlers, takes `isRegenerating`/`onRegenerateClick` props since the confirm/processing overlays are Modal-level siblings that must survive tab switches), `NotificationsTab.tsx`, `MapTab.tsx`, `AdvancedTab.tsx`. `SettingsModal.tsx` shrinks to 484 lines (Modal wrapper, tablist keyboard nav, footer, Escape-to-close, regenerate overlays). TYPE-01/STYLE-INLINE-STATIC already resolved by earlier phases — nothing left to fix in passing. All 50 existing `SettingsModal.test.tsx` tests pass unchanged (never coupled to file layout); new 13-test `MapTab.test.tsx` closes a 0%-coverage gap the split made visible (the Map tab button was asserted to exist but its panel was never clicked into). Full frontend suite 2253/2253 green; 0 circular imports (madge); clean tsc build.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| GOD-06                      | Split `utils/aircraftIcons.ts` (1510 lines) data/logic. DONE `81d94f2c`: confirmed mostly a large lookup table (~1250 lines); split into a `utils/aircraftIcons/` directory — `data.ts` (`ShapeDefinition` interface + `shapes`/`TypeDesignatorIcons`/`TypeDescriptionIcons`/`CategoryIcons` tables, kept as TypeScript rather than JSON since the shape definitions benefit from type checking and this is not user-facing translatable content), `logic.ts` (`getBaseMarker`/`svgShapeToURI`/`getAircraftColor`/`shouldRotate`), `index.ts` (barrel). Zero consumer changes — bundler `moduleResolution` resolves the directory transparently for both `AircraftMarkers.tsx` and the 48-test suite. Full frontend suite 2230/2230 green; 0 circular imports (madge); clean tsc build.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| GOD-07                      | Split `useAppStore.ts` (1219 lines). DONE `2add10af`: used Zustand's slices pattern (single combined store) rather than separate stores, per the plan's explicit lower-blast-radius alternative — 28 non-test files consume `useAppStore` directly. Split into `store/slices/`: `connectionSlice.ts`, `messagesSlice.ts` (bulk of the logic — addMessage/addAlertMessage), `alertsSlice.ts`, `readStateSlice.ts`, `statsSlice.ts`, `adsbSlice.ts`, `uiSlice.ts`. `useAppStore.ts` shrinks to 113 lines (composition root + selectors + dev/E2E window exposure). Public API 100% unchanged — zero consumer or test changes needed. Cross-slice reads (messagesSlice needs decoders/adsbAircraft/readMessageUids; readStateSlice needs messageGroups/alertMessageGroups) use small local "Dependencies" interfaces sourced from the base types module instead of importing the owning slice's interface, avoiding a type-only `slices/*.ts` <-> `types.ts` hub cycle that `just madge` does not tolerate (it treats `import type` the same as a value import, unlike TypeScript itself). Full frontend suite 2253/2253 green; 0 circular imports (madge); clean tsc build.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| GOD-08                      | DRY `AircraftMarkers.tsx` tooltip code. DONE `924822ae`: extracted the ~30-line `onMouseEnter` tooltip-positioning calculation duplicated 3x (AnimatedSprite / static-sprite / SVG-fallback branches, ~150 duplicated lines) into `hooks/useTooltipPositioning.ts` — `calculateTooltipPosition()` pure geometry function plus a `useTooltipPositioning(setTooltip)` hook returning an `onMouseEnter(hex)` factory (called once per render, not per marker, to respect the rules of hooks) and a shared `onMouseLeave`. `AircraftMarkers.tsx` shrinks 1095 -> 976 lines. New 10-test suite covers the position math and hook wiring; `AircraftMarkers.test.tsx` had explicitly deferred this coverage. No behavior change; full frontend suite 2240/2240 green; 0 circular imports (madge); clean tsc build. Did not additionally extract the `<MarkerButton>` shared-component consolidation the plan also floated — higher JSX-restructuring risk for marginal gain once the actual duplication driver (the positioning calculation) was removed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| GOD-09                      | (Deferred) `services/rrd-migration.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| EFFECT-01 through EFFECT-04 | Extract custom hooks from page components. ALL DONE. EFFECT-01 `7835350b`: `LiveMapPage.tsx` (688 lines, 12 useEffects) → 5 hooks (`useMapLifecycle`, `useMapPauseState`, `useMapZoomFreeze`, `useMapFollowedAircraft`, `useMapSidebarLayout`), page shrinks to ~275 lines. EFFECT-02 `d3c8868f`: `LiveMessagesPage.tsx` (820 lines, 9 useEffects + 1 useLayoutEffect) → 4 hooks (`usePageRegistration` — new, generic/reusable; `useMessageListHeight`, `useMessageScrollAnchor`, `useMessageFilters` — also relocates the `globalFilterProps` singleton Navigation.tsx reads), page shrinks to ~500 lines. EFFECT-03 `202b761c`: `SearchPage.tsx` (1065 lines, 6 useEffects + 1 useLayoutEffect) → 4 hooks (`useSearchStatePersistence`, `useSearchFormCollapse`, `useSearchResultsSubscription`, `useSearchScrollMargin`). EFFECT-04 `afe96db9`: `AlertsPage.tsx` (756 lines, 5 useEffects + 1 useLayoutEffect) → 4 hooks (`useAlertsListHeight`, `useAlertsHistoricalSearch` — bundles subscribe+trigger since the results handler writes back historicalPage; `useAlertsScrollReset`, `useAlertsScrollAnchor` — live-mode-only), page shrinks to ~490 lines. Both SearchPage and AlertsPage deliberately left their page-registration effect inline — each has a dependency array that doesn't match the generic `usePageRegistration` contract, and forcing it through would silently change re-registration frequency. None of the four needed new dedicated hook test files — pure code relocation, existing page test suites (33+19+46+29 = 127 tests) already exercise every hook end-to-end; `hooks/**` full-suite coverage sits at 89.92% stmt / 69.72% branch, above the 88/88/55/88 threshold.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| SCSS-MOBILE                 | Mobile-first conversion — DONE. All 30 component/page SCSS files converted from desktop-first `max-width` to mobile-first `min-width` (24 components + 6 pages). `_mixins.scss` `breakpoint-max()` deprecated with `@warn` (f6b29d4a); one deliberate exception remains (`_live-map.scss`'s tablet-only bounded-range clamp, `breakpoint(md)` + `breakpoint-max(lg)`, documented inline — not expressible as a single min-width check). Key commits: select/toggle/radio (9241a3ed/834a6516/81970333), settings-modal (0e28af61), stats (af8b558c), button (8088bcbe), connection-status (92865685, + BEM class-mismatch bug fix e68f52a4), context-menu (168db279), logs-viewer (77b50123), modal (96750203), navigation (642f1b55), toast (1485e2bd), chart dead-code removal (965b7dac), message-group (6b0db3b0), migration-status (823b8f7b), message-card (2e1686db), map subsystem: map-control-button/map-controls/map-filters-menu/map-provider-selector/map/map-overlays-menu/aircraft-markers/aircraft-list/geojson-overlay-button (b192bc88 through e3af71c2), pages: alerts/common/live-map/live-messages/search (25a56235 through 6052809b). Also fixed 3 real map-controls layout/stacking bugs found interactively (icon misalignment, oversized flyout button, dropdown direction + z-index) with 7 new E2E regression tests (55a3a6a8). Every conversion visually verified via before/after Playwright screenshots and a git-stash regression check (fails without the fix, passes with it).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| NIT-01                      | Move magic numbers into `config.ts`. DONE `ed3fc2fc`: added seven documented, env-overridable constants — `MESSAGE_BATCH_CHUNK_SIZE`, `SEARCH_PAGE_SIZE` (replaces three separate `limit = 50` literals in `socket/handlers.ts`), `HEYWHATSTHAT_TIMEOUT_MS`, `TCP_READ_TIMEOUT_MS`, `DB_CACHE_SIZE_KB`, `DB_WAL_AUTOCHECKPOINT_PAGES`, `DB_BACKUP_MMAP_SIZE_BYTES` (the last three also keep the primary/backup DB connections' pragmas in sync via one source of truth instead of two hardcoded copies). New "Operational tunables (NIT-01)" describe block in `config.test.ts` covers both defaults and env-var overrides.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| NIT-04                      | Audit dead/unused exports. DONE `27c6992e`: `MigrateWorkerResult` in `migrate-worker.ts` was exported but confirmed (via grep) to have zero external consumers — dropped the `export` keyword, now a purely internal type. `computeConfigHash` / `feetAltListToMeters` in `heywhatsthat.ts` confirmed to have real internal callers in addition to being directly unit-tested — legitimate exported-for-testability pattern, left as-is. `writeStatsNow` in `stats-writer.ts` confirmed test-only but already carries the '(for testing or manual trigger)' JSDoc tag the remediation asked for — no change needed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| NIT-05                      | Add `madge --circular` CI check — DONE `34eaafe2`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| NIT-06                      | Remove unreachable `_loadData` catch branch in `acarshub-react/src/utils/spriteLoader.ts` (flagged during Phase 4 TEST-GAP-FE work — branch is logically unreachable given surrounding control flow; removing it is a small refactor that needs a sweep alongside NIT-04 dead-code audit) — DONE `d9a5ddc4`: the inner Promise wrapped a plain synchronous assignment in a try/catch that could never throw (spritesheetData is a static top-level import inlined at build time); removed the dead catch, kept the genuinely-reachable outer timeout-rejection path. Full 26-test spriteLoader suite green.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| NIT-07                      | Update stale `LATEST_REVISION` constant in `acarshub-backend/src/db/migrate.ts:50` from `"803398f85958"` to `"8c9d47f5ed13"` (the actual latest at `migrate.ts:1361`). Cosmetic — only used in log strings — but misleading and surfaced repeatedly while writing Phase 6 TEST-GAP-BE migrate.ts tests. Pairs naturally with GOD-02 (split `db/migrate.ts`) since the constant should live next to the migration array. DONE `394a9d73`: moved the declaration to immediately after `MIGRATIONS` and derive it as `MIGRATIONS[MIGRATIONS.length - 1]?.revision` instead of a hand-maintained string literal, so it cannot drift from the real latest migration again. Also fixed a matching stale test _name_ in `migrate-fts-repair.test.ts` (the assertion already checked the correct revision).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| NIT-08                      | Backend full-suite flake remediation. Root-caused two distinct races: (1) `tcp-listener.test.ts` rolled a port in `15550 + random*1000` per worker — under parallel vitest workers two workers occasionally collided on the same port and the second `EADDRINUSE`d or cross-talked, sporadically failing `should not reconnect after stop is called` and `should auto-reconnect after disconnection`; (2) `stats.test.ts > sums across 60 per-minute rows correctly` inserted rows at `now - 3600` and the route handler's `nowSeconds = Math.floor(Date.now()/1000)` was sampled fresh, so a sub-second drift on a heavily-loaded CI ticked the second over and dropped the boundary row from the 1-hour window. Fixes: tcp-listener now binds servers on port 0 and reads the OS-assigned port back via `server.address()` (with an explicit-port overload for the reconnect-rebind case); stats now `vi.useFakeTimers({ toFake: ["Date"] })` + `vi.setSystemTime(...)` at suite scope, plus a new deterministic regression test that advances the clock by one second between insert and request to prove the boundary semantics. 15/15 clean full-suite runs after the fix. DONE `0e314206`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| NIT-09                      | `acarshub-react/src/components/Map/MapContextMenu.tsx` — each menu item's `onClick` calls `onClose()` directly even though the parent `ContextMenu` already calls `onClose()` after every item click (`ContextMenu.tsx:173`), so `onClose` fires twice per item activation. Idempotent in practice (the menu unmounts), but the duplicate call is dead code and misleading. Pinned by regression test in `MapContextMenu.test.tsx`; cleanup is to remove the inner `onClose()` from each item handler. Surfaced while writing Phase 6 TEST-GAP-FE Map subsystem bundle 1. DONE `7dba4c81`: item `onClick` handlers now reference the raw callback directly instead of wrapping it with an extra `onClose()` call; ContextMenu's own auto-close handles closing the menu. Updated the pinning regression test to assert exactly one call instead of exactly two; confirmed it fails (count === 2) without the fix and passes (count === 1) with it. Full Map subsystem suite (283 tests) green.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| NIT-10                      | `acarshub-react/src/components/LogsViewer.tsx` test coverage — deferred during Phase 6 TEST-GAP-FE "everything else" pass. DONE `8cf6f063`: added 28 new tests (7 pre-existing LOG-04/BUG-SETTINGS-SCROLL regression tests -> 35 total), covering rendering states (empty buffer, no-match filter, entry structure, conditional module/stack), level filtering (all five levels via `it.each`), search filtering (message/module match, combined with level filter), the statistics bar, TXT/JSON export (Blob MIME type, download filename, object-URL lifecycle), clear (confirm accept/cancel), subscribe/unsubscribe lifecycle, the `maxHeight` custom property, and accessibility attributes. LogsViewer.tsx coverage: 98.24% stmt / 96.29% branch / 100% funcs / 100% lines. The original finding's premise ("heavyweight virtualized component" with "source-filter persistence") did not match the actual 176-line component — no virtualization library, no per-source filter persistence — so no virtualization-mocking harness was needed; every real branch is covered.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+
+### Phase 8 — User audibles (out-of-audit features)
+
+Scheduled after the architecture refactors so the refactored module
+boundaries (split `SettingsModal`, split `AircraftMarkers` tooltip code,
+extracted hooks) are in place before new feature surface lands on them.
+
+| ID               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| FEAT-MARKER-SIZE | ✅ DONE — see full write-up in §15. `MarkerSize` setting (small/medium/large, default medium) with store migration v9→v10, `RadioGroup` in `MapTab.tsx`. Scale baked into sprite/SVG generation math (not CSS transform, to avoid atlas-crop misalignment and touch-target/transform composition bugs); new `.aircraft-marker-hit` 44px-floored wrapper decouples the clickable area from the visual icon so sprite crops never bleed. Two real bugs found and fixed during verification: a stale parallel stylesheet hardcoding `.aircraft-sprite` width/height froze the visual box while the crop kept scaling (atlas bleed at "small", clipping at "large"); `AnimatedSprite`'s `scale` prop was never actually passed at its JSX call site, freezing all animated (propeller) aircraft at the default scale — both pinned by regression tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| PERF-BUNDLE      | ✅ DONE — see full write-up in §15. Phase A found the real problem was worse than the plan assumed: beyond eager `modulePreload` hints, a confirmed-open upstream Rolldown bug (rolldown/rolldown#6083 et al.) was forcing the eagerly-loaded entry chunk to statically import the entire 1MB `map` and 253KB `charts` vendor chunks on every route, regardless of `modulePreload` config. Phase B fixed all 5 identified items: migrated `vite.config.ts` off `manualChunks` onto `codeSplitting.groups` with regex `test` matchers (the documented workaround) plus an explicit `vite-runtime-helpers` group; moved `maplibre-gl.css` into the `LiveMapPage` lazy factory + a `transformIndexHtml` plugin to kill the render-blocking `map-*.css` link; removed dead `socket.ts` dynamic-import wrapping; lazy-loaded all 7 Settings-modal tabs. Verified via Docker Playwright network traces (each route now loads exactly its own vendor chunks, zero cross-contamination) and a real order-dependent test flake in `SettingsModal.test.tsx` found and fixed (stable across 15 shuffle seeds). `just ci` green; full E2E suite matches pre-existing baseline pass/fail counts exactly (5 pre-existing, unrelated failures confirmed via `git stash`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| FEAT-RANGE-RINGS | ✅ DONE — see full write-up in §15. Phase A confirmed `minEdgeDistance * 0.7` (short-axis-only, no-clipping-allowed design) as the root cause; Phase B implemented strategy (c) (`getMaxRingCount` 3-5 by container width, `calculateRangeRingRadii` corner-based buffer with an edge-based no-clip floor). A second, more fundamental defect surfaced during live verification: ring size was computed from `station -> edge/corner distance` rather than `viewport-center -> edge/corner distance`, so panning the map (with the station now off-center) made rings visibly shrink/change count/nearly vanish with no zoom change at all. Fixed by keying the size calculation off the map's own center instead of the station; rings are still drawn anchored at the station's real coordinates. Both defects pinned by regression tests (verified failing pre-fix, passing post-fix via a temporary revert).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| FE-MODAL-A11Y    | `acarshub-react/src/components/Modal.tsx` accessibility fixes (flagged during Phase 4 TEST-GAP-FE work). DONE `c8e3f790`: (1) new `hooks/useFocusTrap.ts` hook traps Tab/Shift+Tab within the dialog while open (wraps at both boundaries, falls back to focusing the container itself via `tabIndex={-1}` when there are no focusable descendants) and restores focus to whatever triggered the modal on close/unmount — closes the WCAG 2.1 AA violation where Tab could walk focus out of an open modal into the underlying page. (2) `role="dialog"`/`aria-modal`/`aria-labelledby`/`tabIndex={-1}` moved off the backdrop `<div>` onto the inner `.modal` element (matching the WAI-ARIA APG "Dialog (Modal)" pattern and the existing `Map/AircraftMessagesModal.tsx` precedent); the backdrop's dead `onKeyDown`-for-Enter handler (unreachable — it had no `tabIndex` so a real user could never focus it to trigger it) was removed outright rather than fixed, since Escape (already implemented, already tested) is the documented working keyboard equivalent to backdrop-click dismissal. 16 new unit tests in `hooks/__tests__/useFocusTrap.test.tsx` (pure-function `getFocusableElements` DOM-order/disabled/tabindex/aria-hidden coverage, plus full trap behavior including wrap-around both directions and focus restoration); `Modal.test.tsx` gained a "focus trap" describe block pinning the same "focus returns to trigger after close" contract that `e2e/accessibility.spec.ts`'s "Focus Management" tests check in a real browser — confirmed via a rebuilt Dockerized-Playwright image that those two pre-existing e2e tests now pass for a genuine reason (a real trap) rather than the coincidental DOM-order luck they were passing on before. Verified via `git stash`: 7 tests fail against the pre-fix code, all pass with the fix restored. |
+
+### Phase 9 — Cleanup
+
+| ID                   | Description                                                                                                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DOC-V4.2             | Mark V4.2 Phase 0 done, or remove if V4.2 is itself historical; also rename `agent-docs/V4.2.md` → `agent-docs/V4.3.md` (and update any inbound references)      |
+| CHANGELOG            | Update CHANGELOG with a summary entry for this remediation cycle (no per-fix detail); credit wiede for the IPv6 changes that the remediation branch rebased onto |
+| VERSION-BUMP         | Bump root `package.json` and all workspace `package.json` files (acarshub-react, acarshub-backend, etc.) to `4.2.0-beta.1`                                       |
+| Delete this document | Per AGENTS.md "no summary docs" rule, once everything above is closed                                                                                            |
+
+---
+
+## Total effort estimate
+
+| Phase                         | Effort                     |
+| ----------------------------- | -------------------------- |
+| 1. Stop the bleeding          | 1-2 days                   |
+| 2. High-impact correctness    | 3-5 days                   |
+| 3. Design-language compliance | 3-5 days                   |
+| 4. Test infra backfill        | 1-2 weeks                  |
+| 5. Documentation              | 3-5 days                   |
+| 6. Continuing test backfill   | 1-2 weeks                  |
+| 7. Architecture refactors     | 2-4 weeks (parallelisable) |
+| 8. User audibles              | 1-2 weeks                  |
+| 9. Cleanup                    | <1 day                     |
+
+**Grand total:** approximately 7-12 engineer-weeks. Phases 1-2 (1-2 weeks)
+produce the highest correctness/security ROI; Phases 3-5 (1.5-2 weeks)
+restore AGENTS.md compliance; Phases 6-7 are sustained maintenance/refactor
+work that can be scheduled around feature delivery. Phase 8 is net-new
+feature surface (out-of-audit audibles) and is intentionally placed after
+the refactors so the marker-rendering and bundle-splitting work lands on
+the cleaned-up module boundaries from Phase 7.

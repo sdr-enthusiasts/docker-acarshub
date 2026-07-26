@@ -55,7 +55,7 @@ import {
   initTimeSeriesCache,
   stopTimeSeriesCache,
 } from "./services/timeseries-cache.js";
-import { handleConnect } from "./socket/handlers.js";
+import { handleConnect } from "./socket/handlers/index.js";
 import {
   initializeSocketServer,
   shutdownSocketServer,
@@ -82,9 +82,19 @@ const config: ServerConfig = {
 };
 
 /**
- * Create and configure Fastify server
+ * Create and configure Fastify server.
+ *
+ * Exported (TEST-GAP-BE) so tests can exercise every route via Fastify's
+ * built-in `.inject()` helper without a real network listener. This is the
+ * only piece of `server.ts` unit-tested directly — the `main()` startup
+ * orchestration (migration sequencing, background-service wiring, signal
+ * handlers) remains covered by the E2E/Docker-Compose full-stack suite only,
+ * since faithfully unit-testing it would mean mocking every one of a dozen
+ * service modules with no meaningful assertion left to make beyond "the
+ * mocks were called in order" — the E2E suite already proves the real
+ * sequence boots correctly end-to-end.
  */
-function createServer() {
+export function createServer() {
   const fastify = Fastify({
     logger: false, // Use Pino logger instead
     trustProxy: true,
@@ -210,9 +220,9 @@ function createServer() {
       return reply
         .header("Cache-Control", "no-cache")
         .send({ acars, vdlm2, hfdl, imsl, irdm, total });
-    } catch (err) {
+    } catch (error) {
       logger.error("Failed to generate stats.json", {
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       return reply.status(500).send({ error: "Internal Server Error" });
     }
@@ -224,9 +234,9 @@ function createServer() {
     try {
       const body = await collectMetrics();
       return reply.header("Content-Type", METRICS_CONTENT_TYPE).send(body);
-    } catch (err) {
+    } catch (error) {
       logger.error("Failed to generate metrics", {
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
       return reply.status(500).send("Internal Server Error");
     }
@@ -354,10 +364,10 @@ async function main(): Promise<void> {
           { framesRemaining },
         );
       }
-    } catch (err) {
+    } catch (error) {
       // Non-fatal: the scheduled task will pick this up within 5 minutes.
       logger.warn("Startup WAL checkpoint failed (non-fatal)", {
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
     }
 
@@ -523,11 +533,21 @@ async function main(): Promise<void> {
   }
 }
 
-// Start the server
-main().catch((error) => {
-  logger.fatal("Fatal error", {
-    error: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined,
+// Start the server — but only when this file is the actual process entry
+// point (`tsx watch src/server.ts` in dev, `node server.bundle.mjs` in
+// production), not when it is imported as a module (TEST-GAP-BE:
+// server.test.ts imports `createServer` for route-level testing via
+// Fastify's `.inject()`, and must not trigger a real startup sequence —
+// migrations, background services, socket server, process.exit — as a
+// side effect of the import). Standard ESM equivalent of Python's
+// `if __name__ == "__main__":` / Node's CJS `require.main === module`.
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+  main().catch((error) => {
+    logger.fatal("Fatal error", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    process.exit(1);
   });
-  process.exit(1);
-});
+}

@@ -97,8 +97,7 @@ export const useSocketIO = () => {
         "Requesting time-series warm-up for warm-tier periods",
       );
       for (const period of WARM_PERIODS) {
-        // @ts-expect-error — Flask-SocketIO requires namespace as third arg
-        socket.emit("rrd_timeseries", { time_period: period }, "/main");
+        socket.emit("rrd_timeseries", { time_period: period });
       }
     });
 

@@ -25,6 +25,7 @@ import type {
   Adsb,
   AdsbStatus,
   AlertTerm,
+  CurrentSearch,
   DatabaseSize,
   Decoders,
   HtmlMsg,
@@ -162,7 +163,11 @@ export interface ServerToClientEvents {
 // Events emitted to backend
 export interface ClientToServerEvents {
   // Search queries
-  query_search: (query: Record<string, string>) => void;
+  query_search: (query: {
+    search_term: CurrentSearch | Record<string, string | undefined>;
+    results_after?: number;
+    show_all?: boolean;
+  }) => void;
 
   // Historical alert queries
   query_alerts_by_term: (data: { term: string; page?: number }) => void;
@@ -170,6 +175,7 @@ export interface ClientToServerEvents {
   // Alert management
   update_alerts: (data: { terms: string[]; ignore: string[] }) => void;
   regenerate_alert_matches: (data: Record<string, unknown>) => void;
+  request_recent_alerts: (data: Record<string, unknown>) => void;
 
   // Signal queries
   signal_freqs: (data: { freqs: boolean }) => void;
@@ -472,9 +478,17 @@ class SocketService {
   }
 
   /**
-   * Emit a database search query
+   * Emit a database search query.
+   *
+   * Currently unused (SearchPage.tsx uses the raw socket directly to keep
+   * type narrowness for the search_term object); kept here for symmetry
+   * with the other typed wrappers.
    */
-  searchDatabase(query: Record<string, string>): void {
+  searchDatabase(query: {
+    search_term: CurrentSearch | Record<string, string | undefined>;
+    results_after?: number;
+    show_all?: boolean;
+  }): void {
     socketLogger.debug("Emitting database search query", { query });
     this.socket?.emit("query_search", query);
   }
@@ -495,9 +509,7 @@ class SocketService {
    */
   queryAlertsByTerm(term: string, page = 0): void {
     socketLogger.debug("Querying historical alerts by term", { term, page });
-    // Legacy style: pass namespace as third argument
-    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
-    this.socket?.emit("query_alerts_by_term", { term, page }, "/main");
+    this.socket?.emit("query_alerts_by_term", { term, page });
   }
 
   /**
@@ -506,9 +518,7 @@ class SocketService {
    */
   requestSignalFreqs(): void {
     socketLogger.trace("Requesting signal frequency data");
-    // Legacy style: pass namespace as third argument
-    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
-    this.socket?.emit("signal_freqs", { freqs: true }, "/main");
+    this.socket?.emit("signal_freqs", { freqs: true });
   }
 
   /**
@@ -516,9 +526,7 @@ class SocketService {
    */
   requestSignalCount(): void {
     socketLogger.trace("Requesting signal count data");
-    // Legacy style: pass namespace as third argument
-    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
-    this.socket?.emit("signal_count", { count: true }, "/main");
+    this.socket?.emit("signal_count", { count: true });
   }
 
   /**
@@ -527,9 +535,7 @@ class SocketService {
    */
   requestSignalGraphs(): void {
     socketLogger.trace("Requesting signal graphs data");
-    // Legacy style: pass namespace as third argument
-    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
-    this.socket?.emit("signal_graphs", {}, "/main");
+    this.socket?.emit("signal_graphs", {});
   }
 
   /**
@@ -538,9 +544,7 @@ class SocketService {
    */
   requestStatus(): void {
     socketLogger.debug("Requesting real-time system status");
-    // Legacy style: pass namespace as third argument
-    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
-    this.socket?.emit("request_status", {}, "/main");
+    this.socket?.emit("request_status", {});
   }
 
   /**
@@ -554,9 +558,7 @@ class SocketService {
     }
 
     socketLogger.debug("Requesting recent alerts from backend");
-    // Legacy style: pass namespace as third argument
-    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
-    this.socket.emit("request_recent_alerts", {}, "/main");
+    this.socket.emit("request_recent_alerts", {});
   }
 
   /**
@@ -581,9 +583,7 @@ class SocketService {
     }
 
     socketLogger.info("Requesting alert match regeneration from backend");
-    // Legacy style: pass namespace as third argument
-    // @ts-expect-error - Legacy Socket.IO syntax requires namespace as third arg
-    this.socket.emit("regenerate_alert_matches", {}, "/main");
+    this.socket.emit("regenerate_alert_matches", {});
   }
 
   /**

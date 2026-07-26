@@ -20,6 +20,9 @@ import type {
   LibacarsData,
   LibacarsFrequencyData,
 } from "../types";
+import { createLogger } from "./logger";
+
+const logger = createLogger("decoderUtils");
 
 /**
  * Process decodedText.formatted array to generate formatted output
@@ -91,7 +94,7 @@ function formatLibacarsValue(key: string, value: unknown, indent = 0): string {
 
   // Format key as Title Case
   const formattedKey = key
-    .split("_")
+    .split(/[_-]/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 
@@ -217,26 +220,38 @@ function formatLibacarsGeneric(data: LibacarsData): string {
 
 /**
  * Parse and format libacars JSON string
- * @param libacarsString - Raw libacars JSON string from backend
+ * @param libacarsInput - Raw libacars JSON string or already-parsed data
  * @returns Formatted HTML string or null if parsing fails
  */
-export function parseAndFormatLibacars(libacarsString: string): string | null {
+export function parseAndFormatLibacars(libacarsInput: unknown): string | null {
   try {
-    // Clean the libacars string (same as legacy implementation)
-    let data = libacarsString;
+    let parsedData: LibacarsData;
 
-    // Remove all characters before the first {
-    data = data.substring(data.indexOf("{"));
-    // Replace all \\ with nothing
-    data = data.replace(/\\/g, "");
-    // Replace "' with nothing
-    data = data.replace(/"'/g, "");
-    // Replace '\n\s' with nothing
-    data = data.replace(/'\n\s'/g, "");
-    // Ensure the last character is }, if not, remove everything after the last }
-    data = data.substring(0, data.lastIndexOf("}") + 1);
+    if (typeof libacarsInput === "string") {
+      // Clean the libacars string (same as legacy implementation)
+      let data = libacarsInput;
 
-    const parsedData = JSON.parse(data) as LibacarsData;
+      // Remove all characters before the first {
+      data = data.substring(data.indexOf("{"));
+      // Replace all \\ with nothing
+      data = data.replace(/\\/g, "");
+      // Replace "' with nothing
+      data = data.replace(/"'/g, "");
+      // Replace '\n\s' with nothing
+      data = data.replace(/'\n\s'/g, "");
+      // Ensure the last character is }, if not, remove everything after the last }
+      data = data.substring(0, data.lastIndexOf("}") + 1);
+
+      parsedData = JSON.parse(data) as LibacarsData;
+    } else if (
+      typeof libacarsInput === "object" &&
+      libacarsInput !== null &&
+      !Array.isArray(libacarsInput)
+    ) {
+      parsedData = libacarsInput as LibacarsData;
+    } else {
+      throw new TypeError("Libacars data must be a JSON string or object");
+    }
 
     // Determine the type of libacars message and format accordingly
     const freqData = parsedData as LibacarsFrequencyData;
@@ -252,7 +267,9 @@ export function parseAndFormatLibacars(libacarsString: string): string | null {
     // Generic formatter for unknown types
     return formatLibacarsGeneric(parsedData);
   } catch (error) {
-    console.error("Error parsing libacars data:", error);
+    logger.error("Error parsing libacars data", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }

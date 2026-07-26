@@ -17,10 +17,15 @@
 
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import {
+  DB_BACKUP_MMAP_SIZE_BYTES,
+  DB_CACHE_SIZE_KB,
+  DB_WAL_AUTOCHECKPOINT_PAGES,
+} from "../config.js";
 import { createLogger } from "../utils/logger.js";
 import * as schema from "./schema.js";
 
-const logger = createLogger("database");
+const logger = createLogger("db:client");
 
 // Environment configuration
 const DB_PATH = process.env.ACARSHUB_DB || "./data/acarshub.db";
@@ -85,7 +90,15 @@ export function initDatabase(
     // Create SQLite connection
     sqliteConnection = new Database(path, {
       timeout: DB_TIMEOUT,
-      verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
+      verbose:
+        process.env.NODE_ENV === "development"
+          ? (message?: unknown, ...additionalArgs: unknown[]) => {
+              // better-sqlite3's verbose hook fires for every prepared
+              // statement; route through logger at trace so it can be
+              // turned on/off via log-level config rather than NODE_ENV.
+              logger.trace("sqlite", { message, additionalArgs });
+            }
+          : undefined,
     });
 
     // Enable WAL mode for better concurrent read performance
@@ -120,8 +133,9 @@ export function initDatabase(
     // Enable foreign keys (SQLite default is OFF)
     sqliteConnection.pragma("foreign_keys = ON");
 
-    // Set cache size to 10MB (negative = KB, positive = pages)
-    sqliteConnection.pragma("cache_size = -10000");
+    // Set cache size (negative = KB, positive = pages). Default 10MB;
+    // override via DB_CACHE_SIZE_KB (NIT-01).
+    sqliteConnection.pragma(`cache_size = -${DB_CACHE_SIZE_KB}`);
 
     // Removed: Increase mmap_size for better performance (256MB)/268435456
     // https://sqlite.org/mmap.html there appears to be no appreciable benefit to
@@ -131,12 +145,16 @@ export function initDatabase(
     sqliteConnection.pragma("mmap_size = 0");
 
     // Lower auto-checkpoint threshold from the default 1000 pages (~4 MB) to
-    // 200 pages (~800 KB). The scheduled TRUNCATE checkpoint runs every 5 minutes
-    // but PASSIVE auto-checkpoint is the first line of defence between those
-    // scheduled runs.  A 200-page threshold triggers auto-checkpoint roughly
-    // every 800 KB of WAL writes, keeping the WAL file small on busy installs
-    // (HFDL can sustain 1000+ msgs/min) even if a scheduled checkpoint is delayed.
-    sqliteConnection.pragma("wal_autocheckpoint = 200");
+    // DB_WAL_AUTOCHECKPOINT_PAGES (default 200, ~800 KB). The scheduled
+    // TRUNCATE checkpoint runs every 5 minutes but PASSIVE auto-checkpoint is
+    // the first line of defence between those scheduled runs. A 200-page
+    // threshold triggers auto-checkpoint roughly every 800 KB of WAL writes,
+    // keeping the WAL file small on busy installs (HFDL can sustain
+    // 1000+ msgs/min) even if a scheduled checkpoint is delayed. Overridable
+    // via DB_WAL_AUTOCHECKPOINT_PAGES (NIT-01).
+    sqliteConnection.pragma(
+      `wal_autocheckpoint = ${DB_WAL_AUTOCHECKPOINT_PAGES}`,
+    );
 
     // Initialize Drizzle ORM
     drizzleClient = drizzle(sqliteConnection, { schema });
@@ -154,10 +172,14 @@ export function initDatabase(
         sqliteBackupConnection.pragma("journal_mode = WAL");
         sqliteBackupConnection.pragma("synchronous = NORMAL");
         sqliteBackupConnection.pragma("foreign_keys = ON");
-        sqliteBackupConnection.pragma("cache_size = -10000");
-        sqliteBackupConnection.pragma("mmap_size = 268435456");
-        // Mirror the same 200-page auto-checkpoint threshold as the primary.
-        sqliteBackupConnection.pragma("wal_autocheckpoint = 200");
+        sqliteBackupConnection.pragma(`cache_size = -${DB_CACHE_SIZE_KB}`);
+        sqliteBackupConnection.pragma(
+          `mmap_size = ${DB_BACKUP_MMAP_SIZE_BYTES}`,
+        );
+        // Mirror the same auto-checkpoint threshold as the primary.
+        sqliteBackupConnection.pragma(
+          `wal_autocheckpoint = ${DB_WAL_AUTOCHECKPOINT_PAGES}`,
+        );
 
         drizzleBackupClient = drizzle(sqliteBackupConnection, { schema });
         logger.info("Backup database initialized successfully");
@@ -165,6 +187,31 @@ export function initDatabase(
         logger.error("Failed to initialize backup database", {
           error: error instanceof Error ? error.message : String(error),
         });
+
+        // LEAK-04: if `new Database()` above succeeded but a later pragma
+        // call (or the drizzle() wrap) threw, sqliteBackupConnection would
+        // otherwise be left as a live, only-partially-configured handle
+        // while drizzleBackupClient stayed null — an inconsistent partial
+        // state where hasBackupDatabase() correctly reports "disabled" but
+        // sqliteBackupConnection-based callers (e.g.
+        // getBackupWalCheckpointStatus()) would still see a non-null,
+        // possibly misconfigured connection. Close the raw handle if one
+        // was opened, then null both refs so backup-db state is
+        // all-or-nothing.
+        if (sqliteBackupConnection) {
+          try {
+            sqliteBackupConnection.close();
+          } catch (closeError) {
+            logger.trace("Error closing partially-initialized backup DB", {
+              error:
+                closeError instanceof Error
+                  ? closeError.message
+                  : String(closeError),
+            });
+          }
+        }
+        sqliteBackupConnection = null;
+        drizzleBackupClient = null;
         // Don't fail if backup init fails, just log it
       }
     }

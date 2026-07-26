@@ -46,13 +46,17 @@ export class SpriteLoader {
     try {
       // Import spritesheet data directly - Vite handles base path
       // Use a timeout to prevent mobile Safari from hanging
-      const loadPromise = new Promise<void>((resolve, reject) => {
-        try {
-          this.data = spritesheetData as SpritesheetData;
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
+      //
+      // NIT-06: the assignment below is a plain reference to a value
+      // already resolved by the static `import spritesheetData from "..."`
+      // at the top of this module — Vite/esbuild inline JSON imports at
+      // build time, so this line can never throw. The try/catch that used
+      // to wrap it here was unreachable dead code (confirmed via coverage:
+      // the branch was never hit in any test run). The outer try/catch
+      // below still applies to the genuinely-reachable timeout rejection.
+      const loadPromise = new Promise<void>((resolve) => {
+        this.data = spritesheetData as SpritesheetData;
+        resolve();
       });
 
       const timeoutPromise = new Promise<void>((_, reject) => {
@@ -163,9 +167,18 @@ export class SpriteLoader {
    *
    * @param spriteName - Name of sprite to position
    * @param frameIndex - Frame index for animations (default: 0)
+   * @param scale - Display scale factor (default: 0.6). FEAT-MARKER-SIZE:
+   *   callers multiply this by the user's marker-size setting
+   *   (`getMarkerSizeScale()`) so x/y/width/height all move together —
+   *   see the comment in `utils/markerSize.ts` for why this must be done
+   *   here rather than via a CSS-only transform/calc().
    * @returns Sprite position data or null if not found
    */
-  getSpritePosition(spriteName: string, frameIndex = 0): SpritePosition | null {
+  getSpritePosition(
+    spriteName: string,
+    frameIndex = 0,
+    scale = 0.6,
+  ): SpritePosition | null {
     if (!this.data) {
       return null;
     }
@@ -192,9 +205,6 @@ export class SpriteLoader {
 
     const col = spriteId % spritesPerRow;
     const row = Math.floor(spriteId / spritesPerRow);
-
-    // Scale all positions and sizes to 60%
-    const scale = 0.6;
 
     return {
       x: col * spriteWidth * scale,

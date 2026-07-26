@@ -15,7 +15,8 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   IconChevronDown,
   IconChevronLeft,
@@ -24,16 +25,21 @@ import {
   IconXmark,
 } from "../components/icons";
 import { MessageCard } from "../components/MessageCard";
+import { useSearchFormCollapse } from "../hooks/useSearchFormCollapse";
+import { useSearchResultsSubscription } from "../hooks/useSearchResultsSubscription";
+import { useSearchScrollMargin } from "../hooks/useSearchScrollMargin";
+import {
+  loadPersistedSearchState,
+  useSearchStatePersistence,
+} from "../hooks/useSearchStatePersistence";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
-import type { AcarsMsg, CurrentSearch, SearchHtmlMsg } from "../types";
+import type { AcarsMsg, CurrentSearch } from "../types";
 
 import { uiLogger } from "../utils/logger";
 import { formatBytes } from "../utils/stringUtils";
 
 const RESULTS_PER_PAGE = 50;
-const SEARCH_STATE_KEY = "acarshub_search_state";
-const NAVIGATION_FLAG_KEY = "acarshub_navigation_active";
 
 /**
  * Human-readable labels for each CurrentSearch field.
@@ -53,16 +59,6 @@ const FIELD_LABELS: Record<keyof CurrentSearch, string> = {
   msg_type: "Type",
 };
 
-// Interface for persisted search state
-interface PersistedSearchState {
-  searchParams: CurrentSearch;
-  currentPage: number;
-  results: AcarsMsg[];
-  totalResults: number;
-  queryTime: number | null;
-  activeSearch: CurrentSearch | null;
-}
-
 /**
  * Estimated item height for unmeasured search result cards.
  * Same rationale as the live-messages virtualizer: biased high so initial
@@ -81,50 +77,18 @@ const ESTIMATED_ITEM_HEIGHT = 300;
  * - Database size statistics
  * - Persistent search state
  * - Mobile-first responsive design
+ *
+ * EFFECT-03: the page's original 6 useEffects + 1 useLayoutEffect (state
+ * persistence, form-collapse scroll listener, socket subscription,
+ * scroll-margin measurement) have been extracted into domain hooks under
+ * src/hooks/. This component composes those hooks plus the search
+ * business logic (executeSearch/handleInputChange/pagination) and render.
  */
 export const SearchPage = () => {
   const setActivePageName = useAppStore((state) => state.setCurrentPage);
   const databaseSize = useAppStore((state) => state.databaseSize);
 
-  // Load persisted state only if this is in-app navigation (not a fresh page load)
-  const loadPersistedState = (): Partial<PersistedSearchState> => {
-    // Check if this is in-app navigation vs fresh page load
-    const isInAppNavigation = sessionStorage.getItem(NAVIGATION_FLAG_KEY);
-
-    if (!isInAppNavigation) {
-      // Fresh page load - clear any old search state
-      sessionStorage.removeItem(SEARCH_STATE_KEY);
-      uiLogger.debug("Fresh page load detected - cleared search state");
-      return {};
-    }
-
-    // In-app navigation - restore previous search state
-    try {
-      const stored = sessionStorage.getItem(SEARCH_STATE_KEY);
-      if (stored) {
-        uiLogger.debug("Restored search state from in-app navigation");
-        return JSON.parse(stored);
-      }
-    } catch (error) {
-      uiLogger.warn("Failed to load persisted search state", { error });
-    }
-    return {};
-  };
-
-  const persistedState = loadPersistedState();
-
-  // Set navigation flag for subsequent page navigations
-  useEffect(() => {
-    sessionStorage.setItem(NAVIGATION_FLAG_KEY, "true");
-
-    // Clear flag on page unload (browser close/refresh)
-    const handleBeforeUnload = () => {
-      sessionStorage.removeItem(NAVIGATION_FLAG_KEY);
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
+  const persistedState = loadPersistedSearchState();
 
   // Search form state
   const [searchParams, setSearchParams] = useState<CurrentSearch>(
@@ -163,36 +127,27 @@ export const SearchPage = () => {
     persistedState.activeSearch || null,
   );
 
-  // Controls whether the search form is collapsed to just its header row.
-  // Collapses automatically once the user scrolls the form completely off the
-  // top of the viewport.  Expands when the user clicks the chevron toggle or
-  // scrolls back to the very top of the page.
-  const [isFormCollapsed, setIsFormCollapsed] = useState(false);
+  useSearchStatePersistence({
+    searchParams,
+    currentPage,
+    results,
+    totalResults,
+    queryTime,
+    activeSearch,
+  });
+
+  useSearchResultsSubscription({
+    setResults,
+    setTotalResults,
+    setQueryTime,
+    setIsSearching,
+  });
 
   // Ref to the <form> element — used to measure the form's rendered height so
   // the scroll-collapse threshold adapts to the actual form size.  On mobile
   // the form can be taller than the viewport, so a fixed pixel threshold would
   // collapse the form while the user is still scrolling within it.
   const formRef = useRef<HTMLFormElement>(null);
-
-  /**
-   * When true the scroll-based auto-collapse/expand handler is suppressed.
-   * Set by expandForm() so the programmatic scroll-to-top that follows the
-   * expansion does not immediately re-collapse the form.
-   * Cleared after 1 s — long enough for any real or synthetic scroll to settle.
-   */
-  const suppressAutoCollapse = useRef(false);
-  const suppressAutoCollapseTimer = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
-
-  // Debounce timer ref
-  const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-
-  // Results section ref for scrolling (points to the results-info header)
-  const resultsRef = useRef<HTMLDivElement>(null);
 
   // ---------------------------------------------------------------------------
   // Virtual list infrastructure
@@ -206,137 +161,29 @@ export const SearchPage = () => {
   /**
    * Reference to the outer .app-content scroll container.
    * Obtained once via querySelector after mount — the element is stable for
-   * the lifetime of the application.
+   * the lifetime of the application. Shared between useSearchFormCollapse
+   * (which acquires it) and useSearchScrollMargin (which reads it).
    */
   const appContentRef = useRef<HTMLElement | null>(null);
+
+  const { isFormCollapsed, expandForm } = useSearchFormCollapse({
+    formRef,
+    appContentRef,
+  });
+
+  // Debounce timer ref
+  const searchDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  // Results section ref for scrolling (points to the results-info header)
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   /**
    * Reference to the positioned container that hosts the absolutely-positioned
    * virtual items. Its height equals rowVirtualizer.getTotalSize().
    */
   const virtualResultsRef = useRef<HTMLDivElement>(null);
-
-  /**
-   * Pixel offset of the virtual results container from the top of
-   * .app-content's scrollable area.  The virtualizer uses this to determine
-   * which items are currently visible.
-   *
-   * Measured in a useLayoutEffect so it is always up-to-date before paint.
-   */
-  const [scrollMargin, setScrollMargin] = useState(0);
-
-  // Acquire the outer scroll container once on mount and wire up the
-  // scroll-driven collapse/expand listener.
-  //
-  // WHY dynamic threshold: a fixed pixel value (e.g. 80 px) breaks on mobile
-  // where the expanded form is taller than the viewport — the user must scroll
-  // more than 80 px just to reach the Search button, which would immediately
-  // collapse the form under them.  Instead we collapse only once the form has
-  // fully scrolled above the visible area of .app-content, detected via
-  // getBoundingClientRect() comparisons (works in real browsers) with a
-  // scrollTop > 0 guard so jsdom's all-zero rects don't trigger falsely at
-  // mount time.
-  useEffect(() => {
-    const scrollEl = document.querySelector<HTMLElement>(".app-content");
-    appContentRef.current = scrollEl;
-
-    if (!scrollEl) return;
-
-    const handleScroll = () => {
-      if (suppressAutoCollapse.current) return;
-
-      const scrollTop = scrollEl.scrollTop;
-
-      // Auto-expand: when the user scrolls back to the very top, restore the
-      // form so the fields are immediately accessible without clicking the
-      // expand button.
-      if (scrollTop <= 0) {
-        setIsFormCollapsed(false);
-        return;
-      }
-
-      // Auto-collapse: the form has scrolled completely above the visible
-      // area of .app-content.
-      //
-      // In real browsers getBoundingClientRect() gives us live viewport
-      // coordinates.  formRect.bottom ≤ containerRect.top means the bottom
-      // edge of the form is at or above the top edge of the scroll container,
-      // i.e. the form is entirely off-screen.
-      //
-      // In jsdom all rects are zero, so (0 - 0) = 0 ≤ 0 is trivially true.
-      // The scrollTop > 0 guard above ensures we only reach this branch when
-      // a test has explicitly simulated a scroll, which is the intended signal.
-      const formRect = formRef.current?.getBoundingClientRect();
-      const containerRect = scrollEl.getBoundingClientRect();
-      if (formRect && formRect.bottom - containerRect.top <= 0) {
-        setIsFormCollapsed(true);
-      }
-    };
-
-    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
-    return () => scrollEl.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Register Socket.IO listener for search results
-  // Wait for socket to be initialized before subscribing
-  useEffect(() => {
-    const handleSearchResults = (data: SearchHtmlMsg) => {
-      // Backend already enriches messages with decodedText
-      setResults(data.msghtml);
-      setTotalResults(data.num_results);
-      setQueryTime(data.query_time);
-      setIsSearching(false);
-      // Form collapse is scroll-driven — results arriving do not collapse the
-      // form.  The user scrolls down to browse results and the form collapses
-      // naturally once it leaves the viewport.
-    };
-
-    // Check if socket service is initialized
-    if (!socketService.isInitialized()) {
-      uiLogger.debug("Socket not initialized yet, waiting for connection");
-      return () => {};
-    }
-
-    try {
-      const socket = socketService.getSocket();
-      socket.on("database_search_results", handleSearchResults);
-      uiLogger.debug("Subscribed to database_search_results event");
-
-      return () => {
-        socket.off("database_search_results", handleSearchResults);
-        uiLogger.debug("Unsubscribed from database_search_results event");
-      };
-    } catch (error) {
-      uiLogger.warn("Failed to subscribe to search results", { error });
-      return () => {};
-    }
-  }, []);
-
-  // Persist state to localStorage whenever it changes
-  useEffect(() => {
-    const stateToSave: PersistedSearchState = {
-      searchParams,
-      currentPage,
-      results,
-      totalResults,
-      queryTime,
-      activeSearch,
-    };
-
-    try {
-      sessionStorage.setItem(SEARCH_STATE_KEY, JSON.stringify(stateToSave));
-      uiLogger.debug("Persisted search state to sessionStorage");
-    } catch (error) {
-      uiLogger.warn("Failed to persist search state", { error });
-    }
-  }, [
-    searchParams,
-    currentPage,
-    results,
-    totalResults,
-    queryTime,
-    activeSearch,
-  ]);
 
   // Clear debounce timer on unmount to prevent stale callbacks firing after tests / navigation
   useEffect(() => {
@@ -358,34 +205,6 @@ export const SearchPage = () => {
   // Check if all search fields are empty
   const isSearchEmpty = (params: CurrentSearch): boolean => {
     return Object.values(params).every((value) => value.trim() === "");
-  };
-
-  // Expand the search form and scroll back to the top of the page so the
-  // form fields are immediately reachable.
-  //
-  // WHY instant scroll: behavior:"smooth" creates a race on Mobile Safari —
-  // the animation runs concurrently with Playwright's click action and can
-  // move the target button outside the viewport mid-click.
-  const expandForm = () => {
-    // Suppress auto-collapse so the programmatic scroll-to-top that follows
-    // this expansion does not immediately re-collapse the form via the scroll
-    // listener.  Cleared after 1 s — long enough for any real or synthetic
-    // scroll triggered by the expansion to settle.
-    if (suppressAutoCollapseTimer.current) {
-      clearTimeout(suppressAutoCollapseTimer.current);
-    }
-    suppressAutoCollapse.current = true;
-    suppressAutoCollapseTimer.current = setTimeout(() => {
-      suppressAutoCollapse.current = false;
-    }, 1000);
-
-    setIsFormCollapsed(false);
-    const scrollEl =
-      appContentRef.current ??
-      document.querySelector<HTMLElement>(".app-content");
-    if (scrollEl) {
-      scrollEl.scrollTo({ top: 0, behavior: "instant" });
-    }
   };
 
   /**
@@ -455,10 +274,7 @@ export const SearchPage = () => {
       queryPayload.results_after = page;
     }
 
-    // Flask-SocketIO requires namespace as third argument when emitting from client
-    // Type assertion needed because Socket.IO client types don't match Flask-SocketIO pattern
-    // biome-ignore lint/suspicious/noExplicitAny: Flask-SocketIO client typing limitation
-    (socket as any).emit("query_search", queryPayload, "/main");
+    socket?.emit("query_search", queryPayload);
 
     uiLogger.debug("Executing search query", {
       params,
@@ -593,6 +409,12 @@ export const SearchPage = () => {
   // Uses the outer .app-content element as the scroll container so the search
   // form above the results scrolls naturally with the page.
   // ---------------------------------------------------------------------------
+  const scrollMargin = useSearchScrollMargin({
+    virtualResultsRef,
+    appContentRef,
+    recomputeTrigger: sortedResults,
+  });
+
   const rowVirtualizer = useVirtualizer({
     count: sortedResults.length,
     getScrollElement: () => appContentRef.current,
@@ -606,47 +428,6 @@ export const SearchPage = () => {
     // the stats/pagination bar appears.
     scrollMargin,
   });
-
-  // Measure scrollMargin: distance from the top of .app-content's scroll
-  // origin to the top of the virtual results container.
-  //
-  // WHY useLayoutEffect: runs after DOM mutations and before paint, so the
-  // measurement uses the freshly-laid-out positions of all elements and the
-  // virtualizer has the correct offset on the very first paint cycle.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: sortedResults is an intentional trigger dependency — the effect reads refs (stable) but must re-fire whenever results change so the scrollMargin is recalculated after the DOM updates with new results-info/pagination elements above the virtual container.
-  useLayoutEffect(() => {
-    const measure = () => {
-      if (!virtualResultsRef.current) return;
-      // Lazily acquire the scroll container in case the useEffect above has
-      // not fired yet (e.g. in strict-mode double-invoke).
-      if (!appContentRef.current) {
-        appContentRef.current =
-          document.querySelector<HTMLElement>(".app-content");
-      }
-      if (!appContentRef.current) return;
-
-      const containerTop =
-        virtualResultsRef.current.getBoundingClientRect().top;
-      const scrollElTop = appContentRef.current.getBoundingClientRect().top;
-      const margin =
-        containerTop - scrollElTop + appContentRef.current.scrollTop;
-      setScrollMargin(Math.max(0, margin));
-    };
-
-    measure();
-
-    // Re-measure if the page content above the results changes size (e.g.
-    // results-info bar appears, pagination bar appears/disappears on resize).
-    const ro = new ResizeObserver(measure);
-    const parent = virtualResultsRef.current?.parentElement;
-    if (parent) ro.observe(parent);
-    window.addEventListener("resize", measure);
-
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [sortedResults]);
 
   return (
     <div className="page search-page">
@@ -978,23 +759,26 @@ export const SearchPage = () => {
         {!isSearching && sortedResults.length > 0 && (
           <div
             ref={virtualResultsRef}
-            className="search-page__results"
-            style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+            className="search-page__results virtual-list"
+            style={
+              {
+                "--virtual-list-total-height": `${rowVirtualizer.getTotalSize()}px`,
+              } as React.CSSProperties
+            }
           >
             {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const message = sortedResults[virtualRow.index];
               return (
                 <div
                   key={message.uid}
+                  className="virtual-list__row"
                   data-index={virtualRow.index}
                   ref={rowVirtualizer.measureElement}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`,
-                  }}
+                  style={
+                    {
+                      "--virtual-row-y": `${virtualRow.start - rowVirtualizer.options.scrollMargin}px`,
+                    } as React.CSSProperties
+                  }
                 >
                   <div className="search-page__result-card">
                     <MessageCard message={message} />

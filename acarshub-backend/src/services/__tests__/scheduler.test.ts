@@ -366,7 +366,7 @@ describe("Scheduler", () => {
       expect(startEvents[0].taskName).toBe("test-task");
     });
 
-    it.skip("should emit taskComplete event with duration", () => {
+    it("should emit taskComplete event with duration", async () => {
       const completeEvents: Array<{
         taskId: string;
         taskName: string;
@@ -382,7 +382,12 @@ describe("Scheduler", () => {
       }, "test-task");
 
       scheduler.start();
-      vi.advanceTimersByTime(1100); // Slightly more than 1 second
+      // executeTask() is async and emits taskComplete *after* `await
+      // task.handler()`. With fake timers, advanceTimersByTime() schedules
+      // the timer callback synchronously, but post-await code only runs
+      // after the microtask queue drains. advanceTimersByTimeAsync() flushes
+      // both, which is required to observe taskComplete.
+      await vi.advanceTimersByTimeAsync(1100); // Slightly more than 1 second
 
       expect(completeEvents.length).toBeGreaterThanOrEqual(1);
       expect(completeEvents[0].taskId).toBe(taskId);
@@ -447,7 +452,7 @@ describe("Scheduler", () => {
       expect(errorCount).toBe(2);
     });
 
-    it.skip("should handle async errors gracefully", () => {
+    it("should handle async errors gracefully", async () => {
       let errorCount = 0;
 
       scheduler.on("taskError", () => {
@@ -460,7 +465,9 @@ describe("Scheduler", () => {
 
       scheduler.start();
 
-      vi.advanceTimersByTime(1100);
+      // Async handler rejection lands in executeTask's catch block after
+      // the microtask queue drains; needs the *Async timer helper.
+      await vi.advanceTimersByTimeAsync(1100);
 
       expect(errorCount).toBeGreaterThan(0);
     });
@@ -481,10 +488,37 @@ describe("Scheduler", () => {
       vi.advanceTimersByTime(3000);
       expect(healthyTaskCount).toBe(3); // Healthy task continues to run
     });
+
+    it("regression: a taskError listener that throws does not become an unhandled rejection (ERR-03)", async () => {
+      // executeTask() is documented to never reject, but its only caller is
+      // the setInterval(() => { this.executeTask(task).catch(...) }, ...)
+      // callback in startTask() — nothing awaits *that* callback's own
+      // returned value either. Before the ERR-03 backstop, a "taskError"
+      // listener throwing (e.g. this.emit("taskError", ...) itself throwing
+      // synchronously from inside executeTask's catch block) would escape
+      // as an unhandled rejection. Prove the fix holds by installing a
+      // listener that throws and confirming no unhandled rejection surfaces.
+      scheduler.on("taskError", () => {
+        throw new Error("listener misbehaves");
+      });
+
+      scheduler.every(1, "seconds").do(() => {
+        throw new Error("task fails");
+      }, "failing-task-with-bad-listener");
+
+      scheduler.start();
+
+      // If the throwing listener escaped as an unhandled rejection, vitest
+      // would surface it as a test-run "Unhandled Rejection" error even
+      // though this assertion itself passes.
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(true).toBe(true);
+    });
   });
 
   describe("Task Metadata", () => {
-    it.skip("should track last run time", () => {
+    it("should track last run time", async () => {
       const taskId = scheduler.every(1, "seconds").do(() => {});
 
       scheduler.start();
@@ -492,7 +526,9 @@ describe("Scheduler", () => {
       const taskBefore = scheduler.getTask(taskId);
       expect(taskBefore?.lastRun).toBeNull();
 
-      vi.advanceTimersByTime(1100);
+      // task.lastRun is assigned after `await task.handler()` in executeTask;
+      // requires microtask flush via the *Async timer helper.
+      await vi.advanceTimersByTimeAsync(1100);
 
       const taskAfter = scheduler.getTask(taskId);
       expect(taskAfter?.lastRun).not.toBeNull();
@@ -508,16 +544,17 @@ describe("Scheduler", () => {
       expect(task?.nextRun).toBeGreaterThan(Date.now());
     });
 
-    it.skip("should update metadata after each execution", () => {
+    it("should update metadata after each execution", async () => {
       const taskId = scheduler.every(1, "seconds").do(() => {});
 
       scheduler.start();
 
-      vi.advanceTimersByTime(1100);
+      // task.lastRun is assigned post-await in executeTask; needs *Async.
+      await vi.advanceTimersByTimeAsync(1100);
       const task1 = scheduler.getTask(taskId);
       const lastRun1 = task1?.lastRun;
 
-      vi.advanceTimersByTime(1100);
+      await vi.advanceTimersByTimeAsync(1100);
       const task2 = scheduler.getTask(taskId);
       const lastRun2 = task2?.lastRun;
 
@@ -619,6 +656,75 @@ describe("Scheduler", () => {
       expect(count2).toBe(2);
 
       scheduler2.stop();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // LEAK-01: at-time alignment-window setTimeout handles
+  //
+  // Tasks scheduled with .at() schedule a one-shot setTimeout to align the
+  // first run to the requested wall-clock minute, then register a recurring
+  // setInterval. Previously the alignment setTimeout was fire-and-forget, so
+  // stop()/disable()/removeTask() called during the alignment window left
+  // the callback to fire later — running the task once after stop and
+  // arming a recurring setInterval that nothing owned.
+  // -------------------------------------------------------------------------
+  describe("LEAK-01: at-time alignment timer cancellation", () => {
+    it("regression: stop() during alignment window prevents the deferred first run", async () => {
+      let executionCount = 0;
+      // CRITICAL: schedule AFTER start() so scheduleTaskAt() takes the
+      // running-scheduler branch and calls startTaskAt(), which is the path
+      // that creates the alignment-window setTimeout. Pre-start scheduling
+      // takes a different code path (startTask with plain setInterval).
+      scheduler.start();
+      scheduler
+        .every(1, "minutes")
+        .at(":30")
+        .do(() => {
+          executionCount += 1;
+        }, "at-task");
+
+      // Stop immediately, while the alignment setTimeout is still pending.
+      scheduler.stop();
+
+      // Advance past where the alignment callback would have fired.
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+      expect(executionCount).toBe(0);
+    });
+
+    it("regression: disableTask() during alignment window prevents the deferred first run", async () => {
+      let executionCount = 0;
+      scheduler.start();
+      const taskId = scheduler
+        .every(1, "minutes")
+        .at(":30")
+        .do(() => {
+          executionCount += 1;
+        }, "at-task");
+
+      scheduler.disableTask(taskId);
+
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+      expect(executionCount).toBe(0);
+    });
+
+    it("regression: removeTask() during alignment window prevents the deferred first run", async () => {
+      let executionCount = 0;
+      scheduler.start();
+      const taskId = scheduler
+        .every(1, "minutes")
+        .at(":30")
+        .do(() => {
+          executionCount += 1;
+        }, "at-task");
+
+      scheduler.removeTask(taskId);
+
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+      expect(executionCount).toBe(0);
     });
   });
 });

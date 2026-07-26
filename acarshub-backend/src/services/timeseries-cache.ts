@@ -70,7 +70,7 @@ import {
   zeroFillBuckets,
 } from "../utils/timeseries.js";
 
-const logger = createLogger("timeseries-cache");
+const logger = createLogger("services:timeseries-cache");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -278,10 +278,10 @@ function refreshPeriod(period: TimePeriod, targetTimeMs: number): void {
       period,
       points: response.points,
     });
-  } catch (err) {
+  } catch (error) {
     logger.error("Failed to refresh time-series cache entry", {
       period,
-      error: err instanceof Error ? err.message : String(err),
+      error: error instanceof Error ? error.message : String(error),
     });
     // Do not rethrow — a failed refresh leaves the previous cached value
     // in place, which is stale but better than nothing.
@@ -349,12 +349,12 @@ export function initTimeSeriesCache(bc: Broadcaster): void {
         period,
         points: response.points,
       });
-    } catch (err) {
+    } catch (error) {
       logger.error(
         "Failed to warm cache entry — period will be empty until next refresh",
         {
           period,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         },
       );
     }
@@ -474,10 +474,10 @@ export function getOrQueryTimeSeries(
           expiresAt: now + config.refreshIntervalMs,
         });
         return response;
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to build lazy time-series response", {
           period,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         // Return stale entry if available rather than nothing.
         return entry?.response ?? null;
@@ -490,10 +490,10 @@ export function getOrQueryTimeSeries(
       logger.debug("Query-only period — querying DB directly", { period });
       try {
         return buildTimeSeriesResponse(period);
-      } catch (err) {
+      } catch (error) {
         logger.error("Failed to build query-only time-series response", {
           period,
-          error: err instanceof Error ? err.message : String(err),
+          error: error instanceof Error ? error.message : String(error),
         });
         return null;
       }

@@ -57,9 +57,11 @@
   }
 
   // The virtual scroll container — fills the remaining viewport height.
-  // Explicit height is set as an inline style by the component after
-  // measuring available space via ResizeObserver.
+  // Virtual scroll container. Runtime-measured viewport height is set by
+  // the component via the --virtual-list-height custom property
+  // (STYLE-INLINE-DYNAMIC).
   &__virtual-list {
+    height: var(--virtual-list-height);
     overflow-y: auto;
     overflow-x: hidden;
     padding: 0 var(--spacing-lg);
@@ -76,9 +78,10 @@
     display: flex;
     gap: var(--spacing-xs);
     padding: var(--spacing-xs) 0;
+    justify-content: center; // mobile-first
 
-    @include breakpoint-max(md) {
-      justify-content: center;
+    @include breakpoint(md) {
+      justify-content: unset;
     }
   }
 
@@ -93,6 +96,14 @@
     cursor: pointer;
     transition: all var(--transition-fast);
     min-width: 100px;
+    // Mobile-first: larger touch targets.
+    min-height: 44px;
+    flex: 1;
+
+    @include breakpoint(md) {
+      min-height: unset;
+      flex: unset;
+    }
 
     &:hover:not(:disabled) {
       background: var(--color-surface1);
@@ -113,12 +124,6 @@
     &:focus-visible {
       outline: 2px solid var(--color-blue);
       outline-offset: 2px;
-    }
-
-    // Mobile: larger touch targets
-    @include breakpoint-max(md) {
-      min-height: 44px;
-      flex: 1;
     }
 
     // Reduced motion
@@ -157,9 +162,18 @@
     color: var(--color-text);
     border: 2px solid var(--color-surface1);
     border-radius: var(--border-radius-md);
-    font-size: var(--font-size-md);
     cursor: pointer;
     transition: border-color var(--transition-fast);
+    // Mobile-first: larger touch target + font (also prevents iOS zoom on
+    // focus -- <16px triggers it).
+    min-height: 44px;
+    font-size: 1rem;
+
+    @include breakpoint(md) {
+      min-height: unset;
+      font-size: var(--font-size-md);
+      max-width: 400px;
+    }
 
     &:hover {
       border-color: var(--color-blue);
@@ -169,16 +183,6 @@
       outline: none;
       border-color: var(--color-blue);
       box-shadow: 0 0 0 3px rgba(var(--color-blue-rgb), 0.1);
-    }
-
-    // Mobile: larger touch targets
-    @include breakpoint-max(md) {
-      min-height: 44px;
-      font-size: 1rem; // Prevent iOS zoom on focus
-    }
-
-    @include breakpoint(md) {
-      max-width: 400px;
     }
   }
 
@@ -202,12 +206,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-sm);
+    gap: var(--spacing-xs); // mobile-first
     padding: var(--spacing-xs) 0;
     flex-wrap: wrap;
 
-    @include breakpoint-max(md) {
-      gap: var(--spacing-xs);
+    @include breakpoint(md) {
+      gap: var(--spacing-sm);
     }
   }
 
@@ -229,6 +233,11 @@
     cursor: pointer;
     transition: all var(--transition-fast);
     min-width: 44px;
+    min-height: 44px; // mobile-first: ensure touch targets
+
+    @include breakpoint(md) {
+      min-height: unset;
+    }
 
     &:hover:not(:disabled) {
       background: var(--color-surface1);
@@ -249,11 +258,6 @@
     &:focus-visible {
       outline: 2px solid var(--color-blue);
       outline-offset: 2px;
-    }
-
-    // Mobile: ensure touch targets
-    @include breakpoint-max(md) {
-      min-height: 44px;
     }
 
     // Reduced motion
@@ -363,26 +367,31 @@
   //   Mobile  — title(0) › button(1) › stats(2, width:100% wraps to own row)
   //             Puts the button on the title line, right-aligned via space-between.
   &__mark-read-button {
-    padding: var(--spacing-xs) var(--spacing-sm);
     background: var(--color-green);
     color: var(--color-base);
     border: none;
     border-radius: var(--border-radius-sm);
-    font-size: var(--font-size-sm);
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-fast);
 
-    // Desktop: appear after .page__stats
+    // Mobile-first: appear between title (order 0) and stats (order 2) so
+    // it sits on the same row as the title.
+    //
+    // SCSS-TOUCH: previously exempted from the 44px rule as a "secondary
+    // header action". Per remediation policy that exemption is removed --
+    // 44px floor by default. Desktop keeps compact padding/font for header
+    // density and appears after .page__stats instead.
+    order: 1;
+    min-height: 44px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-base);
+
     @include breakpoint(md) {
       order: 3;
-    }
-
-    // Mobile: appear between title (order 0) and stats (order 2) so it
-    // sits on the same row as the title. Secondary header action — exempt
-    // from the 44px primary touch-target rule.
-    @include breakpoint-max(md) {
-      order: 1;
+      min-height: unset;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-size: var(--font-size-sm);
     }
 
     &:hover {
@@ -415,14 +424,13 @@
 
   // Push .page__stats to the right on desktop and ensure it sorts after the
   // button on mobile (where it takes width:100% and wraps to its own row).
+  // order: 2 is identical at every breakpoint, so it's unconditional; only
+  // margin-left needs to be gated to desktop.
   .page__stats {
-    @include breakpoint(md) {
-      order: 2;
-      margin-left: auto;
-    }
+    order: 2;
 
-    @include breakpoint-max(md) {
-      order: 2;
+    @include breakpoint(md) {
+      margin-left: auto;
     }
   }
 
@@ -453,12 +461,11 @@
   &__messages {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xs);
+    gap: var(--spacing-sm); // mobile-first
     padding-bottom: var(--spacing-lg);
 
-    // Mobile: full width
-    @include breakpoint-max(md) {
-      gap: var(--spacing-sm);
+    @include breakpoint(md) {
+      gap: var(--spacing-xs);
     }
   }
 

@@ -103,7 +103,7 @@ services:
   # builds, identical to the `test-e2e-docker` justfile target.  Docker reuses
   # the volumes on subsequent runs so `npm ci` is fast after the first install.
   playwright:
-    image: mcr.microsoft.com/playwright:v1.61.0-noble@sha256:57b65fdc9ceabe0ef613124c7bbe2babcf9362c4d85e382fe3b03604e84b428a
+    image: mcr.microsoft.com/playwright:v1.61.1-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48
     depends_on:
       backend:
         condition: service_healthy
