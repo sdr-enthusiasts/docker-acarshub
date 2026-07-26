@@ -1,7 +1,7 @@
 services:
   # Nginx reverse proxy for testing subpath deployment
   nginx:
-    image: nginx:alpine@sha256:20316569d8f81a160065d7d2a5eeffc7ca97d79022462ee255fd23fa103a6b5c
+    image: nginx:alpine@sha256:4a73073bd557c65b759505da037898b61f1be6cbcc3c2c3aeac22d2a470c1752
     container_name: acarshub-nginx
     restart: always
     ports:
