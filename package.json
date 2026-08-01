@@ -35,6 +35,6 @@
     "npm": ">=10.0.0"
   },
   "devDependencies": {
-    "madge": "^8.0.0"
+    "madge": "8.0.0"
   }
 }
