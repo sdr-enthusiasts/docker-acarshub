@@ -75,7 +75,34 @@ export default defineConfig({
       ? [
           {
             name: "firefox",
-            use: { ...devices["Desktop Firefox"] },
+            use: {
+              ...devices["Desktop Firefox"],
+              // Firefox refuses to fall back to software-rendered WebGL2 on
+              // GPU-less hosts (this Docker container has no GPU) unless
+              // explicitly told to — see Mozilla bug 1970486. Without this,
+              // maplibre-gl v6 (which requires WebGL2; v5 could still limp
+              // along on WebGL1) fails to create a context at all and the
+              // Live Map — and everything that depends on it rendering —
+              // never mounts. Chromium doesn't need this because it already
+              // falls back to SwiftShader software WebGL2 by default.
+              //
+              // `webgl.force-enabled` alone isn't sufficient here: Firefox
+              // still exhausts its GL driver options trying the native
+              // (GLX) path first, which needs a real X display this
+              // headless container doesn't have. MOZ_WEBGL_FORCE_EGL routes
+              // context creation through EGL instead, where Mesa's
+              // software rasterizer (llvmpipe/swrast, already present in
+              // the official Playwright image) is reachable.
+              launchOptions: {
+                firefoxUserPrefs: {
+                  "webgl.force-enabled": true,
+                },
+                env: {
+                  ...process.env,
+                  MOZ_WEBGL_FORCE_EGL: "1",
+                },
+              },
+            },
           },
           {
             name: "webkit",
