@@ -14,6 +14,32 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+// Vite's `?worker&url` query bundles maplibre-gl-worker.mjs (plus its
+// sibling maplibre-gl-shared.mjs chunk) into a self-contained, hashed
+// worker asset and gives us its final URL. maplibre-gl v6 ships as
+// ESM-only and no longer auto-detects the worker location for bundled
+// (non-CDN) consumers — see the v5-to-v6 migration guide's "setWorkerUrl()
+// is bundler-only" section. Without this, the Map requests a worker from
+// a guessed path that doesn't match Vite's hashed output; the dev/preview
+// server's SPA fallback serves index.html for that 404 with a 200 status,
+// so the browser happily constructs a worker with HTML as its source,
+// which silently fails to ever produce tile/source data — the map then
+// never fires its `load` event and hangs until the 10s fallback timeout
+// in useMapLifecycle.ts force-completes it. Do NOT switch to plain
+// `?url`: it emits the worker file without its sibling shared chunk, and
+// the worker fails on its first import in production builds.
+//
+// Pass this to <MapLibreMap workerUrl={...}> as a component PROP (a
+// @vis.gl/react-maplibre GlobalSettings field threaded through its
+// internal setGlobals() before the underlying maplibre-gl Map is
+// constructed) — NOT via importing and calling maplibre-gl's own
+// module-level setWorkerUrl() ourselves. That was tried first and
+// caused a worse regression ("Cannot read properties of undefined
+// (reading 'Map')", canvas never mounting in ANY browser): the call
+// site had no consumer of its return value, so Vite/rolldown's
+// tree-shaking silently dropped the call as a dead, side-effect-free
+// import — it never actually ran.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -457,6 +483,7 @@ export function MapComponent({
         onLoad={handleLoad}
         onError={handleError}
         mapStyle={mapStyle}
+        workerUrl={workerUrl}
         attributionControl={{}}
         maxZoom={20}
         minZoom={1}
