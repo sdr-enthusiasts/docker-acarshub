@@ -368,6 +368,7 @@ describe("RangeRings", () => {
       const ringLayer = capturedLayers.find(
         (l) => l.id === "range-rings-outline",
       );
+      expect(ringLayer).toBeDefined();
       const ringPaint = ringLayer?.paint as Record<string, unknown>;
       expect(ringPaint["line-color"]).toBe("#89b4fa");
 
@@ -387,6 +388,7 @@ describe("RangeRings", () => {
       const ringLayer = capturedLayers.find(
         (l) => l.id === "range-rings-outline",
       );
+      expect(ringLayer).toBeDefined();
       const ringPaint = ringLayer?.paint as Record<string, unknown>;
       expect(ringPaint["line-color"]).toBe("#1e66f5");
 

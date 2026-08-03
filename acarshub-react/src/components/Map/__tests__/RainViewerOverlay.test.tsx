@@ -92,7 +92,7 @@ describe("RainViewerOverlay", () => {
       expect(container.firstChild).toBeNull();
     });
 
-    it("renders nothing initially when enabled but radarTime not yet fetched", () => {
+    it("renders nothing initially when enabled but radar frame not yet fetched", () => {
       // fetch hangs — never resolves
       global.fetch = vi.fn(
         () => new Promise(() => {}),
@@ -105,7 +105,7 @@ describe("RainViewerOverlay", () => {
       expect(container.firstChild).toBeNull();
     });
 
-    it("renders Source + Layer once radarTime is fetched", async () => {
+    it("renders Source + Layer once the radar frame is fetched", async () => {
       mockRainViewerApi([{ time: 1700000000, path: "/v2/radar/4cddb2c4b122" }]);
       useSettingsStore.getState().setShowRainViewer(true);
 

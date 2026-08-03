@@ -161,7 +161,7 @@ RUN set -xe && \
     find /addon-deps/better-sqlite3/prebuilds -type f ! -name "linux-arm64.node" -delete; \
     fi && \
     #   cleanup js map files, those are just for viewing the code
-    { find /addon-deps | grep -E ".map$" | xargs rm -rf || true; }
+    find /addon-deps -name "*.map" -delete
 
 # ============================================================
 # Stage 2: Runtime image
