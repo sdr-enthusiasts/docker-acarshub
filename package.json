@@ -1,6 +1,6 @@
 {
   "name": "acarshub-workspace",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "private": true,
   "type": "module",
   "description": "ACARS Hub - Monorepo for frontend, backend, and shared types",
@@ -31,10 +31,13 @@
   "author": "Frederick Clausen II",
   "license": "GPL-3.0-or-later",
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "npm": ">=10.0.0"
   },
   "devDependencies": {
-    "madge": "^8.0.0"
+    "madge": "8.0.0"
+  },
+  "allowScripts": {
+    "better-sqlite3": false
   }
 }

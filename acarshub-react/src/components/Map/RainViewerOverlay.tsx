@@ -68,7 +68,10 @@ export function RainViewerOverlay({
   );
 
   const [timestamp, setTimestamp] = useState<string>("");
-  const [radarTime, setRadarTime] = useState<number | null>(null);
+  const [radarFrame, setRadarFrame] = useState<{
+    host: string;
+    path: string;
+  } | null>(null);
 
   // RainViewer configuration
   const OPACITY = 0.575;
@@ -78,7 +81,10 @@ export function RainViewerOverlay({
   /**
    * Fetch latest radar frame from RainViewer API
    */
-  const fetchLatestRadar = useCallback(async (): Promise<number | null> => {
+  const fetchLatestRadar = useCallback(async (): Promise<{
+    host: string;
+    path: string;
+  } | null> => {
     try {
       const response = await fetch(
         "https://api.rainviewer.com/public/weather-maps.json",
@@ -87,13 +93,18 @@ export function RainViewerOverlay({
       const data: RainViewerAPIResponse = await response.json();
 
       if (data.radar?.past && data.radar.past.length > 0) {
-        // Get the most recent radar frame
+        // Get the most recent radar frame. The tile path is an opaque,
+        // API-provided identifier (e.g. "/v2/radar/34aaa5a4ec78") — it is
+        // NOT derived from `time` and must not be reconstructed from it.
+        // RainViewer's v2 API serves 410 Gone for any path that isn't
+        // exactly what this response returned.
         const latestFrame = data.radar.past[data.radar.past.length - 1];
         mapLogger.debug("RainViewer radar frame fetched", {
           time: latestFrame.time,
+          path: latestFrame.path,
           frameCount: data.radar.past.length,
         });
-        return latestFrame.time;
+        return { host: data.host, path: latestFrame.path };
       }
 
       mapLogger.warn("No radar frames available from RainViewer API");
@@ -110,19 +121,19 @@ export function RainViewerOverlay({
    * Refresh radar data
    */
   const refreshRadar = useCallback(async () => {
-    const time = await fetchLatestRadar();
-    if (time) {
-      setRadarTime(time);
+    const frame = await fetchLatestRadar();
+    if (frame) {
+      setRadarFrame(frame);
       setTimestamp(new Date().toLocaleTimeString());
-      mapLogger.info("RainViewer radar refreshed", { radarTime: time });
+      mapLogger.info("RainViewer radar refreshed", { path: frame.path });
     }
   }, [fetchLatestRadar]);
 
-  // RainViewer raster source (regenerated when radarTime changes)
+  // RainViewer raster source (regenerated when radarFrame changes)
   const rainViewerSource: RasterSourceSpecification | null = useMemo(() => {
-    if (!radarTime) return null;
+    if (!radarFrame) return null;
 
-    const tileUrl = `https://tilecache.rainviewer.com/v2/radar/${radarTime}/512/{z}/{x}/{y}/6/1_1.png`;
+    const tileUrl = `${radarFrame.host}${radarFrame.path}/512/{z}/{x}/{y}/6/1_1.png`;
 
     return {
       type: "raster",
@@ -132,7 +143,7 @@ export function RainViewerOverlay({
       attribution:
         '<a href="https://www.rainviewer.com/api.html">RainViewer.com</a>',
     };
-  }, [radarTime]);
+  }, [radarFrame]);
 
   // RainViewer raster layer configuration
   const rainViewerLayer: RasterLayerSpecification = useMemo(
@@ -153,10 +164,10 @@ export function RainViewerOverlay({
 
   // Fetch initial radar data when overlay is enabled
   useEffect(() => {
-    if (showRainViewer && !radarTime) {
+    if (showRainViewer && !radarFrame) {
       refreshRadar();
     }
-  }, [showRainViewer, radarTime, refreshRadar]);
+  }, [showRainViewer, radarFrame, refreshRadar]);
 
   // Auto-refresh radar tiles every 2 minutes when enabled
   useEffect(() => {

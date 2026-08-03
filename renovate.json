@@ -40,6 +40,17 @@
       "groupName": "playwright"
     },
     {
+      "matchPackageNames": [
+        "maplibre-gl",
+        "react-map-gl",
+        "@vis.gl/react-maplibre",
+        "@maplibre/maplibre-gl-style-spec",
+        "mapbox-gl",
+        "react-map-gl-mapbox"
+      ],
+      "groupName": "mapping"
+    },
+    {
       "matchManagers": ["npm"],
       "automerge": false
     },
