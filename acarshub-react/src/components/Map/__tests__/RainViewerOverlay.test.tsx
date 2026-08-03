@@ -106,7 +106,7 @@ describe("RainViewerOverlay", () => {
     });
 
     it("renders Source + Layer once radarTime is fetched", async () => {
-      mockRainViewerApi([{ time: 1700000000, path: "/v2/radar/1700000000" }]);
+      mockRainViewerApi([{ time: 1700000000, path: "/v2/radar/4cddb2c4b122" }]);
       useSettingsStore.getState().setShowRainViewer(true);
 
       render(<RainViewerOverlay />);
@@ -119,7 +119,7 @@ describe("RainViewerOverlay", () => {
     });
 
     it("renders timestamp DOM (not map layer) in renderTimestampOnly mode", async () => {
-      mockRainViewerApi([{ time: 1700000000, path: "/v2/radar/1700000000" }]);
+      mockRainViewerApi([{ time: 1700000000, path: "/v2/radar/4cddb2c4b122" }]);
       useSettingsStore.getState().setShowRainViewer(true);
 
       render(<RainViewerOverlay renderTimestampOnly />);
@@ -138,8 +138,17 @@ describe("RainViewerOverlay", () => {
       useSettingsStore.getState().setShowRainViewer(true);
     });
 
-    it("constructs the tile URL using the fetched radar timestamp", async () => {
-      mockRainViewerApi([{ time: 1700000999, path: "/v2/radar/1700000999" }]);
+    it("constructs the tile URL from the API-provided host + path, not the timestamp", async () => {
+      // REGRESSION (410 Gone): RainViewer's v2 API returns an opaque path
+      // identifier per frame (e.g. "/v2/radar/34aaa5a4ec78") that is NOT
+      // derived from the frame's `time` field. A prior version of this
+      // component reconstructed the tile URL as
+      // `.../v2/radar/${time}/512/...`, which RainViewer serves as 410
+      // Gone for any real (non-matching) path. Use a path here that
+      // deliberately does not match the timestamp digit-for-digit, so
+      // this test fails if the component ever regresses back to
+      // building the URL from `time` instead of the API's `path`.
+      mockRainViewerApi([{ time: 1700000999, path: "/v2/radar/34aaa5a4ec78" }]);
 
       render(<RainViewerOverlay />);
 
@@ -150,8 +159,9 @@ describe("RainViewerOverlay", () => {
       const src = capturedSources.at(-1);
       const tiles = src?.tiles as string[];
       expect(tiles[0]).toBe(
-        "https://tilecache.rainviewer.com/v2/radar/1700000999/512/{z}/{x}/{y}/6/1_1.png",
+        "https://tilecache.rainviewer.com/v2/radar/34aaa5a4ec78/512/{z}/{x}/{y}/6/1_1.png",
       );
+      expect(tiles[0]).not.toContain("1700000999");
       expect(src?.tileSize).toBe(256);
       expect(src?.maxzoom).toBe(7);
       expect(src?.attribution).toContain("RainViewer.com");
@@ -159,9 +169,9 @@ describe("RainViewerOverlay", () => {
 
     it("uses the LAST entry in radar.past as the latest frame", async () => {
       mockRainViewerApi([
-        { time: 1, path: "/v2/radar/1" },
-        { time: 2, path: "/v2/radar/2" },
-        { time: 3, path: "/v2/radar/3" },
+        { time: 1, path: "/v2/radar/aaaaaaaaaaaa" },
+        { time: 2, path: "/v2/radar/bbbbbbbbbbbb" },
+        { time: 3, path: "/v2/radar/cccccccccccc" },
       ]);
 
       render(<RainViewerOverlay />);
@@ -171,7 +181,34 @@ describe("RainViewerOverlay", () => {
       });
 
       const tiles = capturedSources.at(-1)?.tiles as string[];
-      expect(tiles[0]).toContain("/v2/radar/3/512/");
+      expect(tiles[0]).toContain("/v2/radar/cccccccccccc/512/");
+    });
+
+    it("builds the tile URL using the host returned by the API response", async () => {
+      // The API response's `host` field is authoritative — don't hardcode
+      // tilecache.rainviewer.com in a way that would silently ignore it.
+      global.fetch = vi.fn().mockResolvedValue({
+        json: async () => ({
+          version: "2.0",
+          generated: 0,
+          host: "https://some-other-host.example.com",
+          radar: {
+            past: [{ time: 1, path: "/v2/radar/deadbeefcafe" }],
+            nowcast: [],
+          },
+        }),
+      }) as unknown as typeof fetch;
+
+      render(<RainViewerOverlay />);
+
+      await waitFor(() => {
+        expect(capturedSources.length).toBeGreaterThanOrEqual(1);
+      });
+
+      const tiles = capturedSources.at(-1)?.tiles as string[];
+      expect(tiles[0]).toBe(
+        "https://some-other-host.example.com/v2/radar/deadbeefcafe/512/{z}/{x}/{y}/6/1_1.png",
+      );
     });
   });
 
