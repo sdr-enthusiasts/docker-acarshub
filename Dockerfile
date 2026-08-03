@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1: Build React frontend + Node.js backend
 # ============================================================
-FROM node:25.9.0-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS acarshub-react-builder
+FROM node:26.5.1-slim@sha256:deae974a69e140f44f434ab29cb519fb5f8fe250fd364b8ca446bd0761acdc6a AS acarshub-react-builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /workspace
@@ -22,6 +22,19 @@ COPY acarshub-types/package.json  ./acarshub-types/package.json
 # Install all workspace dependencies (devDeps required for tsc/vite build tools)
 # --loglevel=error suppresses deprecation warnings from transitive deps in @lhci/cli
 # and drizzle-kit (both at latest versions; upstream fixes required to remove them)
+#
+# Root package.json's "allowScripts" denies better-sqlite3's install
+# script here. That script ("node-gyp rebuild") is a phantom entry from
+# an upstream npm registry-normalization bug (npm/cli#8714): the package
+# ships working prebuilt N-API binaries under prebuilds/ and explicitly
+# opts out via "gypfile": false, but npm's publish-time manifest
+# normalization re-adds the script to the registry packument anyway, so
+# npm still tries to run it — and it would fail here since this slim
+# image has no Python/build toolchain. Denying it is correct regardless
+# of image/npm version: the bundled prebuild is used either way. (This
+# requires an npm new enough to actually enforce allowScripts — the one
+# bundled with node:26.5.1-slim does; older npm versions treat it as
+# advisory-only and would silently still run the phantom script.)
 RUN set -xe && \
     npm ci --include=dev --loglevel=error
 
@@ -95,15 +108,19 @@ RUN set -xe && \
     # Stage Drizzle SQL migration files (needed by the migrator at runtime)
     cp -r ./acarshub-backend/drizzle/ /backend/drizzle/ && \
     # Stage native addon runtime files.
-    # Only better-sqlite3 and zeromq (plus their JS-level loaders and the
-    # cmake-ts prebuilt-loader that zeromq depends on) are needed at runtime.
-    # All other production deps are already inlined in server.bundle.mjs.
+    # Only better-sqlite3 and zeromq (plus the cmake-ts prebuilt-loader that
+    # zeromq depends on) are needed at runtime. All other production deps
+    # are already inlined in server.bundle.mjs.
     #
-    # better-sqlite3 runtime deps:
-    #   build/Release/   — compiled .node addon
-    #   lib/             — JS wrapper that loads the addon via 'bindings'
-    #   bindings/        — helper that locates build/Release/
-    #   file-uri-to-path/ — transitive dep of bindings
+    # better-sqlite3 runtime deps (N-API since v13 — see the allowScripts
+    # comment near npm ci above for why this layout changed from v12's
+    # build/Release/ + the generic 'bindings' package loader):
+    #   prebuilds/  — one prebuilt .node addon per platform/arch (pruned below)
+    #   lib/        — JS wrapper; lib/binding.js resolves prebuilds/<platform>.node
+    #                 directly, no longer via the 'bindings' package, which is
+    #                 why that package (and its file-uri-to-path transitive dep)
+    #                 is no longer copied here — npm itself no longer installs
+    #                 either now that nothing depends on them.
     #
     # zeromq runtime deps:
     #   build/           — prebuilt .node addons (all platforms; pruned below)
@@ -112,18 +129,14 @@ RUN set -xe && \
     mkdir -p \
     /addon-deps/better-sqlite3 \
     /addon-deps/zeromq \
-    /addon-deps/cmake-ts \
-    /addon-deps/bindings \
-    /addon-deps/file-uri-to-path && \
-    cp -r node_modules/better-sqlite3/build   /addon-deps/better-sqlite3/build && \
+    /addon-deps/cmake-ts && \
+    cp -r node_modules/better-sqlite3/prebuilds /addon-deps/better-sqlite3/prebuilds && \
     cp -r node_modules/better-sqlite3/lib     /addon-deps/better-sqlite3/lib && \
     cp    node_modules/better-sqlite3/package.json /addon-deps/better-sqlite3/ && \
     cp -r node_modules/zeromq/build           /addon-deps/zeromq/build && \
     cp -r node_modules/zeromq/lib             /addon-deps/zeromq/lib && \
     cp    node_modules/zeromq/package.json    /addon-deps/zeromq/ && \
     cp -r node_modules/cmake-ts/.             /addon-deps/cmake-ts/ && \
-    cp -r node_modules/bindings/.             /addon-deps/bindings/ && \
-    cp -r node_modules/file-uri-to-path/.     /addon-deps/file-uri-to-path/ && \
     # Prune zeromq prebuilts that will never be used in this Linux container:
     #   win32 and darwin — wrong OS entirely
     #   musl variants    — docker-baseimage:base is Debian/glibc, not Alpine
@@ -139,12 +152,14 @@ RUN set -xe && \
     else \
     rm -rf /addon-deps/zeromq/build/linux/x64; \
     fi && \
-    # Prune better-sqlite3 build artifacts:
-    #   deps/  — SQLite amalgamation C source (only needed to compile the addon)
-    #   src/   — C++ binding source (only needed to compile the addon)
-    rm -rf \
-    /addon-deps/better-sqlite3/deps \
-    /addon-deps/better-sqlite3/src && \
+    # Prune better-sqlite3 prebuilds down to the one matching this
+    # container's platform (Debian/glibc, so no musl variant either),
+    # same rationale as the zeromq pruning above.
+    if [ "$(uname -m)" = "x86_64" ]; then \
+    find /addon-deps/better-sqlite3/prebuilds -type f ! -name "linux-x64.node" -delete; \
+    else \
+    find /addon-deps/better-sqlite3/prebuilds -type f ! -name "linux-arm64.node" -delete; \
+    fi && \
     #   cleanup js map files, those are just for viewing the code
     { find /addon-deps | grep -E ".map$" | xargs rm -rf || true; }
 
@@ -202,7 +217,8 @@ COPY acarshub-react/package.json   ./acarshub-react/
 #
 # The native addon runtime files were staged and pruned in the builder:
 #   - cross-platform zeromq prebuilts removed (win32, darwin, musl, other arch)
-#   - better-sqlite3 build artifacts removed (deps/, src/)
+#   - better-sqlite3 prebuilds pruned to just this platform/arch (N-API since
+#     v13 — see the allowScripts comment near npm ci above for the full story)
 #
 # This replaces the entire "apt-get install compilers → npm ci → apt-get purge"
 # block from the old approach — no compilers are needed in the runtime stage
@@ -213,8 +229,6 @@ COPY --from=acarshub-react-builder /backend/migrate-worker.mjs ./migrate-worker.
 COPY --from=acarshub-react-builder /addon-deps/better-sqlite3  ./node_modules/better-sqlite3
 COPY --from=acarshub-react-builder /addon-deps/zeromq          ./node_modules/zeromq
 COPY --from=acarshub-react-builder /addon-deps/cmake-ts        ./node_modules/cmake-ts
-COPY --from=acarshub-react-builder /addon-deps/bindings        ./node_modules/bindings
-COPY --from=acarshub-react-builder /addon-deps/file-uri-to-path ./node_modules/file-uri-to-path
 
 # React SPA served by nginx
 COPY --from=acarshub-react-builder /webapp/dist/ /webapp/dist/

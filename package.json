@@ -36,5 +36,8 @@
   },
   "devDependencies": {
     "madge": "8.0.0"
+  },
+  "allowScripts": {
+    "better-sqlite3": false
   }
 }
