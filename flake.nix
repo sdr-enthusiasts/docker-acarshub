@@ -43,6 +43,7 @@
           src = ./.;
 
           check_javascript = true;
+          check_docker = true;
           check_python = false;
 
           javascript = {
