@@ -312,4 +312,4 @@ ENV ENABLE_ACARS="false" \
     IMSL_CONNECTIONS="udp" \
     IRDM_CONNECTIONS="udp"
 
-HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
+HEALTHCHECK --start-period=3600s --interval=600s CMD ["/scripts/healthcheck.sh"]
