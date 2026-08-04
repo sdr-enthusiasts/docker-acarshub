@@ -184,9 +184,14 @@ RUN set -xe && \
 # Stage 2: Runtime image
 # ============================================================
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:base
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG BUILD_NUMBER=0
+
+# SHELL must come *after* any ARG/ENV in the stage. hadolint 2.15.x resets its
+# shell-dialect tracking to POSIX sh when an ARG or ENV follows SHELL, which
+# makes every later RUN be linted as sh and spuriously reports SC3054 for the
+# bash arrays below.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Copy the Node.js runtime from the builder.
 # node:slim is Debian-based (same ABI family as docker-baseimage:base) so the
