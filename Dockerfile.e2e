@@ -50,11 +50,13 @@ COPY acarshub-backend/ ./acarshub-backend/
 # present in acarshub-react/src/assets/sprites/ and rebuilding them
 # would require sharp's native binary under emulation (see main
 # Dockerfile for the full history of why this is avoided).
-RUN npm run build --workspace=@acarshub/types && \
-    cd acarshub-react && VITE_E2E=true npx vite build
+RUN npm run build --workspace=@acarshub/types
 
-# ── Test runner ──────────────────────────────────────────────
+# WORKDIR rather than `cd` satisfies DL3003. This is also the directory the
+# Playwright runner needs below, so it is set once and serves both purposes.
 WORKDIR /work/acarshub-react
+
+RUN VITE_E2E=true npx vite build
 
 # PLAYWRIGHT_DOCKER=true enables Firefox, WebKit, and Mobile browser
 # projects in playwright.config.ts.  These are gated behind this flag

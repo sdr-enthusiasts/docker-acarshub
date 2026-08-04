@@ -47,8 +47,15 @@ COPY acarshub-types/ ./acarshub-types/
 # Re-declare ARG after FROM so it is in scope for the RUN
 ARG BUILD_NUMBER=0
 
+# VITE_BUILD_NUMBER is a compile-time Vite variable, inlined into the frontend
+# bundle by `vite build` (see acarshub-react/src/utils/version.ts). It is
+# declared as ENV rather than exported inside a single RUN because the build is
+# split across several RUN layers below (WORKDIR instead of `cd`, per DL3003),
+# and a shell `export` would not survive across them. This is a builder stage,
+# so the variable never reaches the runtime image.
+ENV VITE_BUILD_NUMBER="${BUILD_NUMBER}"
+
 RUN set -xe && \
-    export VITE_BUILD_NUMBER="${BUILD_NUMBER}" && \
     # Build each workspace individually so we can skip generate-sprites for the
     # React app.  The sprite sheets (PNG + WebP) are pre-generated static assets
     # committed to the repository (acarshub-react/src/assets/sprites/) and are
@@ -67,8 +74,18 @@ RUN set -xe && \
     # dependency on sharp's native binary running correctly under QEMU emulation,
     # and avoids re-triggering the issue if the lockfile is ever corrupted again.
     # `vite build` produces an identical dist/ output without touching sharp.
-    npm run build --workspace=@acarshub/types && \
-    cd acarshub-react && npx vite build && cd .. && \
+    npm run build --workspace=@acarshub/types
+
+# `vite build` is invoked directly (not via `npm run build --workspace`) to skip
+# generate-sprites, per the rationale above. WORKDIR rather than `cd` satisfies
+# DL3003; the following WORKDIR returns to /workspace because the remaining
+# staging steps use paths relative to the workspace root.
+WORKDIR /workspace/acarshub-react
+RUN set -xe && \
+    npx vite build
+
+WORKDIR /workspace
+RUN set -xe && \
     npm run build --workspace=@acarshub/backend && \
     # Bundle the backend into a single ESM file with esbuild.
     # better-sqlite3 and zeromq are marked external because they contain native
@@ -167,9 +184,14 @@ RUN set -xe && \
 # Stage 2: Runtime image
 # ============================================================
 FROM ghcr.io/sdr-enthusiasts/docker-baseimage:base
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG BUILD_NUMBER=0
+
+# SHELL must come *after* any ARG/ENV in the stage. hadolint 2.15.x resets its
+# shell-dialect tracking to POSIX sh when an ARG or ENV follows SHELL, which
+# makes every later RUN be linted as sh and spuriously reports SC3054 for the
+# bash arrays below.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Copy the Node.js runtime from the builder.
 # node:slim is Debian-based (same ABI family as docker-baseimage:base) so the
@@ -290,4 +312,4 @@ ENV ENABLE_ACARS="false" \
     IMSL_CONNECTIONS="udp" \
     IRDM_CONNECTIONS="udp"
 
-HEALTHCHECK --start-period=3600s --interval=600s CMD /scripts/healthcheck.sh
+HEALTHCHECK --start-period=3600s --interval=600s CMD ["/scripts/healthcheck.sh"]
