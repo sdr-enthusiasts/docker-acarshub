@@ -74,6 +74,11 @@ const ALL_TABLES: ReadonlyArray<Table> = [
   schema.ignoreAlertTerms,
   schema.timeseriesStats,
   schema.rrdImportRegistry,
+  schema.aircraft,
+  schema.decoderVariant,
+  schema.decodedField,
+  schema.decodedMessages,
+  schema.systemConfig,
 ];
 
 // Every explicitly-named index declared in schema.ts's `(table) => ({...})`
@@ -97,6 +102,13 @@ const EXPECTED_INDEXES: readonly string[] = [
   "ix_alert_matches_term_time",
   "ix_alert_matches_id_term",
   "idx_rrd_import_registry_hash",
+  "ix_aircraft_active_hex",
+  // Uniqueness constraints on small lookup tables, not performance indexes.
+  // Declared as named indexes rather than inline UNIQUE so they are pinned
+  // here instead of drifting under auto-generated sqlite_autoindex names,
+  // and so they can be widened later without rebuilding the table.
+  "ix_decoder_variant_key",
+  "ix_decoded_field_label",
 ];
 
 // ---------------------------------------------------------------------------
@@ -188,6 +200,11 @@ describe("db/schema.ts smoke test (TEST-GAP-BE)", () => {
       ["alert_matches", "id"],
       ["timeseries_stats", "timestamp"],
       ["rrd_import_registry", "id"],
+      ["aircraft", "id"],
+      ["decoder_variant", "id"],
+      ["decoded_field", "id"],
+      ["decoded_messages", "message_id"],
+      ["system_config", "key"],
     ] as const)(
       "table '%s' has '%s' as its primary key",
       (tableName, expectedPkColumn) => {

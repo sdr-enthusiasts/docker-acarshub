@@ -91,7 +91,8 @@ describe("Message Query Functions", () => {
         error INTEGER,
         libacars TEXT,
         level REAL,
-        aircraft_id TEXT
+        aircraft_id TEXT,
+        session_id INTEGER
       );
 
       CREATE VIRTUAL TABLE messages_fts USING fts5(
@@ -959,6 +960,85 @@ describe("Message Query Functions", () => {
         )
         .get() as { c: number };
       expect(remaining.c).toBe(PROTECTED_COUNT);
+    });
+
+    it("regression: migration 16's first foreign key (decoded_messages -> messages ON DELETE CASCADE) does not change pruneDatabase()'s behaviour", () => {
+      // Migration 16 (v4.3 Phase 1) introduced this schema's first foreign
+      // keys. pruneDatabase() deletes from `messages` first and
+      // `alert_matches` second (see prune.ts) — that ordering was chosen
+      // for the SQLITE_MAX_VARIABLE_NUMBER reason in the test above, before
+      // any FK existed. This test proves the ordering still produces the
+      // same delete counts now that a `messages` delete can fan out via
+      // cascade: decoded_messages.message_id -> messages(id) ON DELETE
+      // CASCADE has nothing to do with `alert_matches` (no FK relationship
+      // between them), so pruning alert_matches second is unaffected either
+      // way, but the message-first ordering matters because it's what lets
+      // the decoded_messages cascade fire as a side effect of the exact
+      // same DELETE statement pruneDatabase already issues, with no extra
+      // application code required.
+      //
+      // This file's fixture predates migration 16 (see file header) and
+      // does not run the real migration chain, so decoder_variant/
+      // decoded_messages are added by hand here. runMigrations() itself
+      // never sets `foreign_keys = ON` (migrate.ts:223); only the app's
+      // runtime connection does (client.ts:134). This test enables it
+      // explicitly on the same connection pruneDatabase's mocked
+      // getDatabase() wraps, so the cascade actually fires instead of
+      // silently no-opping.
+      db.pragma("foreign_keys = ON");
+      expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
+
+      db.exec(`
+        CREATE TABLE decoder_variant (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          decoder_name TEXT NOT NULL DEFAULT '',
+          decoder_version TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE decoded_messages (
+          message_id INTEGER PRIMARY KEY REFERENCES messages(id) ON DELETE CASCADE,
+          variant_id INTEGER NOT NULL REFERENCES decoder_variant(id),
+          mask_lo    INTEGER NOT NULL DEFAULT 0,
+          mask_hi    INTEGER NOT NULL DEFAULT 0
+        ) WITHOUT ROWID;
+      `);
+
+      const now = Math.floor(Date.now() / 1000);
+      const old = now - 10 * 86400; // outside the 7-day message window
+      const uid = 88123456;
+      insertMessage(uid, old);
+
+      const variantId = db
+        .prepare(
+          "INSERT INTO decoder_variant (decoder_name, decoder_version, description) VALUES ('mcdu', '1.0', 'Fault Log Report') RETURNING id",
+        )
+        .get() as { id: number };
+      db.prepare(
+        "INSERT INTO decoded_messages (message_id, variant_id, mask_lo) VALUES (?, ?, 1)",
+      ).run(uid, variantId.id);
+
+      // Assert on the specific UID rather than a total count, matching the
+      // rest of this describe block: the 4 beforeEach messages are pruned in
+      // the same run, so a hardcoded total would break whenever the shared
+      // fixture changes, for reasons unrelated to this regression.
+      //
+      // The discriminating assertion is that this call does not throw. If the
+      // cascade were downgraded to the FK default, deleting a message with a
+      // decoded_messages child would raise FOREIGN KEY constraint failed and
+      // pruneDatabase() would propagate it.
+      const { prunedMessages } = pruneDatabase(7, 30);
+
+      expect(prunedMessages).toBeGreaterThanOrEqual(1);
+
+      const decodedGone = db
+        .prepare("SELECT message_id FROM decoded_messages WHERE message_id = ?")
+        .get(uid);
+      expect(decodedGone).toBeUndefined();
+
+      const messageGone = db
+        .prepare("SELECT id FROM messages WHERE id = ?")
+        .get(uid);
+      expect(messageGone).toBeUndefined();
     });
   });
 

@@ -83,7 +83,8 @@ export const messages = sqliteTable(
     error: text("error", { length: 32 }).notNull(),
     libacars: text("libacars").notNull(),
     level: text("level", { length: 32 }).notNull(),
-    aircraftId: text("aircraft_id", { length: 36 }), // Added in migration 8, nullable for future use
+    aircraftId: text("aircraft_id", { length: 36 }), // Added in migration 8, nullable for future use; dead column, never written, superseded by sessionId
+    sessionId: integer("session_id"), // Added in migration 16; FK to aircraft(id), NO ACTION on delete — see aircraft table comment below
   },
   (table) => ({
     // Single-column indexes. depa/dsta/flight/freq/label/tail were dropped
@@ -354,6 +355,146 @@ export const rrdImportRegistry = sqliteTable(
 );
 
 // ============================================================================
+// v4.3 Session and Decode Tables (Migration 16)
+// ============================================================================
+
+/**
+ * Flight session registry.
+ *
+ * Each row is one flight session; two appearances of the same aircraft are
+ * two rows (see agent-docs/V4.3.md "Session Lifecycle"). `id` is the FK
+ * target for `messages.sessionId` and is AUTOINCREMENT so a pruned session's
+ * rowid is never reused — reuse would let a stale `messages.session_id`
+ * silently re-point at a different, newer session.
+ *
+ * Exactly one index exists here: `ix_aircraft_active_hex`. A second index on
+ * `last_seen` (`ix_aircraft_last_seen`) was measured and rejected — see
+ * migration16.ts and agent-docs/V4.3.md for the numbers. Do not add it back
+ * without new measurement.
+ *
+ * Drizzle cannot express `WITHOUT ROWID`; this table is a normal rowid table
+ * so that divergence does not apply here. The real DDL lives in
+ * migration16.ts — this file is not the source of truth (see the comment on
+ * the `messages` table above).
+ */
+export const aircraft = sqliteTable(
+  "aircraft",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    icaoHex: text("icao_hex"),
+    callsign: text("callsign"),
+    tail: text("tail"),
+    firstSeen: integer("first_seen").notNull(),
+    lastSeen: integer("last_seen").notNull(),
+    isActive: integer("is_active").notNull().default(1),
+    sessionType: text("session_type").notNull().default("adsb"),
+    pairingMethod: text("pairing_method"),
+    traceState: text("trace_state").notNull().default("none"),
+  },
+  (table) => ({
+    activeHexIdx: index("ix_aircraft_active_hex").on(
+      table.isActive,
+      table.icaoHex,
+    ),
+  }),
+);
+
+/**
+ * Interned `(decoder_name, decoder_version, description)` triples referenced
+ * by `decodedMessages.variantId`. Measured at ~70 distinct triples in
+ * production — a single 4 KB page. `description` is the searchable
+ * message-type name ("Ground Station Squitter", "Fault Log Report"); it lives
+ * here rather than per-message because it is nearly a function of the plugin,
+ * which is what makes message-type search cost almost nothing.
+ *
+ * The unique index below is also the lookup path for upsert-on-insert; there
+ * is no separate index beside it. It is a named index rather than an inline
+ * UNIQUE so it can be widened later without rebuilding the table.
+ */
+export const decoderVariant = sqliteTable(
+  "decoder_variant",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // Empty-string sentinel, not NULL, for "no decoder matched". SQLite treats
+    // NULLs as distinct under UNIQUE, so a nullable column would permit
+    // duplicate rows and break find-or-create lookups. See migration16.ts.
+    decoderName: text("decoder_name").notNull().default(""),
+    decoderVersion: text("decoder_version").notNull(),
+    description: text("description").notNull().default(""),
+  },
+  (table) => ({
+    variantKeyIdx: uniqueIndex("ix_decoder_variant_key").on(
+      table.decoderName,
+      table.decoderVersion,
+      table.description,
+    ),
+  }),
+);
+
+/**
+ * Stable field-label to bit-position assignment for `decodedMessages.maskLo` /
+ * `maskHi`. `id` IS the bit position, so rows are never renumbered or deleted;
+ * a retired field leaves its bit permanently unused. Without this table the
+ * masks would be meaningless across restarts.
+ *
+ * Drizzle cannot express `WITHOUT ROWID` or the `CHECK(id BETWEEN 0 AND 125)`
+ * bound; migration16.ts carries both.
+ */
+export const decodedField = sqliteTable(
+  "decoded_field",
+  {
+    id: integer("id").primaryKey(), // bit position, 0-125
+    label: text("label").notNull(),
+  },
+  (table) => ({
+    labelIdx: uniqueIndex("ix_decoded_field_label").on(table.label),
+  }),
+);
+
+/**
+ * Compact search index over decoder output. A row exists only for messages
+ * that actually produced decoder output, so absence means "no decoder output",
+ * not "not yet processed".
+ *
+ * Deliberately stores NO decoded text: classification (`decoderVariant.
+ * description`) plus a field-presence bitmask carries ~95% of the measured
+ * search value at ~9x less storage than persisting decoded text with an FTS
+ * index over it. Decoded text for display is produced on read. See
+ * agent-docs/V4.3.md "Open Question 7".
+ *
+ * `maskLo` / `maskHi` are a 126-bit set of `decodedField.id` values, split
+ * across two columns because SQLite's INTEGER is signed 64-bit and 64 distinct
+ * labels already exist in production. Bit n of `maskLo` is field id n; bit n
+ * of `maskHi` is field id n + 63.
+ *
+ * Drizzle cannot express `WITHOUT ROWID`; migration16.ts is the source of
+ * truth for the on-disk DDL (see the comment on the `messages` table above).
+ * No index exists beside the primary key — `ix_decoded_version_level` was
+ * measured and rejected, see migration16.ts.
+ */
+export const decodedMessages = sqliteTable("decoded_messages", {
+  messageId: integer("message_id").primaryKey(), // REFERENCES messages(id) ON DELETE CASCADE
+  variantId: integer("variant_id").notNull(), // REFERENCES decoder_variant(id)
+  maskLo: integer("mask_lo").notNull().default(0), // decoded_field ids 0-62
+  maskHi: integer("mask_hi").notNull().default(0), // decoded_field ids 63-125
+});
+
+/**
+ * General-purpose persistent key-value store for values that must survive
+ * restarts and are not appropriate as environment variables (e.g. the
+ * installed decoder version, reprocessor status/cursor — see
+ * agent-docs/V4.3.md "system_config").
+ *
+ * Drizzle cannot express `WITHOUT ROWID`; migration16.ts is the source of
+ * truth for that attribute, as with `decodedMessages` above.
+ */
+export const systemConfig = sqliteTable("system_config", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+// ============================================================================
 // TypeScript Types (Inferred from Schema)
 // ============================================================================
 
@@ -386,3 +527,18 @@ export type NewTimeseriesStat = typeof timeseriesStats.$inferInsert;
 
 export type RrdImportRegistryEntry = typeof rrdImportRegistry.$inferSelect;
 export type NewRrdImportRegistryEntry = typeof rrdImportRegistry.$inferInsert;
+
+export type Aircraft = typeof aircraft.$inferSelect;
+export type NewAircraft = typeof aircraft.$inferInsert;
+
+export type DecoderVariant = typeof decoderVariant.$inferSelect;
+export type NewDecoderVariant = typeof decoderVariant.$inferInsert;
+
+export type DecodedField = typeof decodedField.$inferSelect;
+export type NewDecodedField = typeof decodedField.$inferInsert;
+
+export type DecodedMessage = typeof decodedMessages.$inferSelect;
+export type NewDecodedMessage = typeof decodedMessages.$inferInsert;
+
+export type SystemConfig = typeof systemConfig.$inferSelect;
+export type NewSystemConfig = typeof systemConfig.$inferInsert;

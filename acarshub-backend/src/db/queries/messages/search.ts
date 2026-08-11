@@ -257,6 +257,7 @@ function mapRawRowToMessage(row: Record<string, unknown>): Message {
     libacars: row.libacars as string,
     level: row.level as string,
     aircraftId: (row.aircraft_id as string | null) ?? null,
+    sessionId: (row.session_id as number | null) ?? null,
   };
 }
 

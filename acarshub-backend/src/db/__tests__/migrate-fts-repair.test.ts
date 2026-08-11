@@ -678,7 +678,11 @@ describe("migration04 FTS creation and repair", () => {
       .get() as { version_num: string } | undefined;
     db2.close();
 
-    expect(version?.version_num).toBe("8c9d47f5ed13");
+    // Was "8c9d47f5ed13" (migration15) before migration16
+    // (v43_session_and_decode_tables) landed; update this alongside
+    // db/migrations/index.ts's LATEST_REVISION whenever a new migration is
+    // appended.
+    expect(version?.version_num).toBe("4d2a7c918f3b");
   });
 });
 
@@ -755,13 +759,17 @@ describe("migration10 rebuild_fts", () => {
 
   // -------------------------------------------------------------------------
 
-  test("regression: alembic_version is 8c9d47f5ed13 after all migrations", () => {
+  test("regression: alembic_version is the latest revision after all migrations", () => {
+    // Was "8c9d47f5ed13" (migration15) before migration16
+    // (v43_session_and_decode_tables) landed; update this alongside
+    // db/migrations/index.ts's LATEST_REVISION whenever a new migration is
+    // appended.
     const db = new Database(DB_PATH);
     const version = db
       .prepare("SELECT version_num FROM alembic_version")
       .get() as { version_num: string } | undefined;
     db.close();
 
-    expect(version?.version_num).toBe("8c9d47f5ed13");
+    expect(version?.version_num).toBe("4d2a7c918f3b");
   });
 });

@@ -104,7 +104,8 @@ const CREATE_ALERT_TABLES = `
     error        TEXT NOT NULL DEFAULT '',
     libacars     TEXT NOT NULL DEFAULT '',
     level        TEXT NOT NULL DEFAULT '',
-    aircraft_id  TEXT
+    aircraft_id  TEXT,
+    session_id   INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS alert_matches (
