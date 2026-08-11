@@ -25,6 +25,8 @@ import {
   useAppStore,
 } from "../store/useAppStore";
 import type { MessageRateData } from "../types";
+import { MOBILE_NAV_QUERY } from "../utils/breakpoints";
+import { registerNavActionSlot } from "../utils/navActionSlot";
 import { scrollToTop } from "../utils/scrollRegistry";
 import { MessageFilters } from "./MessageFilters";
 
@@ -146,7 +148,7 @@ export const Navigation = () => {
   const systemHasError = useAppStore(selectSystemErrorState);
   const setSettingsOpen = useAppStore((state) => state.setSettingsOpen);
   const menuDetailsRef = useRef<HTMLDetailsElement>(null);
-  const isMobile = useMediaQuery("(max-width: 767px)");
+  const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
 
   // Filter flyout state (for Live Messages page)
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -193,6 +195,29 @@ export const Navigation = () => {
       menuDetailsRef.current.open = false;
     }
   };
+
+  /**
+   * Ref callback for the mobile nav's page-action slot.
+   *
+   * WHY a callback ref rather than useRef + useEffect: the slot element is
+   * mounted and unmounted by the `isMobile` branch below, and a callback ref
+   * fires during the same commit as that structural change. An effect would
+   * publish the element one commit late, and — worse — on the mobile→desktop
+   * transition would leave the registry briefly holding a detached node that a
+   * page could still portal into.
+   *
+   * React 19 invokes the returned cleanup on detach, so deregistration is
+   * automatic and cannot be missed. `useCallback` with an empty dep list keeps
+   * the ref identity stable, preventing React from tearing down and
+   * re-registering the slot on every unrelated nav re-render (of which there
+   * are many — the msg/min widget updates every few seconds).
+   */
+  const navActionSlotRef = useCallback((el: HTMLDivElement | null) => {
+    registerNavActionSlot(el);
+    return () => {
+      registerNavActionSlot(null);
+    };
+  }, []);
 
   /**
    * Desktop active-nav-link click handler.
@@ -280,8 +305,22 @@ export const Navigation = () => {
               )}
             </div>
 
-            {/* Message rate widget — pinned to right edge of mobile nav */}
-            <MessageRateWidget />
+            {/* Right group: msg/min widget, then the page action slot.
+                Grouped in a flex row so both stay pinned to the right edge
+                under the container's space-between. */}
+            <div className="mobile_nav_right">
+              <MessageRateWidget />
+
+              {/*
+                Page action slot.
+                Kept empty by Navigation itself — the active page portals its
+                single highest-priority action in here via useNavActionSlot()
+                when the viewport leaves it nowhere else to go. See
+                utils/navActionSlot.ts for why the page pushes rather than the
+                nav pulling. Renders as a zero-width no-op when unoccupied.
+              */}
+              <div className="mobile_nav_action_slot" ref={navActionSlotRef} />
+            </div>
           </nav>
         ) : (
           /* Desktop menu */

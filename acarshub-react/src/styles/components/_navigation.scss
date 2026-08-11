@@ -403,6 +403,29 @@
   display: flex;
   align-items: center;
   gap: $spacing-md;
+  // The left group holds the menu toggle and the optional Filters button,
+  // both of which have fixed short labels. Letting it shrink first keeps the
+  // right group (msg/min + page action) intact on narrow screens.
+  min-width: 0;
+}
+
+// Right group of the mobile nav: msg/min widget followed by the page action
+// slot. Grouped so both stay pinned to the right edge under the container's
+// space-between, instead of the action being pushed into the middle.
+.mobile_nav_right {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  flex-shrink: 0;
+}
+
+// Page action slot — populated by the active page via a portal (see
+// utils/navActionSlot.ts). Collapses to nothing when unoccupied: `display:
+// flex` on an empty element with no padding or gap contributes zero width, so
+// an unused slot cannot shift the msg/min widget off the right edge.
+.mobile_nav_action_slot {
+  display: flex;
+  align-items: center;
 }
 
 .mobile_nav_button {

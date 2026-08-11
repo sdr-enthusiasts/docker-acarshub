@@ -17,12 +17,18 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MessageCard } from "../components/MessageCard";
 import { MessageGroup } from "../components/MessageGroup";
+import {
+  type AlertActionPlacement,
+  useAlertActionPlacement,
+} from "../hooks/useAlertActionPlacement";
 import { useAlertsHistoricalSearch } from "../hooks/useAlertsHistoricalSearch";
 import { useAlertsListHeight } from "../hooks/useAlertsListHeight";
 import { useAlertsScrollAnchor } from "../hooks/useAlertsScrollAnchor";
 import { useAlertsScrollReset } from "../hooks/useAlertsScrollReset";
+import { useNavActionSlot } from "../hooks/useNavActionSlot";
 import { useRegisterScrollContainer } from "../hooks/useRegisterScrollContainer";
 import { socketService } from "../services/socket";
 import { useAppStore } from "../store/useAppStore";
@@ -50,6 +56,45 @@ const ESTIMATED_ITEM_HEIGHT = 300;
  * this zone, so live prepends flow in naturally without anchoring.
  */
 const LIST_PADDING_START = 16;
+
+/**
+ * The "Mark All Read" action.
+ *
+ * Extracted so that all three placements (page header, controls bar, nav slot)
+ * render the identical control rather than three near-copies that drift apart.
+ * The modifier class carries only positional/sizing differences; behaviour,
+ * label, and accessible name are placement-invariant, which is what lets the
+ * E2E suite assert on one role+name across every viewport.
+ */
+const MarkAllReadButton = ({
+  placement,
+  onClick,
+  unreadCount,
+}: {
+  placement: AlertActionPlacement;
+  onClick: () => void;
+  unreadCount: number;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`alerts-page__mark-read-button alerts-page__mark-read-button--${placement}`}
+    // The visible label is a fixed string, so the count — the one piece of
+    // information that tells the user what the action will actually affect —
+    // is otherwise announced nowhere.
+    //
+    // The accessible name MUST start with the visible text "Mark All Read":
+    // WCAG 2.5.3 (Label in Name) requires the accessible name to contain the
+    // visible label, so that speech-input users can activate the control by
+    // saying what they see. A name like "Mark all 5 unread alerts as read"
+    // would read naturally but fail that criterion.
+    aria-label={`Mark All Read (${unreadCount} unread)`}
+    title="Mark all alerts as read"
+    data-placement={placement}
+  >
+    Mark All Read
+  </button>
+);
 
 /**
  * AlertsPage Component
@@ -112,6 +157,11 @@ export const AlertsPage = () => {
   const activeTabIndices = useRef<Map<string, number>>(new Map());
 
   const listHeight = useAlertsListHeight(scrollContainerRef);
+
+  // Where "Mark All Read" is anchored at the current viewport. See
+  // hooks/useAlertActionPlacement.ts for the resolution rule.
+  const actionPlacement = useAlertActionPlacement();
+  const navActionSlot = useNavActionSlot();
 
   // Count total alert messages, unread alerts, and unique aircraft
   const stats = useMemo(() => {
@@ -304,22 +354,48 @@ export const AlertsPage = () => {
   const liveHasGroups = alertGroupsArray.length > 0;
   const histHasResults = historicalResults.length > 0;
 
+  /**
+   * Whether the "Mark All Read" action applies at all right now.
+   *
+   * Historical mode has no read/unread concept (results come straight from
+   * the DB), and with nothing unread the action would be a no-op — so it is
+   * omitted rather than shown disabled. This single predicate gates all three
+   * placements, which is what guarantees the button can never appear in two
+   * positions at once.
+   */
+  const showMarkAllRead = viewMode === "live" && stats.unreadAlerts > 0;
+
+  const markAllReadButton = showMarkAllRead ? (
+    <MarkAllReadButton
+      placement={actionPlacement}
+      onClick={handleMarkAllRead}
+      unreadCount={stats.unreadAlerts}
+    />
+  ) : null;
+
   return (
     <div className="page alerts-page">
+      {/*
+        Nav-slot placement.
+        Portalled into the mobile nav bar because at this viewport the header
+        is hidden and the mode row is already full-width. Rendered from here
+        (rather than from Navigation) so the action's handler and enabled
+        condition stay owned by the page that defines them.
+
+        The navActionSlot null-check is load-bearing, not defensive: on the
+        very first commit after a cold load the nav may not have attached its
+        slot yet, and createPortal throws on a null container.
+      */}
+      {actionPlacement === "nav-slot" &&
+        navActionSlot !== null &&
+        markAllReadButton !== null &&
+        createPortal(markAllReadButton, navActionSlot)}
+
       {/* Page Header */}
       <div className="page__header">
         <h1 className="page__title">Alerts</h1>
 
-        {viewMode === "live" && stats.unreadAlerts > 0 && (
-          <button
-            type="button"
-            onClick={handleMarkAllRead}
-            className="alerts-page__mark-read-button"
-            title="Mark all alerts as read"
-          >
-            Mark All Read
-          </button>
-        )}
+        {actionPlacement === "page-header" && markAllReadButton}
 
         <div className="page__stats">
           {viewMode === "live" ? (
@@ -362,23 +438,33 @@ export const AlertsPage = () => {
       <div className="page__content alerts-page__content">
         {/* Controls bar: mode toggle + optional term selector + pagination */}
         <div className="alerts-page__controls-bar">
-          {/* Mode Toggle */}
-          <div className="alerts-page__mode-toggle">
-            <button
-              type="button"
-              onClick={() => handleModeChange("live")}
-              className={`alerts-page__mode-button ${viewMode === "live" ? "alerts-page__mode-button--active" : ""}`}
-            >
-              Live
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange("historical")}
-              className={`alerts-page__mode-button ${viewMode === "historical" ? "alerts-page__mode-button--active" : ""}`}
-              disabled={noTermsConfigured}
-            >
-              Historical
-            </button>
+          {/*
+            Mode row: the Live/Historical toggle, plus — when the header is
+            hidden at tablet width and up — the Mark All Read action anchored
+            to the far right. The wrapper exists solely to give the action a
+            right-hand anchor on the same line as the toggle; the toggle keeps
+            its own element so its internal flex sizing is unaffected.
+          */}
+          <div className="alerts-page__mode-row">
+            <div className="alerts-page__mode-toggle">
+              <button
+                type="button"
+                onClick={() => handleModeChange("live")}
+                className={`alerts-page__mode-button ${viewMode === "live" ? "alerts-page__mode-button--active" : ""}`}
+              >
+                Live
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeChange("historical")}
+                className={`alerts-page__mode-button ${viewMode === "historical" ? "alerts-page__mode-button--active" : ""}`}
+                disabled={noTermsConfigured}
+              >
+                Historical
+              </button>
+            </div>
+
+            {actionPlacement === "controls-bar" && markAllReadButton}
           </div>
 
           {/* Historical term selector */}

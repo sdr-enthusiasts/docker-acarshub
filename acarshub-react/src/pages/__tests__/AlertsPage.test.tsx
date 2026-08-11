@@ -17,8 +17,13 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AlertActionPlacement } from "../../hooks/useAlertActionPlacement";
 import { useAppStore } from "../../store/useAppStore";
 import type { AcarsMsg, MessageGroup } from "../../types";
+import {
+  _resetNavActionSlotForTesting,
+  registerNavActionSlot,
+} from "../../utils/navActionSlot";
 import { AlertsPage } from "../AlertsPage";
 
 // ---------------------------------------------------------------------------
@@ -147,6 +152,29 @@ vi.mock("../../utils/decoderUtils", () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// useAlertActionPlacement mock
+//
+// The placement rule is a pure function of two media queries and is tested
+// exhaustively (including boundary pixels) in
+// hooks/__tests__/useAlertActionPlacement.test.ts. Here we only care which DOM
+// position each placement selects, so the hook is stubbed rather than driven
+// through a jsdom matchMedia harness — jsdom reports no layout, so a
+// viewport-based approach would be simulating the very thing under test.
+//
+// Defaults to "page-header" so every pre-existing test in this file keeps the
+// behaviour it was written against.
+// ---------------------------------------------------------------------------
+const placement = vi.hoisted(() => ({ current: "page-header" as string }));
+
+const setPlacement = (next: AlertActionPlacement): void => {
+  placement.current = next;
+};
+
+vi.mock("../../hooks/useAlertActionPlacement", () => ({
+  useAlertActionPlacement: () => placement.current,
+}));
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -221,6 +249,10 @@ function emitAlertsByTerm(
 
 describe("AlertsPage", () => {
   beforeEach(() => {
+    // Restore the default placement so a test that changed it cannot leak
+    // into the next one.
+    setPlacement("page-header");
+
     alertsByTermHandler = null;
     mockSocket.on.mockClear();
     mockSocket.off.mockClear();
@@ -741,6 +773,206 @@ describe("AlertsPage", () => {
 
       // 3 unique aircraft — may appear in multiple stat elements
       expect(screen.getAllByText("3").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Mark All Read placement
+  //
+  // The action has three possible homes depending on viewport (see
+  // hooks/useAlertActionPlacement.ts). These tests pin the *wiring*: that the
+  // resolved placement selects exactly one DOM position, that the nav-slot
+  // case really portals out of the page, and that the action is never
+  // duplicated or orphaned. The placement *rule* itself is covered by
+  // hooks/__tests__/useAlertActionPlacement.test.ts.
+  // -------------------------------------------------------------------------
+
+  describe("mark all read placement", () => {
+    const withUnreadAlerts = (): void => {
+      useAppStore.setState({
+        alertMessageGroups: new Map([makeAlertGroup("UAL123", 2)]),
+        alertTerms: { terms: ["EMERGENCY"], ignore: [] },
+        readMessageUids: new Set(),
+      });
+    };
+
+    const markAllRead = () =>
+      screen.getByRole("button", { name: /mark all read/i });
+
+    afterEach(() => {
+      _resetNavActionSlotForTesting();
+    });
+
+    it("renders inside .page__header when the header is visible", () => {
+      setPlacement("page-header");
+      withUnreadAlerts();
+
+      render(<AlertsPage />);
+
+      const button = markAllRead();
+      expect(button.closest(".page__header")).not.toBeNull();
+      expect(button).toHaveAttribute("data-placement", "page-header");
+    });
+
+    it("renders inside the mode row when the header is hidden at >= 768px", () => {
+      setPlacement("controls-bar");
+      withUnreadAlerts();
+
+      render(<AlertsPage />);
+
+      const button = markAllRead();
+      // Must be on the same row as the Live/Historical toggle, not merely
+      // somewhere in the controls bar.
+      expect(button.closest(".alerts-page__mode-row")).not.toBeNull();
+      expect(button.closest(".page__header")).toBeNull();
+      expect(button).toHaveAttribute("data-placement", "controls-bar");
+    });
+
+    it("portals into the nav slot when the header is hidden at <= 767px", () => {
+      setPlacement("nav-slot");
+      withUnreadAlerts();
+
+      const slot = document.createElement("div");
+      slot.className = "mobile_nav_action_slot";
+      document.body.appendChild(slot);
+      registerNavActionSlot(slot);
+
+      const { container } = render(<AlertsPage />);
+
+      const button = markAllRead();
+      expect(slot.contains(button)).toBe(true);
+      // The whole point of the portal: the button is NOT inside the page's
+      // own subtree at this viewport.
+      expect(container.contains(button)).toBe(false);
+      expect(button).toHaveAttribute("data-placement", "nav-slot");
+
+      slot.remove();
+    });
+
+    it("omits the action entirely when nav-slot is resolved but no slot is mounted", () => {
+      // Guards the createPortal(null) crash: on a cold load the page can
+      // commit before Navigation has attached its slot.
+      setPlacement("nav-slot");
+      withUnreadAlerts();
+
+      expect(() => render(<AlertsPage />)).not.toThrow();
+
+      expect(
+        screen.queryByRole("button", { name: /mark all read/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders the action exactly once at every placement", () => {
+      // A regression here (e.g. rendering all three and hiding two with CSS)
+      // would put duplicate identically-named buttons in the a11y tree.
+      for (const placement of [
+        "page-header",
+        "controls-bar",
+        "nav-slot",
+      ] as const) {
+        setPlacement(placement);
+        withUnreadAlerts();
+
+        const slot = document.createElement("div");
+        document.body.appendChild(slot);
+        registerNavActionSlot(slot);
+
+        const { unmount } = render(<AlertsPage />);
+
+        expect(
+          screen.getAllByRole("button", { name: /mark all read/i }),
+        ).toHaveLength(1);
+
+        unmount();
+        slot.remove();
+        _resetNavActionSlotForTesting();
+      }
+    });
+
+    it("keeps the action clickable when portalled into the nav slot", async () => {
+      // Portalled content keeps React's synthetic event path, but only if the
+      // portal is rendered from within the page's tree — verify the handler
+      // actually fires rather than assuming.
+      setPlacement("nav-slot");
+      withUnreadAlerts();
+
+      const slot = document.createElement("div");
+      document.body.appendChild(slot);
+      registerNavActionSlot(slot);
+
+      const markAllSpy = vi.spyOn(
+        useAppStore.getState(),
+        "markAllAlertsAsRead",
+      );
+
+      const user = userEvent.setup();
+      render(<AlertsPage />);
+
+      await user.click(markAllRead());
+
+      expect(markAllSpy).toHaveBeenCalledOnce();
+
+      slot.remove();
+    });
+
+    it("is absent in historical mode regardless of placement", async () => {
+      // Historical results have no read/unread state, so the action would be
+      // a no-op. Checked at the nav-slot placement because that is the one
+      // that leaks outside the page subtree and would otherwise linger in the
+      // nav bar after a mode switch.
+      setPlacement("nav-slot");
+      withUnreadAlerts();
+
+      const slot = document.createElement("div");
+      document.body.appendChild(slot);
+      registerNavActionSlot(slot);
+
+      const user = userEvent.setup();
+      render(<AlertsPage />);
+
+      expect(markAllRead()).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: /historical/i }));
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: /mark all read/i }),
+        ).not.toBeInTheDocument();
+      });
+      expect(slot).toBeEmptyDOMElement();
+
+      slot.remove();
+    });
+
+    it("removes the portalled action from the nav slot on unmount", () => {
+      // Navigating away from Alerts must not leave a stale button in the nav
+      // bar acting on a page that is no longer mounted.
+      setPlacement("nav-slot");
+      withUnreadAlerts();
+
+      const slot = document.createElement("div");
+      document.body.appendChild(slot);
+      registerNavActionSlot(slot);
+
+      const { unmount } = render(<AlertsPage />);
+      expect(slot).not.toBeEmptyDOMElement();
+
+      unmount();
+
+      expect(slot).toBeEmptyDOMElement();
+
+      slot.remove();
+    });
+
+    it("exposes an accessible name containing the visible label and the count", () => {
+      // WCAG 2.5.3 Label in Name: speech-input users must be able to say what
+      // they see, so the accessible name has to start with "Mark All Read".
+      setPlacement("page-header");
+      withUnreadAlerts();
+
+      render(<AlertsPage />);
+
+      expect(markAllRead()).toHaveAccessibleName("Mark All Read (2 unread)");
     });
   });
 });
