@@ -128,7 +128,8 @@ const CREATE_STATS_TABLES = `
     error        TEXT NOT NULL DEFAULT '',
     libacars     TEXT NOT NULL DEFAULT '',
     level        TEXT NOT NULL DEFAULT '',
-    aircraft_id  TEXT
+    aircraft_id  TEXT,
+    session_id   INTEGER
   );
 `;
 

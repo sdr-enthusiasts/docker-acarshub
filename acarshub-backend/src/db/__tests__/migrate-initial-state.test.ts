@@ -339,7 +339,11 @@ describe("Migration from initial Alembic state", () => {
       .get() as { version_num: string } | undefined;
 
     expect(version).toBeDefined();
-    expect(version?.version_num).toBe("8c9d47f5ed13");
+    // Was "8c9d47f5ed13" (migration15) before migration16
+    // (v43_session_and_decode_tables) landed; update this alongside
+    // db/migrations/index.ts's LATEST_REVISION whenever a new migration is
+    // appended.
+    expect(version?.version_num).toBe("4d2a7c918f3b");
 
     testDb.close();
   });

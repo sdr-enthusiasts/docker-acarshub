@@ -184,6 +184,11 @@ describe("runMigrations() orchestrator", () => {
     expect(tableNames.has("alert_matches")).toBe(true); // migration 8
     expect(tableNames.has("timeseries_stats")).toBe(true); // migration 11
     expect(tableNames.has("rrd_import_registry")).toBe(true); // migration 11
+    expect(tableNames.has("aircraft")).toBe(true); // migration 16
+    expect(tableNames.has("decoder_variant")).toBe(true); // migration 16
+    expect(tableNames.has("decoded_field")).toBe(true); // migration 16
+    expect(tableNames.has("decoded_messages")).toBe(true); // migration 16
+    expect(tableNames.has("system_config")).toBe(true); // migration 16
   });
 
   it("triggers VACUUM/ANALYZE when FTS is stale even though no migrations ran", () => {

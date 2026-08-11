@@ -76,7 +76,8 @@ describe("Message Transformation", () => {
         error TEXT NOT NULL,
         libacars TEXT NOT NULL,
         level TEXT NOT NULL,
-        aircraft_id TEXT
+        aircraft_id TEXT,
+        session_id INTEGER
       );
 
       CREATE TABLE IF NOT EXISTS alert_stats (
