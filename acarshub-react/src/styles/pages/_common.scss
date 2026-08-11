@@ -24,9 +24,24 @@
  */
 
 .page {
-  // Mobile-first.
-  margin-top: $spacing-sm;
-  margin-bottom: $spacing-sm;
+  // Pages sit flush against the nav bar. There is NO top margin by default.
+  //
+  // WHY the default is 0: this used to be $spacing-sm / $spacing-lg, and every
+  // app-like page then had to override it back to 0 — Live Messages and Alerts
+  // with an explicit `margin-top: 0`, Stats via `margin: 0 auto auto auto`,
+  // Live Map via `margin: 0 !important`. Search was the one page that never
+  // got the override, so it alone rendered a 24px gap above its header, making
+  // its header area look ~45% taller than every other page's. That is a
+  // default which the majority of consumers actively fight; the default was
+  // wrong, not Search.
+  //
+  // A page that genuinely wants to float below the nav (About, which is a
+  // document rather than a tool surface) opts in explicitly — see
+  // `.about-page` in pages/_about.scss.
+  //
+  // Bottom margin is unchanged: trailing space at the end of a scrolled page
+  // is wanted everywhere and was never the anomaly.
+  margin-bottom: $spacing-sm; // mobile-first
   border-radius: $radius-md;
   background-color: var(--color-card-body);
   overflow: clip;
@@ -35,7 +50,6 @@
   @include fade-in($transition-base);
 
   @include breakpoint(md) {
-    margin-top: $spacing-lg;
     margin-bottom: $spacing-lg;
     border-radius: $radius-xl;
   }
@@ -59,24 +73,41 @@
 
 .page__title {
   margin: 0;
-  font-size: $font-size-2xl; // mobile-first
+  // Sized to match the other content of .page__header (the stat line at
+  // 1rem, the Mark All Read action at 0.875rem) rather than to a heading
+  // scale.
+  //
+  // WHY not $font-size-2xl/3xl as before: the header is a single dense row of
+  // page-level metadata, not a document title block. At 1.5rem/1.875rem the
+  // title was roughly double the height of everything beside it, which read
+  // as an oversized banner rather than a row. The page is already identified
+  // by the active nav link, so the title's job here is orientation, not
+  // hierarchy.
+  //
+  // Deliberately flat across breakpoints: the previous step-up to 1.875rem at
+  // >=768px made the mismatch worse on exactly the wide screens where the row
+  // has the most horizontal space and the least need for emphasis.
+  //
+  // Semantics are unaffected — this is still an <h1>, so the document outline
+  // and screen-reader heading navigation are unchanged. Weight (600) and the
+  // full-contrast --color-text still distinguish it from the subtext-coloured
+  // stats beside it.
+  font-size: $font-size-base;
   font-weight: $font-weight-semibold;
   color: var(--color-text);
-
-  @include breakpoint(md) {
-    font-size: $font-size-3xl;
-  }
 }
 
 .page__subtitle {
   margin: $spacing-sm 0 0;
-  font-size: $font-size-sm; // mobile-first
+  // Held at 0.875rem at every width. It previously stepped up to 1rem at
+  // >=768px, which was fine when the title above it was 1.875rem — but now
+  // that .page__title is 1rem flat, that step would render the subtitle at
+  // exactly the title's size and flatten the relationship between them.
+  // Staying one step down keeps the title dominant on the only page that
+  // uses a subtitle (About).
+  font-size: $font-size-sm;
   font-weight: $font-weight-normal;
   color: var(--color-subtext1);
-
-  @include breakpoint(md) {
-    font-size: $font-size-base;
-  }
 }
 
 .page__actions {

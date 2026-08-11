@@ -74,6 +74,10 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  _resetNavActionSlotForTesting,
+  getNavActionSlot,
+} from "../../utils/navActionSlot";
 import { scrollToTop } from "../../utils/scrollRegistry";
 // SUT and scrollRegistry imports below are intentionally placed after the
 // vi.mock blocks for readability. Biome's organize-imports rule would
@@ -523,6 +527,81 @@ describe("Navigation", () => {
       expect(button).toHaveAttribute("aria-expanded", "true");
       await user.click(button);
       expect(button).toHaveAttribute("aria-expanded", "false");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Page action slot
+  //
+  // The mobile nav exposes one slot that the active page portals a
+  // high-priority action into (Alerts' "Mark All Read" when the page header is
+  // hidden at phone width). Navigation's responsibility is only to mount the
+  // slot on mobile and publish it to the registry — it never populates it.
+  // -------------------------------------------------------------------------
+
+  describe("page action slot", () => {
+    afterEach(() => {
+      _resetNavActionSlotForTesting();
+    });
+
+    it("mounts the slot on mobile and registers it", () => {
+      mockMediaQueryResult.current = true;
+      renderAt("/about");
+
+      const slot = document.querySelector(".mobile_nav_action_slot");
+      expect(slot).toBeInTheDocument();
+      expect(getNavActionSlot()).toBe(slot);
+    });
+
+    it("does not mount or register a slot on desktop", () => {
+      // At desktop width pages have room for their own actions, so there is
+      // deliberately nothing to portal into.
+      mockMediaQueryResult.current = false;
+      renderAt("/about");
+
+      expect(
+        document.querySelector(".mobile_nav_action_slot"),
+      ).not.toBeInTheDocument();
+      expect(getNavActionSlot()).toBeNull();
+    });
+
+    it("leaves the slot empty — Navigation never populates it", () => {
+      mockMediaQueryResult.current = true;
+      renderAt("/alerts");
+
+      expect(
+        document.querySelector(".mobile_nav_action_slot"),
+      ).toBeEmptyDOMElement();
+    });
+
+    it("deregisters the slot on unmount", () => {
+      // A stale registration would let a page portal into a detached node,
+      // silently losing the action.
+      mockMediaQueryResult.current = true;
+      const { unmount } = renderAt("/about");
+      expect(getNavActionSlot()).not.toBeNull();
+
+      unmount();
+
+      expect(getNavActionSlot()).toBeNull();
+    });
+
+    it("registers the slot alongside the message-rate widget in the right group", () => {
+      // Placement matters: the slot must sit after the msg/min widget inside
+      // the right-hand group so both stay pinned to the right edge.
+      mockMediaQueryResult.current = true;
+      renderAt("/about", {
+        messageRate: makeRate({ total: 12 }),
+        decoders: makeDecoders({ acars: true }),
+      });
+
+      const right = document.querySelector(".mobile_nav_right");
+      expect(right).toBeInTheDocument();
+
+      const children = Array.from(right?.children ?? []);
+      expect(children).toHaveLength(2);
+      expect(children[0]).toHaveClass("message-rate");
+      expect(children[1]).toHaveClass("mobile_nav_action_slot");
     });
   });
 });

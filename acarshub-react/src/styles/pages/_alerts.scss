@@ -25,9 +25,9 @@
 }
 
 .alerts-page {
-  // Override parent .page margins/border-radius so the page occupies the full
-  // viewport area below the nav bar with no gaps or rounded corners.
-  margin-top: 0;
+  // Override parent .page bottom margin and border-radius so the page occupies
+  // the full viewport area below the nav bar with no gaps or rounded corners.
+  // (Top margin needs no override — `.page` is flush by default.)
   margin-bottom: 0;
   border-radius: 0;
   overflow: visible !important;
@@ -73,15 +73,34 @@
     padding-bottom: var(--spacing-lg);
   }
 
+  // Mode row: wraps the Live/Historical toggle and, when the page header is
+  // hidden at >= 768px, the Mark All Read action anchored to the far right.
+  //
+  // The toggle keeps `flex: 1` so it behaves exactly as it did before this
+  // wrapper existed when no action is present; the action is `flex-shrink: 0`
+  // so a long mode label can never squeeze it out of view.
+  &__mode-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    // Vertical breathing room lives here rather than on __mode-toggle so that
+    // the row's content height equals the mode buttons' height exactly. That
+    // is what lets the Mark All Read action `align-self: stretch` to the same
+    // height as the mode buttons instead of to the buttons-plus-padding box.
+    padding: var(--spacing-xs) 0;
+  }
+
   // Mode toggle (Live/Historical)
   &__mode-toggle {
     display: flex;
     gap: var(--spacing-xs);
-    padding: var(--spacing-xs) 0;
     justify-content: center; // mobile-first
+    flex: 1;
+    min-width: 0;
 
     @include breakpoint(md) {
       justify-content: unset;
+      flex: unset;
     }
   }
 
@@ -358,14 +377,20 @@
 
   // Mark All Read button
   //
-  // Lives as a direct child of .page__header so it can be repositioned
-  // independently of .page__stats on mobile.
+  // The action has three possible homes, selected in JS by
+  // hooks/useAlertActionPlacement.ts and expressed here as --page-header /
+  // --controls-bar / --nav-slot modifiers. Exactly one is ever rendered.
   //
-  // Layout strategy (flex order within .page__header):
-  //   Desktop — title(0) › stats(2, margin-left:auto) › button(3)
-  //             Replicates the original "button at the end of the stats row" look.
-  //   Mobile  — title(0) › button(1) › stats(2, width:100% wraps to own row)
-  //             Puts the button on the title line, right-aligned via space-between.
+  // WHY placement is a JS decision with CSS modifiers, rather than three
+  // always-rendered copies hidden by media queries: the nav-slot position is
+  // in a different part of the DOM tree (a portal into the nav bar), so CSS
+  // cannot move the element there. Rendering three copies would also put three
+  // identically-named buttons in the accessibility tree, breaking
+  // getByRole("button", { name: /mark all read/i }) for both tests and screen
+  // readers.
+  //
+  // Shared appearance lives on the base class; each modifier adds only the
+  // positioning and density its container needs.
   &__mark-read-button {
     background: var(--color-green);
     color: var(--color-base);
@@ -374,24 +399,76 @@
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-fast);
+    white-space: nowrap;
+    // Never let a flex parent shrink the action below its label — being
+    // clipped is indistinguishable from being missing.
+    flex-shrink: 0;
 
-    // Mobile-first: appear between title (order 0) and stats (order 2) so
-    // it sits on the same row as the title.
-    //
-    // SCSS-TOUCH: previously exempted from the 44px rule as a "secondary
-    // header action". Per remediation policy that exemption is removed --
-    // 44px floor by default. Desktop keeps compact padding/font for header
-    // density and appears after .page__stats instead.
-    order: 1;
+    // SCSS-TOUCH: 44px floor by default. Individual placements relax this
+    // only where the container is itself a compact desktop-density row.
     min-height: 44px;
     padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--font-size-base);
+    // NOTE: this was `var(--font-size-base)`, which is not a token that
+    // exists -- _themes.scss defines --font-size-md, not --font-size-base --
+    // so the declaration silently resolved to nothing and the button
+    // inherited its size. Corrected to the real token while rewriting this
+    // rule.
+    font-size: var(--font-size-md);
 
-    @include breakpoint(md) {
-      order: 3;
+    // -- Placement: inside .page__header (viewport height > 800px) ----------
+    //
+    // Flex order within .page__header:
+    //   Mobile  — title(0) › button(1) › stats(2, width:100% wraps to own row)
+    //   Desktop — title(0) › stats(2, margin-left:auto) › button(3)
+    &--page-header {
+      order: 1;
+
+      @include breakpoint(md) {
+        order: 3;
+        min-height: unset;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-sm);
+      }
+    }
+
+    // -- Placement: mode row (header hidden, width >= 768px) ----------------
+    //
+    // margin-left:auto anchors it to the far right of the row, opposite the
+    // Live/Historical toggle.
+    //
+    // Height MUST match .alerts-page__mode-button exactly — the two sit side
+    // by side on one row, and a few pixels of difference reads as a
+    // misalignment rather than as deliberate hierarchy.
+    //
+    // This is done with align-self:stretch rather than by restating the mode
+    // button's padding/font/border metrics. Restating them would be a silent
+    // coupling: the next person to adjust the mode button's padding would
+    // have no indication that a second rule needs the same edit, and the row
+    // would quietly go crooked. Stretching makes the row's own height — which
+    // the mode button already defines, being the tallest item — the single
+    // source of truth.
+    &--controls-bar {
+      margin-left: auto;
+      align-self: stretch;
+      // The stretched height now governs; the 44px floor would only fight it
+      // if the mode button were ever shorter than 44px (it is not, but this
+      // keeps the two from disagreeing).
       min-height: unset;
+      padding: var(--spacing-xs) var(--spacing-md);
+      font-size: var(--font-size-sm);
+    }
+
+    // -- Placement: mobile nav bar (header hidden, width <= 767px) ----------
+    //
+    // Shares the nav bar with the msg/min widget on a phone-width line, so
+    // this is the one placement that must actively conserve horizontal space.
+    // The 44px touch floor is preserved on the vertical axis; horizontal
+    // padding is trimmed and the font stepped down to keep the nav on one
+    // line at 320px, where the widget is hidden anyway (it needs 375px).
+    &--nav-slot {
       padding: var(--spacing-xs) var(--spacing-sm);
       font-size: var(--font-size-sm);
+      line-height: 1;
     }
 
     &:hover {

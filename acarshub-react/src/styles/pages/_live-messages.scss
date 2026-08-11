@@ -38,9 +38,9 @@
   overflow: visible !important;
   display: flex;
   flex-direction: column;
-  // Remove .page margins and border-radius so the page occupies the full
-  // viewport area below the nav bar with no gaps or rounded edges.
-  margin-top: 0;
+  // Remove the .page bottom margin and border-radius so the page occupies the
+  // full viewport area below the nav bar with no gaps or rounded edges.
+  // (Top margin needs no override — `.page` is flush by default.)
   margin-bottom: 0;
   border-radius: 0;
   // Height is set via inline style by LiveMessagesPage using a ResizeObserver
