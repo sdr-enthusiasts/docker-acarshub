@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Skills layout: see .opencode/skills/{shared,languages,projects}/<name>/SKILL.md
+  // The default scan picks up .opencode/skills/**/SKILL.md, so listing the path
+  // explicitly here is belt-and-braces (and serves as documentation for humans).
+  "skills": {
+    "paths": [".opencode/skills"],
+  },
+  "instructions": ["AGENTS.md"],
+  // Built-in subagents. Overriding the model here keeps parallel fan-out cheap;
+  // the primary agent stays on whatever the global config selects.
+  "agent": {
+    "general": {
+      "description": "General-purpose sub-agent for focused implementation tasks. Uses Sonnet for cost-efficient parallel execution.",
+      "model": "opencode/claude-sonnet-5",
+    },
+    "explore": {
+      "description": "Fast read-only agent for codebase exploration and analysis.",
+      "model": "opencode/claude-sonnet-5",
+    },
+  },
+}
