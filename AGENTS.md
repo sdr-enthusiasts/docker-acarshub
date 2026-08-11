@@ -33,7 +33,7 @@ messages.
 - **agent-docs/FEATURES.md** -- feature documentation (decoders,
   search, alerts, map)
 - **agent-docs/TESTING.md** -- test strategy, patterns, infrastructure
-- **agent-docs/V4.2.md** -- v4.2 aircraft session architecture and
+- **agent-docs/V4.3.md** -- v4.3 aircraft session architecture and
   implementation plan
 - **agent-docs/DECODER_CONNECTIONS.md** -- authoritative reference for
   decoder ingress (TCP/UDP/ZMQ, listener wiring)

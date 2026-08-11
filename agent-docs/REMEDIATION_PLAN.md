@@ -1431,13 +1431,16 @@ dev server; Drizzle migrations; no Python/PDM/Flask/Alembic).
 
 **Effort:** Low.
 
-### DOC-V4.2 — `agent-docs/V4.2.md` self-aware about drift — **LOW**
+### DOC-V4.2 — `agent-docs/V4.2.md` self-aware about drift — **DONE**
 
 **Finding.** Lines 26-27 and 514 explicitly acknowledge the documentation
 drift. Phase 0 of that document already calls for an audit — never executed.
 
-**Remediation.** Once DOC-ARCH and DOC-FEAT are complete, mark V4.2 Phase 0 as
-done (or remove that phase entirely if V4.2 is itself a historical plan).
+**Remediation.** Done. The document was renamed to `agent-docs/V4.3.md`
+(the work that shipped as v4.2 was a different body of work), Phase 0 was
+removed as complete, and the document was audited against the 4.2.2 codebase.
+Inbound references in `AGENTS.md`, `agent-docs/ARCHITECTURE.md`,
+`agent-docs/DB_OPTIMIZATION.md`, and `acarshub-backend/README.md` were updated.
 
 **Effort:** Trivial (tracking only).
 
@@ -2591,7 +2594,7 @@ extracted hooks) are in place before new feature surface lands on them.
 
 | ID                   | Description                                                                                                                                                      |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DOC-V4.2             | Mark V4.2 Phase 0 done, or remove if V4.2 is itself historical; also rename `agent-docs/V4.2.md` → `agent-docs/V4.3.md` (and update any inbound references)      |
+| DOC-V4.2             | Done — renamed to `agent-docs/V4.3.md`, Phase 0 removed as complete, audited against 4.2.2, inbound references updated                                           |
 | CHANGELOG            | Update CHANGELOG with a summary entry for this remediation cycle (no per-fix detail); credit wiede for the IPv6 changes that the remediation branch rebased onto |
 | VERSION-BUMP         | Bump root `package.json` and all workspace `package.json` files (acarshub-react, acarshub-backend, etc.) to `4.2.0-beta.1`                                       |
 | Delete this document | Per AGENTS.md "no summary docs" rule, once everything above is closed                                                                                            |

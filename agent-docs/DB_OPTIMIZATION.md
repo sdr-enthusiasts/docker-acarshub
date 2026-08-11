@@ -81,12 +81,15 @@ exact-equality queries on both columns together do not exist in the codebase.
 
 An index on `aircraft_id`. This column is `NULL` for all rows inserted before
 migration 8 and remains `NULL` on all current rows because session linking
-(v4.2, Phase 7) has not been implemented yet. The index is entirely null-valued
+has not been implemented yet. The index is entirely null-valued
 and provides no query acceleration.
 
-**Note**: When v4.2 Phase 7 (ACARS Message Session Linking) is implemented,
-`aircraft_id` will be populated and queries against it will be needed. The index
-should be recreated at that point. Do not recreate it before Phase 7 ships.
+**Note (superseded)**: this section previously said the index should be
+recreated when session linking ships. That is no longer correct.
+`agent-docs/V4.3.md` resolves the question: sessions use an integer key, so
+v4.3 adds a new `messages.session_id INTEGER` column and indexes that instead.
+The `aircraft_id` column stays dead pending a later cleanup migration, and
+`ix_messages_aircraft_id` stays dropped permanently. Do not recreate it.
 
 ### Index to Keep
 
@@ -486,11 +489,12 @@ if (!hasAircraftId) {
 }
 ```
 
-**Note on `aircraft_id`**: The column itself is still needed — v4.2 Phase 7
-populates it. Only the index is being dropped here. The column is still added
-by the `ALTER TABLE` in migration 8 for existing databases that need it. What
-changes is that the index is no longer created in migration 8. Phase 7 will
-create the index when the column actually has data to index.
+**Note on `aircraft_id`** (revised): the column is **not** needed. v4.3 uses an
+integer session key and adds `messages.session_id INTEGER` rather than
+populating this text column, so `aircraft_id` is permanently dead and its index
+is never recreated. See `agent-docs/V4.3.md`. Only the index is dropped here;
+dropping the column itself is left to a later cleanup migration to avoid a
+table rebuild.
 
 For existing databases that already have `ix_messages_aircraft_id` (created by
 a prior run of migration 8), migration 13/14 drops it explicitly. For fresh
@@ -621,21 +625,19 @@ changes across backend, types package, and frontend.
 - Frontend: localStorage key `"acarshub.readMessageIds"` is written on mark-read
   (old key `"acarshub.readMessages"` is neither read nor written)
 
-## Relationship to v4.2
+## Relationship to v4.3
 
-Workstream 1 (dead indexes) has no interaction with v4.2 and can be shipped
-independently at any time.
+Both workstreams shipped ahead of v4.3: Workstream 1 as migrations 13 and 15,
+Workstream 2 as migration 14. There is no remaining coordination to do, and the
+previously-documented conflict over `ix_messages_aircraft_id` is resolved.
 
-Workstream 2 (UUID removal) has one intersection with v4.2: Phase 7 (ACARS Message
-Session Linking) sets `messages.aircraft_id` and expects to drop `ix_messages_aircraft_id`
-as part of Workstream 1. Whichever ships first should leave a note in the migration
-to avoid a double-drop. The simplest coordination is:
+v4.3 inherits two constraints from this document:
 
-- If Workstream 1 ships before v4.2 Phase 7: drop `ix_messages_aircraft_id` in
-  Workstream 1. Phase 7 creates a **new** index after populating the column.
-- If v4.2 Phase 7 ships before Workstream 1: Phase 7 recreates the index after
-  populating the column, and Workstream 1 must **not** drop it (remove it from the
-  Workstream 1 drop list).
+- **Integer keys only.** Workstream 2 removed UUIDs for measured size reasons, so
+  v4.3 sessions key on `aircraft.id` (integer) rather than the originally-planned
+  `session_id TEXT` UUID.
+- **No redundant indexes.** The dead-index audit is the reason v4.3 specifies two
+  indexes on `aircraft` instead of five, one composite on `decoded_messages`
+  instead of two, and none on `aircraft_positions` beyond its primary key.
 
-The agent implementing whichever workstream ships second is responsible for checking
-the current state of `PRAGMA index_list(messages)` before generating DDL.
+See `agent-docs/V4.3.md`.

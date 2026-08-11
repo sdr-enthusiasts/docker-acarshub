@@ -618,12 +618,12 @@ internet-exposed.
 
 ## Future Considerations
 
-### Aircraft Session Architecture (v4.2)
+### Aircraft Session Architecture (v4.3)
 
 A planned rework of the in-memory and on-disk message grouping model
 to use first-class aircraft "session" objects with explicit lifecycle,
-TTL, and persistence. The plan and current status are tracked in
-`agent-docs/V4.2.md`.
+TTL, and persistence, plus readsb-trace-sourced position history. The
+plan and current status are tracked in `agent-docs/V4.3.md`.
 
 ### Horizontal Scaling
 

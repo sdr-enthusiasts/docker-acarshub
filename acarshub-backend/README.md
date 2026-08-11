@@ -175,12 +175,18 @@ SQLite with Drizzle ORM. Schema in `src/db/schema.ts`, migrations in
 `src/db/migrations/`. Major tables:
 
 - `messages` — all ACARS messages
-- `messages_fts` — full-text search index
-- `alert_terms` — user-defined alert keywords
+- `messages_fts` — full-text search index (FTS5, external content)
+- `alert_stats` — per-term alert match counts
+- `ignore_alert_terms` — terms excluded from alert matching
 - `alert_matches` — messages matching alerts
-- `signal_*` — signal strength stats (per decoder)
+- `level_*` — signal strength stats (per decoder)
 - `freqs_*` — frequency usage stats (per decoder)
-- `aircraft_sessions` — v4.2 aircraft session aggregation (see `agent-docs/V4.2.md`)
+- `count` / `nonlogged_count` — message counters
+- `timeseries_stats` — per-minute message rate history
+- `rrd_import_registry` — one-time RRD import bookkeeping
+
+Aircraft session and position-history tables are planned but not yet
+implemented — see `agent-docs/V4.3.md`.
 
 ## Logging
 
