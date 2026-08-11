@@ -24,9 +24,24 @@
  */
 
 .page {
-  // Mobile-first.
-  margin-top: $spacing-sm;
-  margin-bottom: $spacing-sm;
+  // Pages sit flush against the nav bar. There is NO top margin by default.
+  //
+  // WHY the default is 0: this used to be $spacing-sm / $spacing-lg, and every
+  // app-like page then had to override it back to 0 — Live Messages and Alerts
+  // with an explicit `margin-top: 0`, Stats via `margin: 0 auto auto auto`,
+  // Live Map via `margin: 0 !important`. Search was the one page that never
+  // got the override, so it alone rendered a 24px gap above its header, making
+  // its header area look ~45% taller than every other page's. That is a
+  // default which the majority of consumers actively fight; the default was
+  // wrong, not Search.
+  //
+  // A page that genuinely wants to float below the nav (About, which is a
+  // document rather than a tool surface) opts in explicitly — see
+  // `.about-page` in pages/_about.scss.
+  //
+  // Bottom margin is unchanged: trailing space at the end of a scrolled page
+  // is wanted everywhere and was never the anomaly.
+  margin-bottom: $spacing-sm; // mobile-first
   border-radius: $radius-md;
   background-color: var(--color-card-body);
   overflow: clip;
@@ -35,7 +50,6 @@
   @include fade-in($transition-base);
 
   @include breakpoint(md) {
-    margin-top: $spacing-lg;
     margin-bottom: $spacing-lg;
     border-radius: $radius-xl;
   }

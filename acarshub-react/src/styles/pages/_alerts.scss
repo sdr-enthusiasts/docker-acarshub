@@ -25,9 +25,9 @@
 }
 
 .alerts-page {
-  // Override parent .page margins/border-radius so the page occupies the full
-  // viewport area below the nav bar with no gaps or rounded corners.
-  margin-top: 0;
+  // Override parent .page bottom margin and border-radius so the page occupies
+  // the full viewport area below the nav bar with no gaps or rounded corners.
+  // (Top margin needs no override — `.page` is flush by default.)
   margin-bottom: 0;
   border-radius: 0;
   overflow: visible !important;

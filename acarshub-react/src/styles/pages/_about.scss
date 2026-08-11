@@ -18,6 +18,19 @@
 @use "../mixins" as *;
 
 .about-page {
+  // Opt in to a gap between the nav bar and the page.
+  //
+  // `.page` defaults to flush-against-the-nav because the tool surfaces
+  // (Live Messages, Alerts, Search, Stats, Map) all want every available
+  // vertical pixel for content. About is a document, not a tool: it is read
+  // rather than monitored, and the detachment reinforces that. This is the
+  // deliberate exception, declared here rather than assumed globally.
+  margin-top: $spacing-sm; // mobile-first
+
+  @include media-md {
+    margin-top: $spacing-lg;
+  }
+
   // Mobile-first: single column layout
   .page__content {
     display: flex;
