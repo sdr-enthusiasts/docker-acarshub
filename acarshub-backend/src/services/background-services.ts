@@ -349,7 +349,7 @@ export class BackgroundServices extends EventEmitter {
         formattedMessage.message_type = dbMessageType;
 
         // Enrich message with additional fields (ICAO hex, airline, ground stations, etc.)
-        const enrichedMessage = enrichMessage(formattedMessage);
+        const enrichedMessage = enrichMessage(formattedMessage, "ingest");
 
         logger.trace("Message enriched and saved", {
           type: queuedMessage.type,

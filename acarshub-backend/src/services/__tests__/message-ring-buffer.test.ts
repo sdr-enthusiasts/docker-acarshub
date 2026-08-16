@@ -554,6 +554,14 @@ describe("warmMessageBuffers", () => {
     expect(uids).toContain("m1");
     expect(uids).toContain("m2");
     expect(uids).toContain("m3");
+
+    // Contract pin (v4.3 Phase 3 FIX 2): rows read back from the DB for
+    // ring-buffer warm-up must declare source "database" — never "ingest" —
+    // so enrichMessage() does not write to the decoder search index for a
+    // read path. See enrichment.ts's MessageSource doc comment.
+    for (const call of mockEnrichMessage.mock.calls) {
+      expect(call[1]).toBe("database");
+    }
   });
 
   it("skips alert-matched messages when warming the non-alert buffer", async () => {
@@ -595,6 +603,11 @@ describe("warmMessageBuffers", () => {
     expect(alerts).toHaveLength(1);
     expect(alerts[0].uid).toBe("a1");
     expect(alerts[0].matched).toBe(true); // restored by warmMessageBuffers
+
+    // Contract pin (v4.3 Phase 3 FIX 2): same as the non-alert warm-up path.
+    for (const call of mockEnrichMessage.mock.calls) {
+      expect(call[1]).toBe("database");
+    }
   });
 
   it("restores matched_text when matchType is 'text'", async () => {

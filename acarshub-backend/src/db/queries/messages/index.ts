@@ -28,8 +28,20 @@
  *                   maintenance; messageTransform.ts already covers the
  *                   plan's "transform.ts" boundary as a pre-existing sibling
  *                   file, so this maintenance trio gets its own module)
+ *   - decoded-search.ts — v4.3 Phase 3: searchMessagesByVariantDescription/
+ *                   searchMessagesByFieldLabel over the decoder search index
+ *                   (decoded_messages/decoder_variant/decoded_field). Kept
+ *                   separate from search.ts rather than folded into
+ *                   SearchParams: it queries a different table family and
+ *                   has no FTS5/LIKE strategy split to share.
  */
 
+export {
+  type DecodedSearchOptions,
+  type DecodedSearchResult,
+  searchMessagesByFieldLabel,
+  searchMessagesByVariantDescription,
+} from "./decoded-search.js";
 export { deleteOldMessages } from "./delete.js";
 export { type AlertMetadata, addMessage, resetUnsavedMessageCounter } from "./insert.js";
 export {

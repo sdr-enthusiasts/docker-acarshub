@@ -85,7 +85,7 @@ export function handleQuerySearch(
     };
 
     const results = databaseSearch(searchQuery);
-    const enrichedMessages = enrichMessages(results.messages);
+    const enrichedMessages = enrichMessages(results.messages, "database");
 
     const elapsed = performance.now() - startTime;
 

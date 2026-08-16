@@ -345,7 +345,7 @@ export async function warmMessageBuffers(): Promise<void> {
     let messageCount = 0;
     for (const raw of oldestFirstMessages) {
       try {
-        const enriched = enrichMessage(raw as Record<string, unknown>);
+        const enriched = enrichMessage(raw as Record<string, unknown>, "database");
         // Only add to the message buffer if it is NOT an alert match.
         // Alert rows are handled in the separate alert warm-up block below.
         if (!enriched.matched) {
@@ -374,6 +374,7 @@ export async function warmMessageBuffers(): Promise<void> {
       try {
         const enriched = enrichMessage(
           row.message as unknown as Record<string, unknown>,
+          "database",
         );
         // Restore alert metadata that enrichMessage does not know about.
         enriched.matched = true;

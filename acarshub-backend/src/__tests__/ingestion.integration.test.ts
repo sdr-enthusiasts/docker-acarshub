@@ -150,7 +150,7 @@ function ingestMessage(
   formattedMessage.matched_flight = alertMetadata.matched_flight;
   formattedMessage.message_type = dbMessageType;
 
-  const enrichedMessage = enrichMessage(formattedMessage);
+  const enrichedMessage = enrichMessage(formattedMessage, "ingest");
 
   // Update ring buffer BEFORE emitting — a client that connects in
   // this exact instant otherwise sees an emit it then double-counts
