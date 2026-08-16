@@ -155,6 +155,16 @@ export interface SocketEvents {
   // expressed as msgs/min so the UI can show a near-real-time throughput rate.
   message_rate: (data: MessageRateData) => void;
 
+  // v4.3 Phase 6 (ACARS Message Session Linking): emitted after an inbound
+  // message has been linked (or newly assigned) to a session in the
+  // `aircraft` registry. `sessionId` is `aircraft.id`; `messages` carries the
+  // single enriched message that triggered the link. There is no
+  // corresponding client -> server event — this is server -> client only.
+  session_messages_updated: (data: {
+    sessionId: number;
+    messages: AcarsMsg[];
+  }) => void;
+
   // Alert regeneration responses
   regenerate_alert_matches_started: (data: { message: string }) => void;
   regenerate_alert_matches_complete: (data: {

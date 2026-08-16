@@ -18,6 +18,7 @@
 // 14. 803398f85958 - remove_uuid
 // 15. 8c9d47f5ed13 - drop_unnecessary_indexes2
 // 16. 4d2a7c918f3b - v43_session_and_decode_tables
+// 17. 5e6f7a8b9c0d - messages_session_id_index
 //
 // This barrel assembles the ordered MIGRATIONS array from the individual
 // per-migration modules (one file per revision) and derives LATEST_REVISION
@@ -41,6 +42,7 @@ import { migration13_dropUnnecessaryIndexes } from "./migration13.js";
 import { migration14_removeUuid } from "./migration14.js";
 import { migration15_dropUnnecessaryIndexes2 } from "./migration15.js";
 import { migration16_v43Tables } from "./migration16.js";
+import { migration17_messagesSessionIdIndex } from "./migration17.js";
 import type { MigrationStep } from "./types.js";
 
 export {
@@ -141,6 +143,11 @@ export const MIGRATIONS: MigrationStep[] = [
     revision: "4d2a7c918f3b",
     name: "v43_session_and_decode_tables",
     upgrade: migration16_v43Tables,
+  },
+  {
+    revision: "5e6f7a8b9c0d",
+    name: "messages_session_id_index",
+    upgrade: migration17_messagesSessionIdIndex,
   },
 ];
 
