@@ -109,6 +109,10 @@ const EXPECTED_INDEXES: readonly string[] = [
   // and so they can be widened later without rebuilding the table.
   "ix_decoder_variant_key",
   "ix_decoded_field_label",
+  // Migration 17 (Phase 6): supports the NO ACTION FK's child-table scan on
+  // every `DELETE FROM aircraft` — see migration17.ts and agent-docs/V4.3.md
+  // "Session Identifier Type".
+  "ix_messages_session_id",
 ];
 
 // ---------------------------------------------------------------------------

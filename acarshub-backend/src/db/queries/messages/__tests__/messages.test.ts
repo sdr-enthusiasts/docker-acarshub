@@ -92,7 +92,7 @@ describe("Message Query Functions", () => {
         libacars TEXT,
         level REAL,
         aircraft_id TEXT,
-        session_id INTEGER
+        session_id INTEGER REFERENCES aircraft(id)
       );
 
       CREATE VIRTUAL TABLE messages_fts USING fts5(
@@ -136,6 +136,24 @@ describe("Message Query Functions", () => {
         term TEXT NOT NULL,
         match_type TEXT NOT NULL,
         matched_at INTEGER NOT NULL
+      );
+
+      -- v4.3 Phase 6: minimal aircraft (flight session registry) shape,
+      -- matching migration16.ts, needed by the pruneDatabase() session-prune
+      -- tests below. This fixture predates the real migration chain (see
+      -- file header), so the table is hand-declared here rather than pulled
+      -- in via runMigrations().
+      CREATE TABLE IF NOT EXISTS aircraft (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        icao_hex       TEXT,
+        callsign       TEXT,
+        tail           TEXT,
+        first_seen     INTEGER NOT NULL,
+        last_seen      INTEGER NOT NULL,
+        is_active      INTEGER NOT NULL DEFAULT 1,
+        session_type   TEXT NOT NULL DEFAULT 'adsb',
+        pairing_method TEXT,
+        trace_state    TEXT NOT NULL DEFAULT 'none'
       );
 
       CREATE TABLE IF NOT EXISTS count (
@@ -1039,6 +1057,142 @@ describe("Message Query Functions", () => {
         .prepare("SELECT id FROM messages WHERE id = ?")
         .get(uid);
       expect(messageGone).toBeUndefined();
+    });
+
+    // -------------------------------------------------------------------
+    // v4.3 Phase 6: session pruning (decision D4)
+    //
+    // pruneDatabase() deletes orphaned `aircraft` (flight session) rows
+    // LAST, after both the messages delete and the alert_matches delete
+    // above, restricted to is_active = 0. See prune.ts for the full
+    // rationale (NO ACTION FK, why CASCADE/SET NULL are wrong, the
+    // active-session race the is_active=0 restriction closes).
+    // -------------------------------------------------------------------
+
+    const insertAircraftSession = (
+      id: number,
+      isActive: 0 | 1,
+      lastSeen = Math.floor(Date.now() / 1000),
+    ): number => {
+      db.prepare(`
+        INSERT INTO aircraft (id, icao_hex, first_seen, last_seen, is_active)
+        VALUES (?, 'ABC123', ?, ?, ?)
+      `).run(id, lastSeen, lastSeen, isActive);
+      return id;
+    };
+
+    describe("session pruning", () => {
+      it("prunes an inactive session with no surviving messages", () => {
+        const sessionId = insertAircraftSession(9001, 0);
+
+        const { prunedSessions } = pruneDatabase(7, 30);
+
+        expect(prunedSessions).toBeGreaterThanOrEqual(1);
+        const gone = db
+          .prepare("SELECT id FROM aircraft WHERE id = ?")
+          .get(sessionId);
+        expect(gone).toBeUndefined();
+      });
+
+      it("does NOT prune an inactive session that still has a surviving message — enforced by the FK, not just the NOT EXISTS guard", () => {
+        // Enabling foreign_keys explicitly (and asserting it took effect) is
+        // the point of this test: if prune.ts's NOT EXISTS guard were ever
+        // removed, deleting this session while `recentMsg` still references
+        // it must fail loudly on the FOREIGN KEY constraint rather than
+        // quietly succeeding and leaving a dangling session_id.
+        db.pragma("foreign_keys = ON");
+        expect(db.pragma("foreign_keys", { simple: true })).toBe(1);
+
+        const sessionId = insertAircraftSession(9002, 0);
+        const now = Math.floor(Date.now() / 1000);
+        const recentMsg = 90020001;
+        insertMessage(recentMsg, now - 1 * 86400); // within the 7-day window
+        db.prepare("UPDATE messages SET session_id = ? WHERE id = ?").run(
+          sessionId,
+          recentMsg,
+        );
+
+        pruneDatabase(7, 30);
+
+        const stillThere = db
+          .prepare("SELECT id FROM aircraft WHERE id = ?")
+          .get(sessionId);
+        expect(stillThere).toBeDefined();
+      });
+
+      it("does NOT prune an active (is_active = 1) session even with no messages — D4's race guard", () => {
+        const sessionId = insertAircraftSession(9003, 1);
+
+        pruneDatabase(7, 30);
+
+        const stillThere = db
+          .prepare("SELECT id FROM aircraft WHERE id = ?")
+          .get(sessionId);
+        expect(stillThere).toBeDefined();
+      });
+
+      it("deletes messages before it deletes sessions — ordering, not just end state", () => {
+        // Asserting only the end state (session gone) would pass equally
+        // whether prune.ts deletes messages-then-sessions or
+        // sessions-then-messages, since by the time both deletes have run
+        // the visible result is identical. The failure mode that actually
+        // matters is the reversed order: if a session delete were attempted
+        // before its own now-prunable message had been removed, the
+        // NOT EXISTS guard (or, with foreign_keys on, the FK itself) would
+        // block the session delete on THIS pass — it would only disappear
+        // on a later pass once the message was gone. Spying on the
+        // underlying connection's exec/prepare calls and recording the
+        // first statement to touch each table proves messages is cleared
+        // first within a single pruneDatabase() call.
+        const sessionId = insertAircraftSession(9004, 0);
+        const now = Math.floor(Date.now() / 1000);
+        const oldMsg = 90040001;
+        insertMessage(oldMsg, now - 10 * 86400); // outside the 7-day window
+        db.prepare("UPDATE messages SET session_id = ? WHERE id = ?").run(
+          sessionId,
+          oldMsg,
+        );
+
+        const touchOrder: string[] = [];
+        const originalPrepare = db.prepare.bind(db);
+        const prepareSpy = vi
+          .spyOn(db, "prepare")
+          .mockImplementation((sqlText: string) => {
+            // Drizzle's sqlite dialect quotes identifiers
+            // (`delete from "messages" ...`), so match loosely rather than
+            // hand-duplicating its exact quoting/casing.
+            const normalized = sqlText.toLowerCase();
+            if (/delete\s+from\s+"?messages"?/.test(normalized)) {
+              touchOrder.push("messages");
+            } else if (/delete\s+from\s+"?aircraft"?/.test(normalized)) {
+              touchOrder.push("aircraft");
+            }
+            return originalPrepare(sqlText);
+          });
+
+        try {
+          pruneDatabase(7, 30);
+        } finally {
+          prepareSpy.mockRestore();
+        }
+
+        expect(touchOrder).toContain("messages");
+        expect(touchOrder).toContain("aircraft");
+        expect(touchOrder.indexOf("messages")).toBeLessThan(
+          touchOrder.indexOf("aircraft"),
+        );
+
+        // And the end state: the message is gone, and the now-orphaned
+        // session was pruned in the same pass.
+        const messageGone = db
+          .prepare("SELECT id FROM messages WHERE id = ?")
+          .get(oldMsg);
+        expect(messageGone).toBeUndefined();
+        const sessionGone = db
+          .prepare("SELECT id FROM aircraft WHERE id = ?")
+          .get(sessionId);
+        expect(sessionGone).toBeUndefined();
+      });
     });
   });
 

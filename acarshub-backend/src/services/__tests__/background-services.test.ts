@@ -190,24 +190,53 @@ vi.mock("../../db/index.js", () => ({
     .fn()
     .mockReturnValue({ framesCheckpointed: 0, framesRemaining: 0 }),
   checkpointBackup: vi.fn().mockReturnValue(null),
+  getSqliteConnection: vi.fn(),
   optimizeDbFts: vi.fn().mockResolvedValue(undefined),
   optimizeDbMerge: vi.fn().mockResolvedValue(undefined),
   optimizeDbRegular: vi.fn().mockResolvedValue(undefined),
   pruneDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
+// v4.3 Phase 6: session-service.ts is mocked so the scheduler's
+// expire_sessions task (and, if a test ever produces a real formatted
+// message, the ingest session-linking block) never touch a real SQLite
+// connection.
+vi.mock("../session-service.js", () => ({
+  expireStaleSessions: vi.fn().mockReturnValue(0),
+  findOrCreateSession: vi.fn().mockReturnValue(1),
+}));
+
 // Scheduler mock — captures callbacks registered via .do() so tests can invoke them.
 const schedulerCallbacks = new Map<string, (...args: unknown[]) => unknown>();
 
+// Cadence each registered task was scheduled with (every()'s own arguments),
+// keyed by the task name passed to .do()/.at().do(). Recorded alongside
+// schedulerCallbacks above, not in place of it — existing tests key off
+// schedulerCallbacks alone and must keep seeing exactly the same fn value
+// there. This just adds visibility into what every() itself was called
+// with, which schedulerCallbacks never captured (see the G4 cadence test
+// below).
+interface SchedulerCadence {
+  interval: number;
+  unit: string;
+}
+const schedulerCadence = new Map<string, SchedulerCadence>();
+
 vi.mock("../scheduler.js", () => ({
   getScheduler: () => ({
-    every: () => ({
+    every: (interval: number, unit: string) => ({
       do: (fn: (...args: unknown[]) => unknown, name?: string) => {
-        if (name) schedulerCallbacks.set(name, fn);
+        if (name) {
+          schedulerCallbacks.set(name, fn);
+          schedulerCadence.set(name, { interval, unit });
+        }
       },
       at: () => ({
         do: (fn: (...args: unknown[]) => unknown, name?: string) => {
-          if (name) schedulerCallbacks.set(name, fn);
+          if (name) {
+            schedulerCallbacks.set(name, fn);
+            schedulerCadence.set(name, { interval, unit });
+          }
         },
       }),
     }),
@@ -266,10 +295,12 @@ vi.mock("../../formatters/enrichment.js", () => ({
 import { pruneDatabase } from "../../db/index.js";
 import { reheatMessageBuffers } from "../message-ring-buffer.js";
 import { destroySearchIndexRebuilder } from "../search-index-rebuild.js";
+import { expireStaleSessions } from "../session-service.js";
 
 const mockPruneDatabase = vi.mocked(pruneDatabase);
 const mockReheatMessageBuffers = vi.mocked(reheatMessageBuffers);
 const mockDestroySearchIndexRebuilder = vi.mocked(destroySearchIndexRebuilder);
+const mockExpireStaleSessions = vi.mocked(expireStaleSessions);
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -291,6 +322,7 @@ describe("BackgroundServices — fan-in architecture", () => {
     // Reset created-listener tracking and connection configs before each test.
     createdListeners.length = 0;
     schedulerCallbacks.clear();
+    schedulerCadence.clear();
     mockAcarsConnections = { descriptors: [] };
     mockVdlmConnections = { descriptors: [] };
     mockHfdlConnections = { descriptors: [] };
@@ -558,6 +590,7 @@ describe("BackgroundServices — fan-in architecture", () => {
       mockPruneDatabase.mockReturnValue({
         prunedMessages: 5,
         prunedAlerts: 3,
+        prunedSessions: 0,
       });
 
       await pruneCallback?.();
@@ -581,6 +614,7 @@ describe("BackgroundServices — fan-in architecture", () => {
       mockPruneDatabase.mockReturnValue({
         prunedMessages: 10,
         prunedAlerts: 0,
+        prunedSessions: 0,
       });
 
       await pruneCallback?.();
@@ -627,6 +661,57 @@ describe("BackgroundServices — fan-in architecture", () => {
       const svc = new BackgroundServices({ socketio: { emit: vi.fn() } });
 
       await expect(svc.initialize()).resolves.toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Scheduler: expire_sessions (v4.3 Phase 6)
+  // -------------------------------------------------------------------------
+
+  describe("expire_sessions scheduler callback", () => {
+    it("is registered with scheduler.every(5, \"minutes\") and calls expireStaleSessions()", async () => {
+      mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
+
+      const { BackgroundServices } = await import("../index.js");
+      const svc = new BackgroundServices({ socketio: { emit: vi.fn() } });
+      await svc.initialize();
+      svc.start();
+
+      // G4: assert the actual cadence every() was called with, not just
+      // that a callback named "expire_sessions" exists — the previous
+      // version of this test discarded every()'s arguments entirely, so
+      // changing 5 minutes to any other interval/unit would still pass.
+      expect(schedulerCadence.get("expire_sessions")).toEqual({
+        interval: 5,
+        unit: "minutes",
+      });
+
+      const expireCallback = schedulerCallbacks.get("expire_sessions");
+      expect(expireCallback).toBeDefined();
+
+      mockExpireStaleSessions.mockReturnValue(3);
+
+      await expireCallback?.();
+
+      expect(mockExpireStaleSessions).toHaveBeenCalledTimes(1);
+    });
+
+    it("logs and does not throw when expireStaleSessions() fails", async () => {
+      mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
+
+      const { BackgroundServices } = await import("../index.js");
+      const svc = new BackgroundServices({ socketio: { emit: vi.fn() } });
+      await svc.initialize();
+      svc.start();
+
+      const expireCallback = schedulerCallbacks.get("expire_sessions");
+      expect(expireCallback).toBeDefined();
+
+      mockExpireStaleSessions.mockImplementation(() => {
+        throw new Error("boom");
+      });
+
+      await expect(expireCallback?.()).resolves.not.toThrow();
     });
   });
 });

@@ -24,6 +24,7 @@
 // ----------------------------------------------------------------------------
 
 import { EventEmitter } from "node:events";
+import type { AcarsMsg } from "@acarshub/types";
 import {
   ACARS_CONNECTIONS,
   getConfig,
@@ -33,8 +34,10 @@ import {
   VDLM_CONNECTIONS,
 } from "../config.js";
 import {
+  type AlertMetadata,
   addMessageFromJson,
   checkpoint,
+  getSqliteConnection,
   optimizeDbFts,
   optimizeDbMerge,
   optimizeDbRegular,
@@ -65,6 +68,12 @@ import {
   destroySearchIndexRebuilder,
   getSearchIndexRebuilder,
 } from "./search-index-rebuild.js";
+import {
+  type ContactIdentifiers,
+  expireStaleSessions,
+  findOrCreateSession,
+  type SessionType,
+} from "./session-service.js";
 import { checkAndAddStationId, getStationIds } from "./station-ids.js";
 import { startStatsPruning, stopStatsPruning } from "./stats-pruning.js";
 import { buildMessageRate, buildSystemStatus } from "./system-status.js";
@@ -93,6 +102,115 @@ function normalizeMessageType(type: MessageType): string {
 }
 
 const logger = createLogger("services:background-services");
+
+/**
+ * The exact decoder-type strings `normalizeMessageType()` above produces —
+ * pinned as its own union (rather than reusing `normalizeMessageType`'s
+ * `string` return type) so `DECODER_TYPE_TO_SESSION_TYPE` below is checked
+ * exhaustively by the compiler: omitting a key is a compile error, not a
+ * silent runtime fallback.
+ */
+type DecoderMessageType = "ACARS" | "VDL-M2" | "HFDL" | "IMS-L" | "IRDM";
+
+/**
+ * v4.3 Phase 6, decision D2 — maps the decoder type that produced a message
+ * to the `session_type` it contributes to the session service
+ * (session-service.ts). An exhaustive `Record`, not an if/else chain, so
+ * adding a sixth decoder type without extending this map fails to compile.
+ *
+ * `IMS-L` and `IRDM` both map to `adsc` (12-hour timeout), not `acars_only`
+ * (90 minutes), even though neither carries ADS-C position reports itself:
+ * both are satellite ACARS relays, and `acars_only`'s conservative-but-short
+ * window would split a single oceanic flight's sessions across exactly the
+ * multi-hour silence gaps the `adsc` window exists to tolerate. See
+ * agent-docs/V4.3.md "Session Types and Timeout Thresholds".
+ */
+const DECODER_TYPE_TO_SESSION_TYPE: Readonly<
+  Record<DecoderMessageType, SessionType>
+> = {
+  ACARS: "acars_only",
+  "VDL-M2": "vdlm2",
+  HFDL: "hfdl",
+  "IMS-L": "adsc",
+  IRDM: "adsc",
+};
+
+/**
+ * Resolve the `session_type` a just-ingested message contributes, from the
+ * already-normalized `dbMessageType` string. `dbMessageType` is typed
+ * `string` (normalizeMessageType()'s declared return type), so this cannot
+ * be a compile-time-exhaustive switch over `DecoderMessageType` at the call
+ * site — the explicit `acars_only` fallback below is the runtime half of
+ * D2's "exhaustive mapping plus an explicit default" requirement.
+ */
+function sessionTypeForDecoderType(dbMessageType: string): SessionType {
+  const mapped = (
+    DECODER_TYPE_TO_SESSION_TYPE as Readonly<Record<string, SessionType>>
+  )[dbMessageType];
+  if (mapped) {
+    return mapped;
+  }
+  logger.warn(
+    "Unrecognized decoder message type for session-type mapping; defaulting to acars_only",
+    { dbMessageType },
+  );
+  return "acars_only";
+}
+
+/**
+ * Normalize an identifier field pulled off the enriched message for session
+ * matching: empty/whitespace-only becomes absent rather than an empty
+ * string, so `ContactIdentifiers` probes are skipped rather than issued
+ * with `""` (see session-service.ts's `findOrCreateSession()`).
+ */
+function normalizeIdentifier(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Same normalization as `normalizeIdentifier()`, plus uppercasing — hex
+ * addresses are stored and matched uppercase throughout this schema (see
+ * migration16.ts / `aircraft.icao_hex`).
+ */
+function normalizeIcaoHex(value: string | undefined): string | undefined {
+  const normalized = normalizeIdentifier(value);
+  return normalized?.toUpperCase();
+}
+
+/**
+ * Same normalization as `normalizeIdentifier()`, plus stripping `.`
+ * characters — for SESSION MATCHING ONLY, not for what gets stored in
+ * `messages.tail`.
+ *
+ * WHY THIS EXISTS: real decoders conventionally prefix registrations with a
+ * dot (".N12345"), but formatters/index.ts is inconsistent about stripping
+ * it before the formatter sets `formatted.tail`: the raw-ACARS, IRDM and
+ * JAERO-IMSL formatters pass the dot through untouched, while the
+ * SatDump-IMSL, HFDL and VDLM2 formatters strip it. That inconsistency was
+ * harmless while `tail` was purely a display field. It becomes load-bearing
+ * here because `findOrCreateSession()`'s tail probe (session-service.ts) is
+ * an exact SQL equality match — without normalizing here, the same aircraft
+ * heard as ".N77WA" on acarsdec and "N77WA" on dumpvdl2 would mint TWO
+ * sessions instead of one, precisely in the tail-only case (no icao_hex)
+ * the session model exists to serve. Fix the inconsistency in the
+ * formatters, not here, if that ever becomes practical — this is a
+ * targeted workaround at the one call site where the inconsistency
+ * actually matters.
+ */
+function normalizeTailForSessionMatching(
+  value: string | undefined,
+): string | undefined {
+  const normalized = normalizeIdentifier(value);
+  if (!normalized) {
+    return undefined;
+  }
+  const stripped = normalized.replace(/\./g, "");
+  return stripped.length > 0 ? stripped : undefined;
+}
 
 export interface ServicesConfig {
   socketio: {
@@ -303,6 +421,30 @@ export class BackgroundServices extends EventEmitter {
     const messageQueue = getMessageQueue(15);
 
     messageQueue.on("message", async (queuedMessage: QueuedMessage) => {
+      // Hoisted so the session-linking block appended below the try/catch
+      // can reuse the values this block already computed, instead of
+      // re-formatting/re-enriching (and, worse, re-inserting) the same
+      // message a second time. `enrichedMessage`/`alertMetadata` stay
+      // `undefined` if the try block returns early (null formatter result)
+      // or throws, and the session-linking block below checks for that
+      // (type-narrowing only — see `pipelineSucceeded` below for the
+      // actual semantic gate).
+      let dbMessageType: string | undefined;
+      let alertMetadata: AlertMetadata | undefined;
+      let enrichedMessage: AcarsMsg | undefined;
+      // The semantic gate for the session-linking block below. All three
+      // values above are assigned by the time `enrichMessage()` returns —
+      // well BEFORE pushMessage/pushAlert, the acars_msg emit, and the
+      // station-id check, all of which can still throw. Gating on the
+      // truthiness of the three values alone would let a throw in any of
+      // those later steps fall through into session-linking with a
+      // fully-populated (but only partially delivered) message: a session
+      // gets created/touched and `session_messages_updated` gets broadcast
+      // for a message the client never actually received via `acars_msg`.
+      // Set to `true` as the LAST statement in the `try` block below, only
+      // once every throwing step has completed successfully.
+      let pipelineSucceeded = false;
+
       try {
         // Format message using appropriate formatter.
         // The formatted message is a normalized flat dict matching Python's
@@ -325,7 +467,7 @@ export class BackgroundServices extends EventEmitter {
         // is present when createDbSafeParams iterates the object it falls into
         // the unrecognized-key debug-log branch (noise). The type is passed as
         // the explicit first argument to addMessageFromJson instead.
-        const dbMessageType = normalizeMessageType(queuedMessage.type);
+        dbMessageType = normalizeMessageType(queuedMessage.type);
 
         logger.trace("Message formatted", {
           type: queuedMessage.type,
@@ -348,7 +490,7 @@ export class BackgroundServices extends EventEmitter {
         //   level      → level (stored as text, e.g. "-18.2")
         //   error      → error (stored as text, e.g. "0")
         //   …all other fields default to ""
-        const alertMetadata = addMessageFromJson(
+        alertMetadata = addMessageFromJson(
           dbMessageType,
           formattedMessage as RawMessage,
         );
@@ -369,7 +511,7 @@ export class BackgroundServices extends EventEmitter {
         formattedMessage.message_type = dbMessageType;
 
         // Enrich message with additional fields (ICAO hex, airline, ground stations, etc.)
-        const enrichedMessage = enrichMessage(formattedMessage, "ingest");
+        enrichedMessage = enrichMessage(formattedMessage, "ingest");
 
         logger.trace("Message enriched and saved", {
           type: queuedMessage.type,
@@ -400,8 +542,143 @@ export class BackgroundServices extends EventEmitter {
             station_ids: getStationIds(),
           });
         }
+
+        // Every throwing step above (DB insert, ring buffer push, acars_msg
+        // emit, station-id check) has now completed without throwing — this
+        // MUST stay the last statement in the try block. See the
+        // `pipelineSucceeded` declaration above for why this exists.
+        pipelineSucceeded = true;
       } catch (error) {
         logger.error("Failed to process message", {
+          type: queuedMessage.type,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      // ------------------------------------------------------------------
+      // v4.3 Phase 6: ACARS Message Session Linking
+      // ------------------------------------------------------------------
+      //
+      // Appended AFTER the acars_msg emit and station-id check above (their
+      // try/catch has already closed), not folded into it, so a
+      // session-linking failure can NEVER suppress the acars_msg emit or
+      // fail message ingestion — the frontend has already received the
+      // message by the time this code runs. This block gets its own
+      // try/catch for exactly that reason.
+      //
+      // `pipelineSucceeded` is the real gate: it is only `true` once the
+      // ENTIRE try block above — including the acars_msg emit and the
+      // station-id check — has completed without throwing, which is the
+      // actual guarantee this comment used to (incorrectly) attribute to
+      // the three truthiness checks below. Those three checks are kept
+      // only to narrow `dbMessageType`/`alertMetadata`/`enrichedMessage`
+      // from `T | undefined` to `T` for the compiler; `pipelineSucceeded`
+      // being `true` already implies all three are set.
+      if (
+        !pipelineSucceeded ||
+        !dbMessageType ||
+        !alertMetadata ||
+        !enrichedMessage
+      ) {
+        // Either the block above returned early (null formatter result) or
+        // threw before completing — already logged there. Nothing to link.
+        return;
+      }
+
+      try {
+        // D3: a message carrying none of icao_hex/flight/tail cannot be
+        // matched to a session by any probe session-service.ts runs, and
+        // Phase 9's retroactive pairing can never link it after the fact
+        // either — 9.8% of messages in the production reference corpus
+        // (330,655 / 3,362,232) carry none of the three. Minting a
+        // singleton session for each would inflate the aircraft table by
+        // ~10% with rows carrying zero identifying information. Leaving
+        // `messages.session_id` NULL is the honest representation, so this
+        // is logged at trace (normal, expected path), not warn.
+        const identifiers: ContactIdentifiers = {
+          icaoHex: normalizeIcaoHex(enrichedMessage.icao_hex),
+          callsign: normalizeIdentifier(enrichedMessage.flight),
+          // Dot-stripped for session matching only — see
+          // normalizeTailForSessionMatching()'s doc comment for why
+          // icao_hex/flight don't get the same treatment.
+          tail: normalizeTailForSessionMatching(enrichedMessage.tail),
+        };
+
+        if (
+          !identifiers.icaoHex &&
+          !identifiers.callsign &&
+          !identifiers.tail
+        ) {
+          logger.trace(
+            "Message carries no session-linkable identifier; skipping session matching (D3)",
+            { type: queuedMessage.type, uid: alertMetadata.uid },
+          );
+          return;
+        }
+
+        // A non-positive uid is the unsaved-message placeholder minted by
+        // insert.ts's counter (DB_SAVEALL off + an empty message) — there is
+        // no `messages.id` row to link session_id onto, so session matching
+        // is skipped entirely rather than creating a session nothing will
+        // ever reference.
+        const numericUid = Number(alertMetadata.uid);
+        // Deliberately `!(numericUid > 0)`, NOT `numericUid <= 0`: if
+        // `alertMetadata.uid` is ever a non-numeric string, `Number(...)`
+        // produces `NaN`, and `NaN <= 0` is `false` — the `<=` form would
+        // let a NaN uid through and bind it into the UPDATE below. `> 0`
+        // is `false` for `NaN` too, so negating it correctly rejects NaN
+        // alongside zero/negative values.
+        if (!(numericUid > 0)) {
+          logger.trace(
+            "Message was not saved to the messages table; skipping session linking",
+            { type: queuedMessage.type, uid: alertMetadata.uid },
+          );
+          return;
+        }
+
+        const sessionType = sessionTypeForDecoderType(dbMessageType);
+
+        // D1: "touch the session" (findOrCreateSession, which bumps
+        // last_seen) and "link the message row" (the UPDATE below) are
+        // deliberately kept as two separate steps composed inside one
+        // transaction, rather than a single fused operation — so that
+        // Phase 10's deduplication can later suppress the messages INSERT
+        // for a duplicate reception while still touching the session,
+        // without restructuring this seam. Phase 10's dedup itself is out
+        // of scope here.
+        //
+        // findOrCreateSession() (session-service.ts) opens NO transaction
+        // of its own — it issues its writes directly against the handle
+        // `getDatabase()` returns. The UPDATE below issues its write
+        // directly against the handle `getSqliteConnection()` returns.
+        // Those are two different call-forms, but `getDatabase()` (drizzle)
+        // is constructed as `drizzle(sqliteConnection)` over the exact same
+        // underlying better-sqlite3 connection object `getSqliteConnection()`
+        // returns (db/client.ts) — one physical connection, two handles onto
+        // it. `conn.transaction(...)` opens the transaction on that shared
+        // connection, so every statement issued through EITHER handle while
+        // it is open participates in the same transaction; there is no
+        // separate transaction to nest. If session-service.ts ever acquired
+        // its own connection instead of sharing this one, this atomicity
+        // would disappear silently — no error, just a session row that can
+        // survive a rolled-back UPDATE.
+
+        const conn = getSqliteConnection();
+        const linkMessageToSession = conn.transaction((): number => {
+          const sessionId = findOrCreateSession(identifiers, sessionType);
+          conn
+            .prepare("UPDATE messages SET session_id = ? WHERE id = ?")
+            .run(sessionId, numericUid);
+          return sessionId;
+        });
+        const sessionId = linkMessageToSession();
+
+        this.config.socketio.emit("session_messages_updated", {
+          sessionId,
+          messages: [enrichedMessage],
+        });
+      } catch (error) {
+        logger.error("Session linking failed", {
           type: queuedMessage.type,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -441,11 +718,11 @@ export class BackgroundServices extends EventEmitter {
       .do(async () => {
         try {
           const pruneConfig = getConfig();
-          const { prunedAlerts } = await pruneDatabase(
+          const { prunedAlerts, prunedSessions } = await pruneDatabase(
             pruneConfig.dbSaveDays,
             pruneConfig.dbAlertSaveDays,
           );
-          logger.debug("Database pruned");
+          logger.debug("Database pruned", { prunedSessions });
 
           // If alert_matches rows were pruned, the ring buffer may reference
           // messages that no longer exist in the DB.  Reheat so the buffer
@@ -462,6 +739,24 @@ export class BackgroundServices extends EventEmitter {
           });
         }
       }, "prune_database");
+
+    // v4.3 Phase 6: expire stale flight sessions every 5 minutes.
+    //
+    // See agent-docs/V4.3.md "Session Expiry" — this only flips
+    // aircraft.is_active from 1 to 0 for sessions whose type-specific
+    // timeout has elapsed; it never deletes rows. Deleting sessions with no
+    // surviving messages is prune.ts's job, on the existing prune_database
+    // schedule above, not this one.
+    scheduler.every(5, "minutes").do(async () => {
+      try {
+        const expiredCount = expireStaleSessions();
+        logger.debug("Session expiry sweep complete", { expiredCount });
+      } catch (error) {
+        logger.error("Failed to expire stale sessions", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }, "expire_sessions");
 
     // FTS5 merge every 5 minutes — bounded intraday segment consolidation.
     //
