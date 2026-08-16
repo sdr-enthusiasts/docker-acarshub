@@ -28,6 +28,8 @@ import type { AcarsMsg, DecodedText } from "@acarshub/types";
 import { MessageDecoder } from "@airframes/acars-decoder";
 import { getConfig } from "../config.js";
 import { lookupGroundstation, lookupLabel } from "../db/index.js";
+import { indexDecodedMessage } from "../services/decoded-search-index.js";
+import { getInstalledDecoderVersion } from "../services/decoder-version.js";
 import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("formatters:enrichment");
@@ -38,6 +40,14 @@ const logger = createLogger("formatters:enrichment");
  */
 const acarsDecoder = new MessageDecoder();
 logger.debug("ACARS message decoder initialized in enrichment pipeline");
+
+/**
+ * `@airframes/acars-decoder` does not export its `DecodeResult` interface
+ * (only `MessageDecoder`/`IcaoDecoder` — see the package's `.d.ts`), so this
+ * derives the exact same shape from the decoder instance already
+ * constructed above instead of hand-duplicating the interface.
+ */
+type DecodeResult = ReturnType<typeof acarsDecoder.decode>;
 
 /**
  * Protected keys that should never be deleted, even if null/empty
@@ -56,6 +66,27 @@ const PROTECTED_KEYS = new Set([
 ]);
 
 /**
+ * Where the message being enriched came from.
+ *
+ * `enrichMessage()` serves two completely different callers: the live ingest
+ * pipeline, and every read path that loads rows back out of `messages`
+ * (search results, ring-buffer warm-up, alert lookups). Both decode for
+ * display — decode-on-read is deliberate and cheap, 0.00836 ms, see
+ * agent-docs/V4.3.md "Open Question 7" — but only ingest may write the
+ * decoder search index.
+ *
+ * This is a required parameter and a named pair of states rather than an
+ * inferred property or a boolean flag. It was previously inferred as
+ * `if ("id" in message) return;` — the absence of a field meaning "this is
+ * fresh ingest". That was correct at the time and invisible to the test
+ * suite in both directions: attaching `id` at the ingest site silently
+ * stopped all indexing with 1,424 tests still green, and losing the check
+ * made every Search-page request issue a write transaction. A required
+ * parameter turns either mistake into a compile error.
+ */
+export type MessageSource = "ingest" | "database";
+
+/**
  * Enrich a message for frontend consumption
  *
  * Matches Python update_keys() behavior:
@@ -64,9 +95,14 @@ const PROTECTED_KEYS = new Set([
  * 3. Add derived fields (icao_hex, airline, toaddr_decoded, etc.)
  *
  * @param message - Raw message from database or decoder
+ * @param source - Whether this is live ingest or a row read back from the
+ *                 database. Only `"ingest"` writes the decoder search index.
  * @returns Enriched message ready for Socket.IO emission
  */
-export function enrichMessage(message: Record<string, unknown>): AcarsMsg {
+export function enrichMessage(
+  message: Record<string, unknown>,
+  source: MessageSource,
+): AcarsMsg {
   // Create a shallow copy to avoid mutating original
   const enriched = { ...message };
 
@@ -147,7 +183,7 @@ export function enrichMessage(message: Record<string, unknown>): AcarsMsg {
   enrichFlightFields(enriched);
   enrichAddressFields(enriched);
   enrichLabelField(enriched);
-  enrichDecodedText(enriched);
+  enrichDecodedText(enriched, source);
 
   // Type assertion: enriched now has all required fields from database + derived fields
   return enriched as unknown as AcarsMsg;
@@ -159,7 +195,10 @@ export function enrichMessage(message: Record<string, unknown>): AcarsMsg {
  * Populates the decodedText field if the message can be decoded.
  * Only runs if the message has a text field and does not already have decodedText.
  */
-function enrichDecodedText(message: Record<string, unknown>): void {
+function enrichDecodedText(
+  message: Record<string, unknown>,
+  source: MessageSource,
+): void {
   // Skip if already decoded (e.g. re-enrichment of a cached message)
   if (message.decodedText !== undefined) {
     return;
@@ -204,6 +243,12 @@ function enrichDecodedText(message: Record<string, unknown>): void {
       };
 
       message.decodedText = decodedText;
+
+      // Populate the compact decoder search index (v4.3 Phase 3) from this
+      // same decode — see indexDecodedMessageAtIngest() for why this is
+      // gated to fresh ingest only, and getInstalledDecoderVersion() for why
+      // the version cannot come from `result` itself.
+      indexDecodedMessageAtIngest(message, result, source);
     } else {
       logger.trace("Message text not decodable", {
         uid: message.uid,
@@ -217,6 +262,68 @@ function enrichDecodedText(message: Record<string, unknown>): void {
       textPreview: text.substring(0, 50),
       error: error instanceof Error ? error.message : String(error),
     });
+  }
+}
+
+/**
+ * Populate the v4.3 decoder search index (`decoded_messages` /
+ * `decoder_variant` / `decoded_field`) for a message that just decoded, but
+ * ONLY on the live ingest path.
+ *
+ * Read paths (search results, ring-buffer warm-up, alert lookups) re-decode
+ * for display, which is deliberate and cheap, but must not write the index:
+ * it would issue a write transaction on every Search-page request, and a
+ * message already indexed at its original ingest learns nothing from being
+ * re-decoded during a later read. A message ingested before this feature
+ * existed is correctly left unindexed here — backfilling that is Phase 4's
+ * job, not this read path's.
+ *
+ * The caller declares which it is via `source`; see MessageSource for why
+ * that is a required parameter rather than something inferred from the
+ * message's shape.
+ */
+function indexDecodedMessageAtIngest(
+  message: Record<string, unknown>,
+  result: DecodeResult,
+  source: MessageSource,
+): void {
+  if (source !== "ingest") {
+    return;
+  }
+
+  const uid = message.uid;
+  if (typeof uid !== "string") {
+    return;
+  }
+
+  const messageId = Number(uid);
+  // A non-positive uid is the unsaved-message placeholder (DB_SAVEALL off +
+  // empty message — see insert.ts's unsaved-message counter). There is no
+  // messages.id for the index to reference, and the row policy is "no row
+  // for a message with no decoder output OR no message row at all".
+  if (!Number.isInteger(messageId) || messageId <= 0) {
+    return;
+  }
+
+  try {
+    indexDecodedMessage({
+      messageId,
+      decoderName: result.decoder.name,
+      decoderVersion: getInstalledDecoderVersion(),
+      description: result.formatted.description,
+      fieldLabels: result.formatted.items.map((item) => item.label),
+    });
+  } catch (error) {
+    // Loud failure inside indexDecodedMessage() (e.g. the 126-bit field
+    // space exhausted) must not fail message ingestion — log and continue.
+    // See agent-docs/V4.3.md Phase 3 deliverables.
+    logger.error(
+      "Failed to write decoder search index row — ingestion continues",
+      {
+        messageId,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
   }
 }
 
@@ -493,6 +600,7 @@ function tryFormatAsHex(value: unknown, fieldName: string): string | null {
  */
 export function enrichMessages(
   messages: Record<string, unknown>[],
+  source: MessageSource,
 ): AcarsMsg[] {
-  return messages.map((msg) => enrichMessage(msg));
+  return messages.map((msg) => enrichMessage(msg, source));
 }

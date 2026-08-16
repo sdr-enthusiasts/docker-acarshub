@@ -289,7 +289,7 @@ export function handleAlertTermQuery(
       limit: SEARCH_PAGE_SIZE,
     });
 
-    const enrichedMessages = enrichMessages(searchResults.messages);
+    const enrichedMessages = enrichMessages(searchResults.messages, "database");
 
     socket.emit("database_search_results", {
       msghtml: enrichedMessages,
@@ -334,7 +334,7 @@ export function handleQueryAlertsByTerm(
     );
 
     const enrichedAlerts = results.map((alert) => {
-      const enriched = enrichMessage(alert.message);
+      const enriched = enrichMessage(alert.message, "database");
       // Add alert metadata back
       enriched.matched = true;
       enriched.matched_text =

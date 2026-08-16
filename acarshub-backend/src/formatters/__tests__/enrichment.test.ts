@@ -42,7 +42,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("message_type", "ACARS");
         expect(result).not.toHaveProperty("messageType");
@@ -55,7 +55,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("station_id", "KZLA");
         expect(result).not.toHaveProperty("stationId");
@@ -68,7 +68,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("text", "Test message");
         expect(result).not.toHaveProperty("msg_text");
@@ -80,7 +80,7 @@ describe("Message Enrichment", () => {
           time: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("timestamp", 1234567890);
         expect(result).not.toHaveProperty("time");
@@ -93,7 +93,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("block_id", "A1");
         expect(result).not.toHaveProperty("blockId");
@@ -106,7 +106,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("is_response", "1");
         expect(result).not.toHaveProperty("isResponse");
@@ -119,7 +119,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("is_onground", "1");
         expect(result).not.toHaveProperty("isOnground");
@@ -132,7 +132,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("aircraft_id", "abc-123");
         expect(result).not.toHaveProperty("aircraftId");
@@ -151,7 +151,7 @@ describe("Message Enrichment", () => {
           aircraftId: "abc-123",
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         // Check converted fields exist
         expect(result).toHaveProperty("message_type", "VDL-M2");
@@ -182,7 +182,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("uid");
       });
@@ -194,7 +194,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("message_type", "");
       });
@@ -206,7 +206,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("text", "");
       });
@@ -222,7 +222,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("matched", true);
         expect(result).toHaveProperty("matched_text");
@@ -241,7 +241,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("uid");
         expect(result).toHaveProperty("timestamp");
@@ -257,7 +257,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("uid");
         expect(result).toHaveProperty("timestamp");
@@ -273,7 +273,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("uid");
         expect(result).toHaveProperty("timestamp");
@@ -290,7 +290,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("icao_hex", "ABF708");
       });
@@ -302,7 +302,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("icao_hex", "ABF308");
       });
@@ -314,7 +314,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("icao_hex", "ABF708");
       });
@@ -326,7 +326,7 @@ describe("Message Enrichment", () => {
           timestamp: 1234567890,
         };
 
-        const result = enrichMessage(message);
+        const result = enrichMessage(message, "ingest");
 
         expect(result).toHaveProperty("icao_hex", "ABF308");
       });
@@ -358,7 +358,7 @@ describe("Message Enrichment", () => {
           error: "0",
         };
 
-        const result = enrichMessage(dbResult);
+        const result = enrichMessage(dbResult, "database");
 
         // Frontend expects snake_case for these fields
         expect(result).toHaveProperty("message_type", "ACARS");
@@ -401,7 +401,7 @@ describe("Message Enrichment", () => {
         },
       ];
 
-      const results = enrichMessages(messages);
+      const results = enrichMessages(messages, "database");
 
       expect(results).toHaveLength(2);
       expect(results[0]).toHaveProperty("message_type", "ACARS");
@@ -413,7 +413,7 @@ describe("Message Enrichment", () => {
     });
 
     it("returns empty array for empty input", () => {
-      const results = enrichMessages([]);
+      const results = enrichMessages([], "database");
 
       expect(results).toEqual([]);
     });
@@ -435,7 +435,7 @@ describe("Message Enrichment", () => {
         timestamp: 1234567890,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       // Should extract airline info from config
       expect(result).toHaveProperty("flight", "UAL123");
@@ -457,7 +457,7 @@ describe("Message Enrichment", () => {
         timestamp: 1234567890,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result).toHaveProperty("flight", "XYZ999");
       // Should still parse flight number even without airline match
@@ -471,7 +471,7 @@ describe("Message Enrichment", () => {
         timestamp: 1234567890,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result).toHaveProperty("flight", "INVALID");
       // No flight_number, airline, etc. should be added
@@ -488,7 +488,7 @@ describe("Message Enrichment", () => {
         timestamp: 1234567890,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result).toHaveProperty("label", "H1");
       expect(result).toHaveProperty("label_type");
@@ -504,7 +504,7 @@ describe("Message Enrichment", () => {
         timestamp: 1234567890,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result).toHaveProperty("label", "ZZ");
       expect(result).toHaveProperty("label_type", "Unknown Message Label");
@@ -516,7 +516,7 @@ describe("Message Enrichment", () => {
         timestamp: 1234567890,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       // Should not add label_type if label is missing
       expect(result).not.toHaveProperty("label_type");
@@ -549,7 +549,7 @@ describe("Message Enrichment", () => {
         label: "H1",
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result).not.toHaveProperty("decodedText");
     });
@@ -562,7 +562,7 @@ describe("Message Enrichment", () => {
         text: "",
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result).not.toHaveProperty("decodedText");
     });
@@ -575,7 +575,7 @@ describe("Message Enrichment", () => {
         text: "RANDOM UNDECODABLE TEXT THAT MATCHES NO PATTERN ZZ99",
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result.decodedText).toBeUndefined();
     });
@@ -587,7 +587,7 @@ describe("Message Enrichment", () => {
         ...DECODABLE,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result.decodedText).toBeDefined();
     });
@@ -599,7 +599,7 @@ describe("Message Enrichment", () => {
         ...DECODABLE,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(result.decodedText?.decoder.decodeLevel).toBe("full");
     });
@@ -611,7 +611,7 @@ describe("Message Enrichment", () => {
         ...DECODABLE,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(typeof result.decodedText?.decoder.name).toBe("string");
       expect(result.decodedText?.decoder.name?.length).toBeGreaterThan(0);
@@ -624,7 +624,7 @@ describe("Message Enrichment", () => {
         ...DECODABLE,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       expect(Array.isArray(result.decodedText?.formatted)).toBe(true);
       expect(result.decodedText?.formatted.length).toBeGreaterThan(0);
@@ -644,7 +644,7 @@ describe("Message Enrichment", () => {
         ...DECODABLE,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       const first = result.decodedText?.formatted[0];
       expect(first?.label).toBe("Description");
@@ -667,7 +667,7 @@ describe("Message Enrichment", () => {
         decodedText: existing,
       };
 
-      const result = enrichMessage(message);
+      const result = enrichMessage(message, "ingest");
 
       // Must be the same object reference - not a re-decoded copy
       expect(result.decodedText).toBe(existing);
@@ -684,7 +684,7 @@ describe("Message Enrichment", () => {
         text: "\x00\x01\x02\xFF binary garbage \n\r\t",
       };
 
-      expect(() => enrichMessage(message)).not.toThrow();
+      expect(() => enrichMessage(message, "ingest")).not.toThrow();
     });
   });
 });

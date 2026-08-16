@@ -222,8 +222,13 @@ export function databaseSearch(params: SearchParams): SearchResult {
  * query builder, but raw SQL results use the native SQLite column names.
  * This function bridges that gap so FTS5 raw-SQL results are type-compatible
  * with the rest of the codebase.
+ *
+ * Exported for `decoded-search.ts`, which runs its own raw-SQL joins against
+ * `messages` (via `decoded_messages`/`decoder_variant`) for the same reason
+ * FTS5 does here — no Drizzle support for the query shape — and needs the
+ * identical column mapping rather than a second copy of it.
  */
-function mapRawRowToMessage(row: Record<string, unknown>): Message {
+export function mapRawRowToMessage(row: Record<string, unknown>): Message {
   return {
     id: row.id as number,
     messageType: row.message_type as string,
