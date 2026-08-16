@@ -223,6 +223,17 @@ vi.mock("../adsb-poller.js", () => ({
   destroyAdsbPoller: vi.fn(),
 }));
 
+// v4.3 Phase 4 search-index rebuild — mocked so initialize()/stop() wiring
+// can be asserted without a real database (this file's other mocks
+// deliberately avoid touching db/client.js).
+const mockScheduleIfNeeded = vi.fn();
+vi.mock("../search-index-rebuild.js", () => ({
+  getSearchIndexRebuilder: vi.fn(() => ({
+    scheduleIfNeeded: mockScheduleIfNeeded,
+  })),
+  destroySearchIndexRebuilder: vi.fn(),
+}));
+
 vi.mock("../message-ring-buffer.js", () => ({
   pushMessage: vi.fn(),
   pushAlert: vi.fn(),
@@ -254,9 +265,11 @@ vi.mock("../../formatters/enrichment.js", () => ({
 
 import { pruneDatabase } from "../../db/index.js";
 import { reheatMessageBuffers } from "../message-ring-buffer.js";
+import { destroySearchIndexRebuilder } from "../search-index-rebuild.js";
 
 const mockPruneDatabase = vi.mocked(pruneDatabase);
 const mockReheatMessageBuffers = vi.mocked(reheatMessageBuffers);
+const mockDestroySearchIndexRebuilder = vi.mocked(destroySearchIndexRebuilder);
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -283,6 +296,8 @@ describe("BackgroundServices — fan-in architecture", () => {
     mockHfdlConnections = { descriptors: [] };
     mockImslConnections = { descriptors: [] };
     mockIrdmConnections = { descriptors: [] };
+    mockScheduleIfNeeded.mockClear();
+    mockDestroySearchIndexRebuilder.mockClear();
   });
 
   afterEach(() => {
@@ -572,6 +587,46 @@ describe("BackgroundServices — fan-in architecture", () => {
 
       expect(mockPruneDatabase).toHaveBeenCalled();
       expect(mockReheatMessageBuffers).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // v4.3 Phase 4: search-index rebuild wiring
+  // -------------------------------------------------------------------------
+
+  describe("search index rebuild wiring", () => {
+    it("initialize() calls scheduleIfNeeded() on the search index rebuilder", async () => {
+      mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
+
+      const { BackgroundServices } = await import("../index.js");
+      const svc = new BackgroundServices({ socketio: { emit: vi.fn() } });
+      await svc.initialize();
+
+      expect(mockScheduleIfNeeded).toHaveBeenCalledTimes(1);
+    });
+
+    it("stop() destroys the search index rebuilder", async () => {
+      mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
+
+      const { BackgroundServices } = await import("../index.js");
+      const svc = new BackgroundServices({ socketio: { emit: vi.fn() } });
+      await svc.initialize();
+      svc.start();
+      svc.stop();
+
+      expect(mockDestroySearchIndexRebuilder).toHaveBeenCalledTimes(1);
+    });
+
+    it("a scheduling failure does not prevent initialize() from completing", async () => {
+      mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
+      mockScheduleIfNeeded.mockImplementationOnce(() => {
+        throw new Error("boom");
+      });
+
+      const { BackgroundServices } = await import("../index.js");
+      const svc = new BackgroundServices({ socketio: { emit: vi.fn() } });
+
+      await expect(svc.initialize()).resolves.toBeUndefined();
     });
   });
 });

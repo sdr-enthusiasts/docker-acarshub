@@ -29,7 +29,7 @@ import { MessageDecoder } from "@airframes/acars-decoder";
 import { getConfig } from "../config.js";
 import { lookupGroundstation, lookupLabel } from "../db/index.js";
 import { indexDecodedMessage } from "../services/decoded-search-index.js";
-import { getInstalledDecoderVersion } from "../services/decoder-version.js";
+import { buildIndexInput } from "../services/decoder-index-input.js";
 import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("formatters:enrichment");
@@ -306,13 +306,7 @@ function indexDecodedMessageAtIngest(
   }
 
   try {
-    indexDecodedMessage({
-      messageId,
-      decoderName: result.decoder.name,
-      decoderVersion: getInstalledDecoderVersion(),
-      description: result.formatted.description,
-      fieldLabels: result.formatted.items.map((item) => item.label),
-    });
+    indexDecodedMessage(buildIndexInput(messageId, result));
   } catch (error) {
     // Loud failure inside indexDecodedMessage() (e.g. the 126-bit field
     // space exhausted) must not fail message ingestion — log and continue.

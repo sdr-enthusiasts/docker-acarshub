@@ -61,6 +61,10 @@ import {
   reheatMessageBuffers,
 } from "./message-ring-buffer.js";
 import { destroyScheduler, getScheduler } from "./scheduler.js";
+import {
+  destroySearchIndexRebuilder,
+  getSearchIndexRebuilder,
+} from "./search-index-rebuild.js";
 import { checkAndAddStationId, getStationIds } from "./station-ids.js";
 import { startStatsPruning, stopStatsPruning } from "./stats-pruning.js";
 import { buildMessageRate, buildSystemStatus } from "./system-status.js";
@@ -181,6 +185,19 @@ export class BackgroundServices extends EventEmitter {
       this.setupAdsbPolling();
     }
 
+    // Decide whether a decoder-version change requires a search-index
+    // rebuild (v4.3 Phase 4) and, if so, fire it in the background. Wrapped
+    // in try/catch: a scheduling failure here must never prevent the
+    // backend from starting — the rebuild is a search-quality repair, not a
+    // correctness requirement for ingest.
+    try {
+      getSearchIndexRebuilder().scheduleIfNeeded();
+    } catch (error) {
+      logger.error("Failed to schedule search index rebuild", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     logger.debug("Background services initialized", {
       adsbEnabled: appConfig.enableAdsb,
     });
@@ -246,6 +263,9 @@ export class BackgroundServices extends EventEmitter {
 
     // Stop ADS-B polling
     destroyAdsbPoller();
+
+    // Stop the search-index rebuild service, if one is running
+    destroySearchIndexRebuilder();
 
     // Clear message queue
     destroyMessageQueue();
