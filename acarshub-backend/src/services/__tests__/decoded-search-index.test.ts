@@ -35,14 +35,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   closeDatabase,
   getDatabase,
@@ -314,7 +307,11 @@ describe("writeDecodedMessageIndexRow / getMessageFieldMask", () => {
 
   it("round-trips a simple mask exactly", () => {
     const messageId = insertTestMessage();
-    const variantId = findOrCreateDecoderVariant("label-sq", "1.9.1", "Squitter");
+    const variantId = findOrCreateDecoderVariant(
+      "label-sq",
+      "1.9.1",
+      "Squitter",
+    );
     writeDecodedMessageIndexRow(messageId, variantId, {
       maskLo: 0b101n,
       maskHi: 0n,
@@ -330,15 +327,23 @@ describe("writeDecodedMessageIndexRow / getMessageFieldMask", () => {
     const variantA = findOrCreateDecoderVariant("label-a", "1.0.0", "A");
     const variantB = findOrCreateDecoderVariant("label-b", "1.0.0", "B");
 
-    writeDecodedMessageIndexRow(messageId, variantA, { maskLo: 1n, maskHi: 0n });
-    writeDecodedMessageIndexRow(messageId, variantB, { maskLo: 2n, maskHi: 0n });
+    writeDecodedMessageIndexRow(messageId, variantA, {
+      maskLo: 1n,
+      maskHi: 0n,
+    });
+    writeDecodedMessageIndexRow(messageId, variantB, {
+      maskLo: 2n,
+      maskHi: 0n,
+    });
 
     expect(countRows("decoded_messages")).toBe(1);
     const mask = getMessageFieldMask(messageId);
     expect(mask?.maskLo).toBe(2n);
 
     const row = getSqliteConnection()
-      .prepare("SELECT variant_id AS variantId FROM decoded_messages WHERE message_id = ?")
+      .prepare(
+        "SELECT variant_id AS variantId FROM decoded_messages WHERE message_id = ?",
+      )
       .get(messageId) as { variantId: number };
     expect(row.variantId).toBe(variantB);
   });
@@ -581,9 +586,9 @@ describe("indexDecodedMessage", () => {
     // unlike runMigrations()'s bare connection, this is the connection
     // indexDecodedMessage() itself writes through, so this proves the
     // cascade fires for rows this module actually produces.
-    expect(
-      getSqliteConnection().pragma("foreign_keys", { simple: true }),
-    ).toBe(1);
+    expect(getSqliteConnection().pragma("foreign_keys", { simple: true })).toBe(
+      1,
+    );
 
     const messageId = insertTestMessage();
     indexDecodedMessage({
@@ -595,10 +600,7 @@ describe("indexDecodedMessage", () => {
     });
     expect(countRows("decoded_messages")).toBe(1);
 
-    getDatabase()
-      .delete(messages)
-      .where(eq(messages.id, messageId))
-      .run();
+    getDatabase().delete(messages).where(eq(messages.id, messageId)).run();
 
     expect(countRows("decoded_messages")).toBe(0);
   });

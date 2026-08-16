@@ -102,14 +102,13 @@ type Db = ReturnType<typeof getDatabase>;
  * See agent-docs/V4.3.md "Session Types and Timeout Thresholds" for the
  * rationale behind each value.
  */
-export const SESSION_TIMEOUT_SECONDS: Readonly<Record<SessionType, number>> =
-  {
-    adsb: 1200, // 20 minutes — local Mode S; aircraft lands/leaves range quickly
-    vdlm2: 2700, // 45 minutes — slightly longer range; taxi/gate messages common
-    hfdl: 21600, // 6 hours — oceanic; multi-hour gaps between reports normal
-    adsc: 43200, // 12 hours — polar/oceanic; very long gaps by design
-    acars_only: 5400, // 90 minutes — no position data; conservative to avoid false splits
-  };
+export const SESSION_TIMEOUT_SECONDS: Readonly<Record<SessionType, number>> = {
+  adsb: 1200, // 20 minutes — local Mode S; aircraft lands/leaves range quickly
+  vdlm2: 2700, // 45 minutes — slightly longer range; taxi/gate messages common
+  hfdl: 21600, // 6 hours — oceanic; multi-hour gaps between reports normal
+  adsc: 43200, // 12 hours — polar/oceanic; very long gaps by design
+  acars_only: 5400, // 90 minutes — no position data; conservative to avoid false splits
+};
 
 /**
  * `session_type` values in upgrade-precedence order, most authoritative
@@ -148,9 +147,12 @@ function asSessionType(value: string): SessionType {
   if (isSessionType(value)) {
     return value;
   }
-  logger.warn("Unrecognized session_type on aircraft row; treating as acars_only for timeout purposes", {
-    value,
-  });
+  logger.warn(
+    "Unrecognized session_type on aircraft row; treating as acars_only for timeout purposes",
+    {
+      value,
+    },
+  );
   return "acars_only";
 }
 
@@ -477,7 +479,8 @@ function extendSession(
 ): number {
   const currentType = asSessionType(row.sessionType);
   const upgraded =
-    sessionTypePriorityIndex(sourceType) < sessionTypePriorityIndex(currentType);
+    sessionTypePriorityIndex(sourceType) <
+    sessionTypePriorityIndex(currentType);
 
   const identifierUpdate = buildIdentifierUpdate(row, identifiers);
 

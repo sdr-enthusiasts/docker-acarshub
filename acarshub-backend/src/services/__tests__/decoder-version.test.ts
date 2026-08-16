@@ -43,9 +43,8 @@ describe("getInstalledDecoderVersion", () => {
       },
     }));
 
-    const { getInstalledDecoderVersion: withBrokenResolver } = await import(
-      "../decoder-version.js"
-    );
+    const { getInstalledDecoderVersion: withBrokenResolver } =
+      await import("../decoder-version.js");
 
     expect(() => withBrokenResolver()).not.toThrow();
     expect(withBrokenResolver()).toBe("unknown");
