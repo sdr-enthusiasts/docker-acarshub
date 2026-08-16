@@ -669,7 +669,7 @@ describe("BackgroundServices — fan-in architecture", () => {
   // -------------------------------------------------------------------------
 
   describe("expire_sessions scheduler callback", () => {
-    it("is registered with scheduler.every(5, \"minutes\") and calls expireStaleSessions()", async () => {
+    it('is registered with scheduler.every(5, "minutes") and calls expireStaleSessions()', async () => {
       mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
 
       const { BackgroundServices } = await import("../index.js");

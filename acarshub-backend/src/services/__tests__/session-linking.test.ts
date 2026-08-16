@@ -378,7 +378,11 @@ describe("session linking — no existing match", () => {
 
 describe("session linking — D2 decoder-type -> session_type mapping", () => {
   it.each([
-    ["ACARS" as MessageType, () => makeRawAcars({ icao: "CCCC01" }), "acars_only"],
+    [
+      "ACARS" as MessageType,
+      () => makeRawAcars({ icao: "CCCC01" }),
+      "acars_only",
+    ],
     ["VDLM2" as MessageType, () => makeRawVdlm2("CCCC02"), "vdlm2"],
     ["HFDL" as MessageType, () => makeRawHfdl("CCCC03"), "hfdl"],
     ["IMSL" as MessageType, () => makeRawImsl("N-CCCC04"), "adsc"],
@@ -529,7 +533,10 @@ describe("session linking — session_messages_updated emit shape", () => {
     // reappear.
     expect(calls[0]).toHaveLength(2);
 
-    const [, payload] = calls[0] as [string, { sessionId: number; messages: Array<Record<string, unknown>> }];
+    const [, payload] = calls[0] as [
+      string,
+      { sessionId: number; messages: Array<Record<string, unknown>> },
+    ];
     const acarsEmitted = lastAcarsMsgEmit();
     const expectedUid = acarsEmitted?.msghtml.uid;
 
@@ -596,7 +603,7 @@ describe("session linking — G1 pipeline-failure fall-through guard", () => {
 // ---------------------------------------------------------------------------
 
 describe("session linking — G2 tail normalization across decoder dot-stripping inconsistency", () => {
-  it("matches a raw-ACARS message with a dotted tail (\".N77WA\") and a VDLM2 message with an already dot-stripped tail (\"N77WA\") to the SAME session when neither carries an icao_hex", async () => {
+  it('matches a raw-ACARS message with a dotted tail (".N77WA") and a VDLM2 message with an already dot-stripped tail ("N77WA") to the SAME session when neither carries an icao_hex', async () => {
     const sessionCountBefore = countSessions();
 
     // Raw-ACARS formatter passes the dot through untouched (formatters/index.ts).
@@ -664,14 +671,12 @@ describe("session linking — G3 atomicity of the session-linking transaction", 
     const originalPrepare = conn.prepare.bind(conn);
     const prepareSpy = vi
       .spyOn(conn, "prepare")
-      .mockImplementation(
-        (sql: string): ReturnType<typeof conn.prepare> => {
-          if (sql.includes("UPDATE messages SET session_id")) {
-            throw new Error("simulated messages.session_id UPDATE failure");
-          }
-          return originalPrepare(sql);
-        },
-      );
+      .mockImplementation((sql: string): ReturnType<typeof conn.prepare> => {
+        if (sql.includes("UPDATE messages SET session_id")) {
+          throw new Error("simulated messages.session_id UPDATE failure");
+        }
+        return originalPrepare(sql);
+      });
 
     await ingest("ACARS", makeRawAcars({ icao: "B1B1B1", flight: undefined }));
 
