@@ -98,8 +98,7 @@ const systemConfigState = vi.hoisted(() => ({
 }));
 
 vi.mock("../system-config.js", async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import("../system-config.js")>();
+  const original = await importOriginal<typeof import("../system-config.js")>();
   systemConfigState.original = original;
   systemConfigState.setSystemConfigValue.mockImplementation(
     original.setSystemConfigValue,
@@ -132,7 +131,10 @@ import {
   type RebuildProgress,
   SearchIndexRebuilder,
 } from "../search-index-rebuild.js";
-import { getSystemConfigValue, setSystemConfigValue } from "../system-config.js";
+import {
+  getSystemConfigValue,
+  setSystemConfigValue,
+} from "../system-config.js";
 
 let tmpDir: string;
 let dbPath: string;
@@ -320,9 +322,7 @@ describe("SearchIndexRebuilder.scheduleIfNeeded", () => {
       TEST_DECODER_VERSION,
     );
     expect(getSystemConfigValue("search_index_rebuild_cursor")).toBe("0");
-    expect(getSystemConfigValue("search_index_rebuild_status")).toBe(
-      "running",
-    );
+    expect(getSystemConfigValue("search_index_rebuild_status")).toBe("running");
 
     await flushImmediate();
     expect(runSpy).toHaveBeenCalledTimes(1);
@@ -408,12 +408,8 @@ describe("SearchIndexRebuilder.scheduleIfNeeded — re-entrancy guard (F1)", () 
     const firstRunPromise = rebuilder.run();
     expect(rebuilder.isRunning).toBe(true);
 
-    const cursorDuringRun = getSystemConfigValue(
-      "search_index_rebuild_cursor",
-    );
-    const statusDuringRun = getSystemConfigValue(
-      "search_index_rebuild_status",
-    );
+    const cursorDuringRun = getSystemConfigValue("search_index_rebuild_cursor");
+    const statusDuringRun = getSystemConfigValue("search_index_rebuild_status");
     const versionDuringRun = getSystemConfigValue(
       "acars_decoder_installed_version",
     );
@@ -681,9 +677,7 @@ describe("SearchIndexRebuilder.run — batching and cursor persistence", () => {
     );
     // Status is untouched by an aborted run — it must stay "running" so the
     // next scheduleIfNeeded() resumes instead of restarting.
-    expect(getSystemConfigValue("search_index_rebuild_status")).toBe(
-      "running",
-    );
+    expect(getSystemConfigValue("search_index_rebuild_status")).toBe("running");
   });
 });
 
@@ -722,9 +716,7 @@ describe("SearchIndexRebuilder.run — crash consistency", () => {
     // back everything since BEGIN, not just the statement that threw.
     expect(countRows("decoded_messages")).toBe(0);
     expect(getSystemConfigValue("search_index_rebuild_cursor")).toBe("0");
-    expect(getSystemConfigValue("search_index_rebuild_status")).toBe(
-      "failed",
-    );
+    expect(getSystemConfigValue("search_index_rebuild_status")).toBe("failed");
   });
 });
 

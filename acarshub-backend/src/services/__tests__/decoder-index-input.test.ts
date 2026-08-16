@@ -108,7 +108,11 @@ describe("buildIndexInput", () => {
     // Exactly the three real item labels, in the same order they appear in
     // formatted.items — nothing added, nothing deduplicated away, nothing
     // derived from formatted.description or remaining.text.
-    expect(input.fieldLabels).toEqual(["Description", "Altitude", "Remaining Text"]);
+    expect(input.fieldLabels).toEqual([
+      "Description",
+      "Altitude",
+      "Remaining Text",
+    ]);
     expect(input.fieldLabels).toHaveLength(3);
   });
 

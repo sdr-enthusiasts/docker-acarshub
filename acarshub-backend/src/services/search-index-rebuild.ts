@@ -106,7 +106,11 @@ function planRow(row: RebuildRow): RowPlan {
     });
 
     if (result.decoded === true) {
-      return { kind: "index", id: row.id, input: buildIndexInput(row.id, result) };
+      return {
+        kind: "index",
+        id: row.id,
+        input: buildIndexInput(row.id, result),
+      };
     }
     return { kind: "delete", id: row.id };
   } catch (error) {
