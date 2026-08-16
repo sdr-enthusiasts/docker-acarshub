@@ -30,6 +30,18 @@
  * Session matching itself runs through the real session-service.ts
  * (`findOrCreateSession`), so these tests double as end-to-end coverage of
  * D1–D3 as actually wired, not a hand-typed copy of the wiring.
+ *
+ * The ONE thing deliberately stubbed is the Phase 4 search-index rebuilder.
+ * `BackgroundServices.initialize()` calls `scheduleIfNeeded()`, and on a
+ * freshly migrated test database `system_config` holds no decoder version, so
+ * the real implementation correctly concludes the version has changed and
+ * fires a full background rebuild over this database — sweeping `messages`,
+ * decoding, and writing `decoded_messages` rows on `setImmediate` batches that
+ * interleave with these tests' assertions and can outlive `closeDatabase()` in
+ * teardown. That is right in production and wrong in a test: it makes these
+ * tests non-hermetic and racy against a service they are not testing. Stubbing
+ * the singleton factory is the narrowest way to keep the rest of the wiring
+ * real. Phase 4's own behaviour is covered by search-index-rebuild.test.ts.
  */
 
 import { mkdtempSync, rmSync } from "node:fs";
@@ -56,6 +68,15 @@ import {
 import { destroyScheduler } from "../scheduler.js";
 import * as sessionServiceModule from "../session-service.js";
 import type { MessageType } from "../tcp-listener.js";
+
+// See the file header for why the rebuilder — and only the rebuilder — is
+// stubbed here.
+vi.mock("../search-index-rebuild.js", () => ({
+  getSearchIndexRebuilder: (): { scheduleIfNeeded: () => boolean } => ({
+    scheduleIfNeeded: (): boolean => false,
+  }),
+  destroySearchIndexRebuilder: (): void => {},
+}));
 
 // ---------------------------------------------------------------------------
 // Setup / teardown
