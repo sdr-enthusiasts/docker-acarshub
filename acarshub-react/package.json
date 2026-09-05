@@ -52,7 +52,7 @@
     "@vitest/ui": "4.1.10",
     "axe-core": "4.13.0",
     "canvas": "3.2.3",
-    "happy-dom": "20.11.2",
+    "happy-dom": "20.13.2",
     "jsdom": "30.0.1",
     "rollup-plugin-visualizer": "7.0.1",
     "sass": "1.102.0",
