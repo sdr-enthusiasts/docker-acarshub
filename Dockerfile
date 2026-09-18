@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1: Build React frontend + Node.js backend
 # ============================================================
-FROM node:26.7.0-slim@sha256:5758d367d7b4f48b73a9bb3530e687e47efb289f3b43f9c0450a25225ae0db5d AS acarshub-react-builder
+FROM node:26.9.0-slim@sha256:65f816afd401c1c4de3293acc46dce115398152af4bdcd73c103b096988922d7 AS acarshub-react-builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /workspace
