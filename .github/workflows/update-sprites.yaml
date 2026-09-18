@@ -22,7 +22,8 @@
 # Files updated:
 # - acarshub-react/src/assets/sprites/spritesheet.json
 # - acarshub-react/src/assets/sprites/spritesheet.png
-# - acarshub-react/src/assets/sprites/spritesheet-{theme}-{state}.png (all colored variants)
+# - acarshub-react/src/assets/sprites/spritesheet-{theme}-{state}.{png,webp}
+#   (all colored variants: 2 themes x 8 states)
 # - acarshub-react/ATTRIBUTIONS.md
 #
 # License: pw-silhouettes is licensed under CC BY-NC-SA 4.0
@@ -97,7 +98,9 @@ jobs:
         with:
           node-version: "24"
           cache: "npm"
-          cache-dependency-path: acarshub-react/package-lock.json
+          # Monorepo: the single npm-workspaces lockfile lives at the repo root,
+          # not in acarshub-react/.
+          cache-dependency-path: package-lock.json
 
       - name: Download new sprite assets
         if: steps.compare.outputs.needs_update == 'true'
@@ -117,10 +120,11 @@ jobs:
 
       - name: Install dependencies and generate colored sprite sheets
         if: steps.compare.outputs.needs_update == 'true'
-        working-directory: acarshub-react
         run: |
+          # npm ci must run from the workspace root; sharp ships prebuilt
+          # @img/sharp-* binaries so --ignore-scripts is safe here.
           npm ci --ignore-scripts
-          npm run generate-sprites
+          npm run generate-sprites --workspace=acarshub-react
           echo "Colored sprite sheets generated"
 
       - name: Update ATTRIBUTIONS.md version
@@ -153,7 +157,7 @@ jobs:
             ### Changes
             - ✅ Updated `spritesheet.json` from pw-silhouettes release
             - ✅ Updated `spritesheet.png` from pw-silhouettes release
-            - ✅ Regenerated all colored sprite sheets (16 variants × 2 themes)
+            - ✅ Regenerated all colored sprite sheets (2 themes × 8 states, PNG + WebP)
             - ✅ Updated version in `ATTRIBUTIONS.md`
 
             ### Source

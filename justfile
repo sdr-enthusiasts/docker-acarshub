@@ -105,9 +105,10 @@ madge:
 
 # Full CI-like check (unit/integration tests + linting + formatting)
 ci:
-    @echo "Building shared types package (required before TypeScript project references check)..."
-    cd acarshub-types && npm run build
     @echo "Running TypeScript checks (all projects via project references)..."
+    # acarshub-types no longer needs a manual pre-build: it is a composite
+    # project referenced by the root solution, so `--build` emits its dist/
+    # before the consumers that resolve @acarshub/types against it.
     # NOTE: deliberately NOT `npx tsc` here. `madge` (devDependency, NIT-05) pulls
     # in a transitive typescript@5.x (its own tooling is incompatible with
     # TypeScript 7 — see the tsc pin bump commit) which npm hoists to the

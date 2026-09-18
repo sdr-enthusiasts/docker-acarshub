@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "target": "ES2022",
     "module": "ESNext",
     "lib": ["ES2022"],

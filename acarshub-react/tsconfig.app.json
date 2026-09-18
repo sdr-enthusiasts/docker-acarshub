@@ -14,5 +14,6 @@
       "@/*": ["./src/*"]
     }
   },
+  "references": [{ "path": "../acarshub-types" }],
   "include": ["src"]
 }

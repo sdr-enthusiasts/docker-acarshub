@@ -6,6 +6,7 @@
     "rootDir": "./src",
     "noEmit": false
   },
+  "references": [{ "path": "../acarshub-types" }],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/__tests__/**"]
 }
