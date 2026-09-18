@@ -37,14 +37,7 @@
  * acarshub-react/src/hooks/useRRDTimeSeriesData.ts.
  */
 export type TimePeriod =
-  | "1hr"
-  | "6hr"
-  | "12hr"
-  | "24hr"
-  | "1wk"
-  | "30day"
-  | "6mon"
-  | "1yr";
+  "1hr" | "6hr" | "12hr" | "24hr" | "1wk" | "30day" | "6mon" | "1yr";
 
 /**
  * All valid TimePeriod values as an immutable array.

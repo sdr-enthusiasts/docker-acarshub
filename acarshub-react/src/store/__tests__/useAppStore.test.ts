@@ -1056,26 +1056,12 @@ describe("useAppStore", () => {
 
     function makeEntry(
       period:
-        | "1hr"
-        | "6hr"
-        | "12hr"
-        | "24hr"
-        | "1wk"
-        | "30day"
-        | "6mon"
-        | "1yr",
+        "1hr" | "6hr" | "12hr" | "24hr" | "1wk" | "30day" | "6mon" | "1yr",
       startOffset = 3_600_000,
     ) {
       return {
         time_period: period as
-          | "1hr"
-          | "6hr"
-          | "12hr"
-          | "24hr"
-          | "1wk"
-          | "30day"
-          | "6mon"
-          | "1yr",
+          "1hr" | "6hr" | "12hr" | "24hr" | "1wk" | "30day" | "6mon" | "1yr",
         data: [
           {
             timestamp: NOW - 60_000,

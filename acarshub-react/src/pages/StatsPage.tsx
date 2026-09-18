@@ -39,12 +39,7 @@ import { formatTimestamp } from "../utils/dateUtils";
  * Main stats section types
  */
 type StatsSection =
-  | "reception"
-  | "signal"
-  | "alerts"
-  | "frequency"
-  | "messages"
-  | "status";
+  "reception" | "signal" | "alerts" | "frequency" | "messages" | "status";
 
 /**
  * StatsPage Component
@@ -303,11 +298,7 @@ export const StatsPage = () => {
       if (!selectedExists) {
         setSelectedFreqDecoder(
           frequencyDecoderTabs[0].id as
-            | "acars"
-            | "vdlm"
-            | "hfdl"
-            | "imsl"
-            | "irdm",
+            "acars" | "vdlm" | "hfdl" | "imsl" | "irdm",
         );
       }
     }

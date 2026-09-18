@@ -69,9 +69,7 @@ export interface LibacarsCPDLC {
 
 // Generic libacars data structure
 export type LibacarsData =
-  | LibacarsFrequencyData
-  | LibacarsCPDLC
-  | Record<string, unknown>;
+  LibacarsFrequencyData | LibacarsCPDLC | Record<string, unknown>;
 
 /**
  * Core ACARS Message Type
