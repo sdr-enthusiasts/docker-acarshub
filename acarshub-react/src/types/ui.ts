@@ -288,10 +288,7 @@ export type EuropeMapProvider = never; // No tile layers, only overlays in tar10
  * All available map providers
  */
 export type MapProvider =
-  | WorldwideMapProvider
-  | USMapProvider
-  | EuropeMapProvider
-  | "custom";
+  WorldwideMapProvider | USMapProvider | EuropeMapProvider | "custom";
 
 /**
  * Map provider configuration

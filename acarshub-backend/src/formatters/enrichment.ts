@@ -186,9 +186,7 @@ function enrichDecodedText(message: Record<string, unknown>): void {
       const decodedText: DecodedText = {
         decoder: {
           decodeLevel: result.decoder.decodeLevel as
-            | "full"
-            | "partial"
-            | "none",
+            "full" | "partial" | "none",
           name: result.decoder.name,
         },
         formatted: [

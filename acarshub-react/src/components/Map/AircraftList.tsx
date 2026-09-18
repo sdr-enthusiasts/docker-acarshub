@@ -141,12 +141,7 @@ interface AircraftListProps {
 }
 
 type SortField =
-  | "callsign"
-  | "altitude"
-  | "speed"
-  | "messages"
-  | "alerts"
-  | "distance";
+  "callsign" | "altitude" | "speed" | "messages" | "alerts" | "distance";
 type SortDirection = "asc" | "desc";
 
 /**

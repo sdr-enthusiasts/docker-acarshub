@@ -53,13 +53,7 @@ ChartJS.register(
  * Decoder type for filtering time-series data
  */
 export type DecoderType =
-  | "combined"
-  | "acars"
-  | "vdlm"
-  | "hfdl"
-  | "imsl"
-  | "irdm"
-  | "error";
+  "combined" | "acars" | "vdlm" | "hfdl" | "imsl" | "irdm" | "error";
 
 interface TimeSeriesChartProps {
   /** Time-series data points */

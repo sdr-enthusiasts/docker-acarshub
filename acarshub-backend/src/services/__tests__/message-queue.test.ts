@@ -142,8 +142,7 @@ describe("MessageQueue", () => {
 
     it("should include timestamp in queued messages", () => {
       let capturedMessage:
-        | { type: string; data: unknown; timestamp: number }
-        | undefined;
+        { type: string; data: unknown; timestamp: number } | undefined;
 
       queue.on("message", (msg) => {
         capturedMessage = msg;

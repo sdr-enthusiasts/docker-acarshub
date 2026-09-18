@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1: Build React frontend + Node.js backend
 # ============================================================
-FROM node:26.7.0-slim@sha256:5758d367d7b4f48b73a9bb3530e687e47efb289f3b43f9c0450a25225ae0db5d AS acarshub-react-builder
+FROM node:26.9.0-slim@sha256:65f816afd401c1c4de3293acc46dce115398152af4bdcd73c103b096988922d7 AS acarshub-react-builder
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 WORKDIR /workspace
@@ -33,7 +33,7 @@ COPY acarshub-types/package.json  ./acarshub-types/package.json
 # image has no Python/build toolchain. Denying it is correct regardless
 # of image/npm version: the bundled prebuild is used either way. (This
 # requires an npm new enough to actually enforce allowScripts — the one
-# bundled with node:26.5.1-slim does; older npm versions treat it as
+# bundled with node:26.9.0-slim does; older npm versions treat it as
 # advisory-only and would silently still run the phantom script.)
 RUN set -xe && \
     npm ci --include=dev --loglevel=error
