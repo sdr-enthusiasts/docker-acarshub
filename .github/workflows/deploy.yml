@@ -17,6 +17,11 @@ on:
         type: boolean
         description: "Build latest as test"
         default: false
+      base_variant:
+        required: false
+        type: string
+        description: "Debian codename to build on the next-release base images (e.g. forky). Blank builds on stable."
+        default: ""
 
 env:
   REGISTRY: ghcr.io
@@ -37,10 +42,12 @@ jobs:
           INPUTS_REASON: ${{ github.event.inputs.reason }}
           INPUTS_USE_TEST_IMAGE: ${{ github.event.inputs.use_test_image }}
           INPUTS_BUILD_LATEST_AS_TEST: ${{ github.event.inputs.build_latest_as_test }}
+          INPUTS_BASE_VARIANT: ${{ github.event.inputs.base_variant }}
         run: |
           echo "Workflow dispatch reason: $INPUTS_REASON"
           echo "Use test image: $INPUTS_USE_TEST_IMAGE"
           echo "Build latest as test: $INPUTS_BUILD_LATEST_AS_TEST"
+          echo "Base variant: ${INPUTS_BASE_VARIANT:-none (stable)}"
 
   get_version:
     name: "Get version and build number"
@@ -69,7 +76,7 @@ jobs:
       github.event.inputs.build_latest_as_test == 'false' ||
       github.event.inputs.build_latest_as_test == ''
     needs: get_version
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@4cf063e5906338b3b92f0fe71d8dbae52c180d99 # main
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@6fe78a4f1b7ab06ae480c7d2bb304f3a6c39055b # main
     with:
       push_enabled: true
       push_destinations: ghcr.io
@@ -81,6 +88,7 @@ jobs:
       build_baseimage_url: :base/:base-test-pr
       dockerfile_changes: |
         ARG VERSION=0\.0\.0/ARG VERSION=${{ needs.get_version.outputs.version }}/g;s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}
+      base_variant: ${{ github.event.inputs.base_variant }}
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -89,7 +97,7 @@ jobs:
     if: |
       github.event.inputs.build_latest_as_test == 'true' &&
       (github.event.inputs.use_test_image == 'false' || github.event.inputs.use_test_image == '')
-    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@4cf063e5906338b3b92f0fe71d8dbae52c180d99 # main
+    uses: sdr-enthusiasts/common-github-workflows/.github/workflows/sdre.yml@6fe78a4f1b7ab06ae480c7d2bb304f3a6c39055b # main
     needs: get_version
     with:
       push_enabled: true
@@ -103,6 +111,7 @@ jobs:
       docker_latest_tag: test
       dockerfile_changes: |
         ARG VERSION=0\.0\.0/ARG VERSION=${{ needs.get_version.outputs.version }}/g;s/ARG BUILD_NUMBER=0/ARG BUILD_NUMBER=${{ needs.get_version.outputs.build_number }}
+      base_variant: ${{ github.event.inputs.base_variant }}
     secrets:
       ghcr_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -111,11 +120,13 @@ jobs:
     name: Release
     needs: [deploy, get_version]
     runs-on: ubuntu-24.04
+    # A next-release (base_variant) build is a preview, not a release.
     if: |
       (github.event.inputs.use_test_image == 'false' ||
       github.event.inputs.use_test_image == '' ) &&
       (github.event.inputs.build_latest_as_test == 'false' ||
-      github.event.inputs.build_latest_as_test == '' )
+      github.event.inputs.build_latest_as_test == '' ) &&
+      github.event.inputs.base_variant == ''
 
     steps:
       - name: Checkout
