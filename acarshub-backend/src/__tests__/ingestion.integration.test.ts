@@ -578,6 +578,66 @@ describe("ingestion pipeline (integration)", () => {
       expect(row?.stationId).toBe("XX-TEST-VDL2");
       expect(row?.icao).toBe("AC212D");
     });
+
+    it("aero_l envelope with an integral-MHz frequency stores freq as '1545.00'", async () => {
+      // Regression: 1545000000 Hz formats to 1545 (no decimal point); the
+      // old padEnd(7, "0") normalization stored it as "1545000".
+      const result = await routeXngThroughQueue(
+        xngEnvelope("aero_l", 1545000000, "XX-TEST-AERO", {
+          type: "acars",
+          mode: "2",
+          tail: "VT-ANB",
+          label: "B6",
+          block_id: "4",
+          flight: "AI0142",
+          msg_num: "M11A",
+          text: "XNG AERO BODY",
+          more_to_come: false,
+        }),
+      );
+
+      expect(result).not.toBeNull();
+      const row = getMessageByUid(String(result?.uid));
+      expect(row?.messageType).toBe("IMS-L");
+      expect(row?.freq).toBe("1545.00");
+    });
+  });
+
+  describe("frequency normalization across the seam", () => {
+    it("native VDLM2 message with an integral-MHz freq stores '136.000'", () => {
+      // Regression: 136000000 Hz formats to 136 (no decimal point); the
+      // old padEnd(7, "0") normalization stored it as "1360000".
+      const result = ingestMessage(
+        {
+          type: "VDLM2",
+          data: {
+            vdl2: {
+              t: { sec: 1700000003 },
+              station: "vdl-station",
+              avlc: {
+                src: { addr: "A8D8D3", type: "Aircraft" },
+                dst: { addr: "1234" },
+                acars: {
+                  msg_text: "VDLM2 INTEGRAL FREQ",
+                  reg: ".N12345",
+                  flight: "UA1234",
+                  label: "H1",
+                },
+              },
+              freq: 136000000,
+              sig_level: -18.2,
+              hdr_bits_fixed: 0,
+            },
+          },
+        },
+        socket,
+      );
+
+      expect(result).not.toBeNull();
+      const row = getMessageByUid(String(result?.uid));
+      expect(row?.messageType).toBe("VDL-M2");
+      expect(row?.freq).toBe("136.000");
+    });
   });
 
   describe("MessageQueue wiring — end-to-end via real queue", () => {
