@@ -41,17 +41,20 @@ const DECODER_NAME_TO_RATE_KEY: Record<
  * Return the live rolling rate for a decoder from the messageRate store value.
  * Falls back to the LastMinute value from system_status when messageRate is
  * not yet available (e.g. before the first 5-second scheduler tick).
+ *
+ * Returns null for entries that have no rate source at all (e.g. XNG, which
+ * reports only a running total) so the rate row can be hidden rather than
+ * showing a misleading 0.
  */
 function getDecoderRate(
   messageRate: MessageRateData | null,
   decoderName: string,
   fallback: number | undefined,
-): number {
-  if (messageRate !== null) {
-    const key = DECODER_NAME_TO_RATE_KEY[decoderName];
-    if (key) return messageRate[key];
-  }
-  return fallback ?? 0;
+): number | null {
+  const key = DECODER_NAME_TO_RATE_KEY[decoderName];
+  if (messageRate !== null && key) return messageRate[key];
+  if (fallback !== undefined) return fallback;
+  return key ? 0 : null;
 }
 
 /**
@@ -207,29 +210,35 @@ export const StatusPage = () => {
         <Card>
           <h2 className="card__title">Message Statistics</h2>
           <div className="status-grid">
-            {Object.entries(status.global).map(([name, stats]) => (
-              <div key={name} className="status-item">
-                <div className="status-item__header">
-                  <span className="status-item__name">{name} Messages</span>
-                  {renderStatusBadge(stats.Status)}
-                </div>
-                <div className="status-item__details">
-                  <div className="status-detail">
-                    <span className="status-detail__label">Total:</span>
-                    <span className="status-detail__value">
-                      {stats.Count?.toLocaleString() ?? 0}
-                    </span>
+            {Object.entries(status.global).map(([name, stats]) => {
+              const rate = getDecoderRate(messageRate, name, stats.LastMinute);
+              return (
+                <div key={name} className="status-item">
+                  <div className="status-item__header">
+                    <span className="status-item__name">{name} Messages</span>
+                    {renderStatusBadge(stats.Status)}
                   </div>
-                  <div className="status-detail">
-                    <span className="status-detail__label">Rate (1 min):</span>
-                    <span className="status-detail__value">
-                      {getDecoderRate(messageRate, name, stats.LastMinute)}{" "}
-                      msg/min
-                    </span>
+                  <div className="status-item__details">
+                    <div className="status-detail">
+                      <span className="status-detail__label">Total:</span>
+                      <span className="status-detail__value">
+                        {stats.Count?.toLocaleString() ?? 0}
+                      </span>
+                    </div>
+                    {rate !== null && (
+                      <div className="status-detail">
+                        <span className="status-detail__label">
+                          Rate (1 min):
+                        </span>
+                        <span className="status-detail__value">
+                          {rate} msg/min
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {Object.keys(status.global).length === 0 && (
             <p className="text-muted">No message statistics available</p>

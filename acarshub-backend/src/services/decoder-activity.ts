@@ -35,6 +35,15 @@ import type { MessageType } from "./listener-types.js";
  */
 const knownEnabled = new Set<MessageType>();
 
+/**
+ * Types that have received at least one xng envelope.  Such a type may have no
+ * listener of its own, so its connection state follows the XNG listener.
+ */
+const xngFed = new Set<MessageType>();
+
+/** Total xng envelopes routed since start. */
+let xngMessageCount = 0;
+
 function isConfigEnabled(type: MessageType): boolean {
   const config = getConfig();
   switch (type) {
@@ -59,12 +68,14 @@ export function isDecoderEnabled(type: MessageType): boolean {
 }
 
 /**
- * Record that a message of `type` was received.
+ * Record that an xng message of `type` was received.  Only called for xng
+ * envelopes, so it also marks the type as fed by xng.
  *
  * Returns true only when the type was not already effectively enabled —
  * i.e. this call made it newly visible and callers should refresh clients.
  */
 export function markDecoderActive(type: MessageType): boolean {
+  xngFed.add(type);
   if (knownEnabled.has(type)) {
     return false;
   }
@@ -78,6 +89,29 @@ export function markDecoderActive(type: MessageType): boolean {
  */
 export function resetDecoderActivity(): void {
   knownEnabled.clear();
+  xngFed.clear();
+  xngMessageCount = 0;
+}
+
+/**
+ * True when at least one xng envelope of `type` has been received.
+ */
+export function isFedByXng(type: MessageType): boolean {
+  return xngFed.has(type);
+}
+
+/**
+ * Count one routed xng envelope.
+ */
+export function recordXngMessage(): void {
+  xngMessageCount++;
+}
+
+/**
+ * Total xng envelopes routed since start.
+ */
+export function getXngMessageCount(): number {
+  return xngMessageCount;
 }
 
 /**

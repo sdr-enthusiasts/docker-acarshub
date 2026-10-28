@@ -37,8 +37,11 @@ vi.mock("../../config.js", async (importOriginal) => {
 
 import {
   buildDecoderFeatures,
+  getXngMessageCount,
   isDecoderEnabled,
+  isFedByXng,
   markDecoderActive,
+  recordXngMessage,
   resetDecoderActivity,
 } from "../decoder-activity.js";
 
@@ -102,6 +105,52 @@ describe("decoder-activity", () => {
 
     expect(isDecoderEnabled("HFDL")).toBe(false);
     expect(markDecoderActive("HFDL")).toBe(true);
+  });
+
+  describe("isFedByXng", () => {
+    it("is false until markDecoderActive is called for the type", () => {
+      expect(isFedByXng("VDLM2")).toBe(false);
+
+      markDecoderActive("VDLM2");
+
+      expect(isFedByXng("VDLM2")).toBe(true);
+      expect(isFedByXng("ACARS")).toBe(false);
+    });
+
+    it("marks a config-enabled type as xng-fed without changing the return value", () => {
+      mockEnabled.enableAcars = true;
+
+      expect(markDecoderActive("ACARS")).toBe(false);
+      expect(isFedByXng("ACARS")).toBe(true);
+    });
+
+    it("is cleared by resetDecoderActivity", () => {
+      markDecoderActive("HFDL");
+
+      resetDecoderActivity();
+
+      expect(isFedByXng("HFDL")).toBe(false);
+    });
+  });
+
+  describe("xng message counter", () => {
+    it("starts at zero and counts each recorded message", () => {
+      expect(getXngMessageCount()).toBe(0);
+
+      recordXngMessage();
+      recordXngMessage();
+      recordXngMessage();
+
+      expect(getXngMessageCount()).toBe(3);
+    });
+
+    it("is reset by resetDecoderActivity", () => {
+      recordXngMessage();
+
+      resetDecoderActivity();
+
+      expect(getXngMessageCount()).toBe(0);
+    });
   });
 
   describe("buildDecoderFeatures", () => {

@@ -51,7 +51,11 @@ import {
   destroyAdsbPoller,
   getAdsbPoller,
 } from "./adsb-poller.js";
-import { buildDecoderFeatures, markDecoderActive } from "./decoder-activity.js";
+import {
+  buildDecoderFeatures,
+  markDecoderActive,
+  recordXngMessage,
+} from "./decoder-activity.js";
 import { type ConnectionStatus, ListenerManager } from "./listener-manager.js";
 import {
   destroyMessageQueue,
@@ -126,7 +130,11 @@ export class BackgroundServices extends EventEmitter {
       onMessage: (type, data) =>
         routeListenerMessage(type, data, (carrier, payload) => {
           getMessageQueue().push(carrier, payload);
-          if (type === "XNG" && markDecoderActive(carrier)) {
+          if (type !== "XNG") {
+            return;
+          }
+          recordXngMessage();
+          if (markDecoderActive(carrier)) {
             this.onDecoderActivated(carrier);
           }
         }),
