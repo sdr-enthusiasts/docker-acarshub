@@ -50,6 +50,7 @@ const getTestSettings = (overrides?: Partial<UserSettings>): UserSettings => ({
     provider: "carto_dark_all",
     customTileUrl: undefined,
     userSelectedProvider: false,
+    cartoApiKey: "",
     stationLat: 0,
     stationLon: 0,
     rangeRings: [100, 200, 300],

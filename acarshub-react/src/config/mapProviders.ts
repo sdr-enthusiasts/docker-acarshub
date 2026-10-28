@@ -14,12 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type { MapProvider, MapProviderConfig, Theme } from "../types";
+import type {
+  MapApiKeyProvider,
+  MapProvider,
+  MapProviderConfig,
+  MapSettings,
+  Theme,
+} from "../types";
+
+/**
+ * User-supplied API keys for providers that need one, keyed by service
+ */
+export type MapApiKeys = Record<MapApiKeyProvider, string>;
 
 /**
  * Map Provider Configurations
  * Based on tar1090's base_layers.js
- * All providers are free and do not require API keys
+ * All providers are free. CARTO providers need a free, user-supplied API key
+ * (requiresApiKey: "carto"); all others work without registration.
  * Theme-aware default: OpenFreeMap Dark (Mocha) / Positron (Latte),
  * see getThemeDefaultProvider()
  */
@@ -45,6 +57,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 19,
+    requiresApiKey: "carto",
   },
   {
     id: "osm_de",
@@ -139,6 +152,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 20,
+    requiresApiKey: "carto",
   },
   {
     id: "carto_dark_nolabels",
@@ -148,6 +162,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 20,
+    requiresApiKey: "carto",
   },
   {
     id: "carto_light_all",
@@ -157,6 +172,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 20,
+    requiresApiKey: "carto",
   },
   {
     id: "carto_light_nolabels",
@@ -166,6 +182,7 @@ export const WORLDWIDE_PROVIDERS: MapProviderConfig[] = [
     attribution:
       'Powered by <a href="https://carto.com">CARTO.com</a> using data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://www.openstreetmap.org/copyright">ODbL</a>',
     maxZoom: 20,
+    requiresApiKey: "carto",
   },
 ];
 
@@ -265,13 +282,30 @@ export function getGibsCloudsUrl(): string {
 }
 
 /**
+ * Whether a provider can be used with the given API keys.
+ * False when it needs a key that is empty or whitespace-only.
+ */
+export function isProviderAvailable(
+  config: MapProviderConfig,
+  apiKeys: MapApiKeys,
+): boolean {
+  if (!config.requiresApiKey) {
+    return true;
+  }
+  return (apiKeys[config.requiresApiKey] ?? "").trim() !== "";
+}
+
+/**
  * Get tile URL for a provider
- * Handles special cases like GIBS clouds and custom URLs
+ * Handles special cases like GIBS clouds and custom URLs, and appends the
+ * API key for providers that need one. Returns undefined when the provider
+ * needs a key that is missing, so callers fall back to the theme default.
  */
 export function getProviderTileUrl(
   providerId: string,
   customUrl?: string,
-): string {
+  apiKeys?: MapApiKeys,
+): string | undefined {
   if (providerId === "custom" && customUrl) {
     return customUrl;
   }
@@ -281,5 +315,34 @@ export function getProviderTileUrl(
   }
 
   const provider = getProviderConfig(providerId);
-  return provider?.url || "";
+  if (!provider) {
+    return "";
+  }
+
+  if (provider.requiresApiKey) {
+    const key = (apiKeys?.[provider.requiresApiKey] ?? "").trim();
+    if (key === "") {
+      return undefined;
+    }
+    const separator = provider.url.includes("?") ? "&" : "?";
+    return `${provider.url}${separator}key=${encodeURIComponent(key)}`;
+  }
+
+  return provider.url;
+}
+
+/**
+ * Resolve the provider that is actually rendered: the stored provider, or
+ * the theme default when the stored provider needs an API key that is not
+ * set. The stored choice itself is never modified.
+ */
+export function resolveEffectiveProvider(
+  map: MapSettings,
+  theme: Theme,
+): MapProvider {
+  const config = getProviderConfig(map.provider);
+  if (config && !isProviderAvailable(config, { carto: map.cartoApiKey })) {
+    return getThemeDefaultProvider(theme);
+  }
+  return map.provider;
 }

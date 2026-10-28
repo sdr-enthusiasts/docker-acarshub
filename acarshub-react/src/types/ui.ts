@@ -291,6 +291,11 @@ export type MapProvider =
   WorldwideMapProvider | USMapProvider | EuropeMapProvider | "custom";
 
 /**
+ * Third-party tile services whose URLs need a user-supplied API key
+ */
+export type MapApiKeyProvider = "carto";
+
+/**
  * Map provider configuration
  */
 export interface MapProviderConfig {
@@ -310,6 +315,8 @@ export interface MapProviderConfig {
   minZoom?: number;
   /** Whether this is a vector tile layer (false = raster) */
   isVector?: boolean;
+  /** API key that must be configured before this provider can be used */
+  requiresApiKey?: MapApiKeyProvider;
 }
 
 /**
@@ -365,6 +372,12 @@ export interface MapSettings {
   customTileUrl?: string;
   /** User has explicitly selected a provider (don't auto-switch with theme) */
   userSelectedProvider: boolean;
+  /**
+   * CARTO basemaps API key (stored only in this browser). Empty string
+   * means no key: CARTO providers are unavailable and fall back to the
+   * theme default.
+   */
+  cartoApiKey: string;
   /** Station latitude for range rings and center */
   stationLat: number;
   /** Station longitude for range rings and center */
@@ -534,6 +547,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     provider: "openfreemap_dark",
     customTileUrl: undefined,
     userSelectedProvider: false, // Allow theme-aware switching
+    cartoApiKey: "",
     stationLat: 0,
     stationLon: 0,
     rangeRings: [100, 200, 300],

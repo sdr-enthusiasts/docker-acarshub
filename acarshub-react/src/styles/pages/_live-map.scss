@@ -202,6 +202,10 @@
     gap: var(--spacing-sm);
   }
 
+  &__provider-hint {
+    font-style: italic;
+  }
+
   &__theme-badge {
     display: inline-block;
     font-size: 0.75rem;

@@ -111,6 +111,7 @@ export type {
   // Error/Loading
   LoadingState,
   LogLevel,
+  MapApiKeyProvider,
   MapProvider,
   MapProviderCategory,
   MapProviderConfig,

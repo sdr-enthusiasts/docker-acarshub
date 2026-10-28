@@ -55,6 +55,8 @@
  *     - Known id → returns that provider's url field.
  *     - Unknown id → returns "" (NOT undefined, NOT null — the SCSS
  *       and Leaflet glue code rely on the empty-string fallback).
+ *     - CARTO ids → `?key=<encoded, trimmed key>` appended; undefined
+ *       when no key is set (Map.tsx then uses the theme default).
  *
  *  6. getThemeDefaultProvider:
  *     - Mocha → openfreemap_dark, Latte → openfreemap_positron. These
@@ -62,10 +64,19 @@
  *     - Both results are published providers (resolvable config).
  *     - DEFAULT_SETTINGS (which hard-codes a literal to avoid an
  *       import cycle) stays in sync with the Mocha default.
+ *
+ *  7. CARTO API key gating (isProviderAvailable,
+ *     resolveEffectiveProvider): exactly the five CARTO providers
+ *     need a key; a CARTO choice without a key resolves to the theme
+ *     default, every other choice is returned unchanged.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_SETTINGS } from "../../types";
+import {
+  DEFAULT_SETTINGS,
+  type MapProvider,
+  type MapSettings,
+} from "../../types";
 import {
   ALL_PROVIDERS,
   getGibsCloudsUrl,
@@ -73,6 +84,8 @@ import {
   getProvidersByCategory,
   getProviderTileUrl,
   getThemeDefaultProvider,
+  isProviderAvailable,
+  resolveEffectiveProvider,
   US_PROVIDERS,
   WORLDWIDE_PROVIDERS,
 } from "../mapProviders";
@@ -320,5 +333,166 @@ describe("getThemeDefaultProvider", () => {
     expect(DEFAULT_SETTINGS.map.provider).toBe(
       getThemeDefaultProvider(DEFAULT_SETTINGS.appearance.theme),
     );
+  });
+});
+
+const CARTO_IDS: MapProvider[] = [
+  "carto_english",
+  "carto_dark_all",
+  "carto_dark_nolabels",
+  "carto_light_all",
+  "carto_light_nolabels",
+];
+
+function mapSettingsWith(overrides: Partial<MapSettings>): MapSettings {
+  return { ...DEFAULT_SETTINGS.map, ...overrides };
+}
+
+describe("CARTO API key requirement", () => {
+  it("marks exactly the five CARTO providers with requiresApiKey=carto", () => {
+    const marked = ALL_PROVIDERS.filter((p) => p.requiresApiKey).map(
+      (p) => p.id,
+    );
+    expect(marked).toEqual(CARTO_IDS);
+    for (const id of CARTO_IDS) {
+      expect(getProviderConfig(id)?.requiresApiKey).toBe("carto");
+    }
+  });
+});
+
+describe("isProviderAvailable", () => {
+  it.each(CARTO_IDS)("%s is unavailable without a key", (id) => {
+    const config = getProviderConfig(id);
+    if (!config) throw new Error(`missing config for ${id}`);
+    expect(isProviderAvailable(config, { carto: "" })).toBe(false);
+  });
+
+  it("treats a whitespace-only key as missing", () => {
+    const config = getProviderConfig("carto_dark_all");
+    if (!config) throw new Error("missing config");
+    expect(isProviderAvailable(config, { carto: "   \t" })).toBe(false);
+  });
+
+  it.each(CARTO_IDS)("%s is available with a key", (id) => {
+    const config = getProviderConfig(id);
+    if (!config) throw new Error(`missing config for ${id}`);
+    expect(isProviderAvailable(config, { carto: "abc123" })).toBe(true);
+  });
+
+  it("every non-CARTO provider is available without a key", () => {
+    for (const config of ALL_PROVIDERS.filter(
+      (p) => !CARTO_IDS.includes(p.id),
+    )) {
+      expect(isProviderAvailable(config, { carto: "" }), config.id).toBe(true);
+    }
+  });
+});
+
+describe("getProviderTileUrl with API keys", () => {
+  it("appends ?key= to CARTO URLs", () => {
+    expect(
+      getProviderTileUrl("carto_dark_all", undefined, { carto: "abc123" }),
+    ).toBe(
+      "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png?key=abc123",
+    );
+  });
+
+  it("trims and URL-encodes the key", () => {
+    expect(
+      getProviderTileUrl("carto_light_all", undefined, {
+        carto: "  a b&c=d/e  ",
+      }),
+    ).toBe(
+      "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?key=a%20b%26c%3Dd%2Fe",
+    );
+  });
+
+  it("uses & when the provider URL already has a query string", () => {
+    const config = getProviderConfig("carto_english");
+    if (!config) throw new Error("missing config");
+    const original = config.url;
+    config.url = `${original}?lang=en`;
+    try {
+      expect(
+        getProviderTileUrl("carto_english", undefined, { carto: "k" }),
+      ).toBe(`${original}?lang=en&key=k`);
+    } finally {
+      config.url = original;
+    }
+  });
+
+  it.each(CARTO_IDS)("returns undefined for %s without a key", (id) => {
+    expect(getProviderTileUrl(id)).toBeUndefined();
+    expect(getProviderTileUrl(id, undefined, { carto: "" })).toBeUndefined();
+    expect(getProviderTileUrl(id, undefined, { carto: "  " })).toBeUndefined();
+  });
+
+  it("leaves non-CARTO URLs untouched when a key is set", () => {
+    expect(getProviderTileUrl("osm", undefined, { carto: "abc123" })).toBe(
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    );
+    expect(
+      getProviderTileUrl(
+        "custom",
+        "https://my-tiles.example.com/{z}/{x}/{y}.png",
+        { carto: "abc123" },
+      ),
+    ).toBe("https://my-tiles.example.com/{z}/{x}/{y}.png");
+  });
+});
+
+describe("resolveEffectiveProvider", () => {
+  it.each([
+    ["mocha", "openfreemap_dark"],
+    ["latte", "openfreemap_positron"],
+  ] as const)(
+    "CARTO without a key resolves to the %s theme default (%s)",
+    (theme, expected) => {
+      for (const id of CARTO_IDS) {
+        expect(
+          resolveEffectiveProvider(
+            mapSettingsWith({ provider: id, cartoApiKey: "" }),
+            theme,
+          ),
+        ).toBe(expected);
+      }
+    },
+  );
+
+  it.each(["mocha", "latte"] as const)(
+    "CARTO with a key is kept on %s",
+    (theme) => {
+      for (const id of CARTO_IDS) {
+        expect(
+          resolveEffectiveProvider(
+            mapSettingsWith({ provider: id, cartoApiKey: "abc123" }),
+            theme,
+          ),
+        ).toBe(id);
+      }
+    },
+  );
+
+  it("non-CARTO providers are returned unchanged without a key", () => {
+    for (const provider of [
+      "osm",
+      "openfreemap_liberty",
+      "vfr_sectional",
+      "custom",
+    ] as const) {
+      expect(
+        resolveEffectiveProvider(
+          mapSettingsWith({ provider, cartoApiKey: "" }),
+          "latte",
+        ),
+      ).toBe(provider);
+    }
+  });
+
+  it("tolerates a missing cartoApiKey field (pre-v11 imported settings)", () => {
+    const map = mapSettingsWith({ provider: "carto_dark_all" });
+    // Simulates settings imported from an export taken before v11
+    delete (map as Partial<MapSettings>).cartoApiKey;
+    expect(resolveEffectiveProvider(map, "mocha")).toBe("openfreemap_dark");
   });
 });

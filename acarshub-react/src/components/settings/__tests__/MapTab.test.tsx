@@ -125,6 +125,112 @@ describe("MapTab", () => {
     });
   });
 
+  describe("CARTO API key", () => {
+    const CARTO_IDS = [
+      "carto_english",
+      "carto_dark_all",
+      "carto_dark_nolabels",
+      "carto_light_all",
+      "carto_light_nolabels",
+    ];
+
+    function providerOption(value: string): HTMLOptionElement {
+      const select = screen.getByLabelText("Map Provider");
+      const option = select.querySelector<HTMLOptionElement>(
+        `option[value="${value}"]`,
+      );
+      if (!option) throw new Error(`no option for ${value}`);
+      return option;
+    }
+
+    it("renders a masked, non-autocompleting key input", () => {
+      render(<MapTab />);
+      const input = screen.getByLabelText("CARTO API key");
+      expect(input).toHaveAttribute("type", "password");
+      expect(input).toHaveAttribute("autocomplete", "off");
+      expect(input).toHaveValue("");
+    });
+
+    it("links to the CARTO key page in a new tab", () => {
+      render(<MapTab />);
+      const link = screen.getByRole("link", {
+        name: "carto.com/basemaps/apikey",
+      });
+      expect(link).toHaveAttribute("href", "https://carto.com/basemaps/apikey");
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    });
+
+    it("typing a key stores it (trimmed) in the settings store", () => {
+      render(<MapTab />);
+      fireEvent.change(screen.getByLabelText("CARTO API key"), {
+        target: { value: " abc123 " },
+      });
+      expect(useSettingsStore.getState().settings.map.cartoApiKey).toBe(
+        "abc123",
+      );
+      expect(screen.getByLabelText("CARTO API key")).toHaveValue("abc123");
+    });
+
+    it("disables CARTO options with a hint when no key is set", () => {
+      render(<MapTab />);
+      for (const id of CARTO_IDS) {
+        const option = providerOption(id);
+        expect(option.disabled).toBe(true);
+        expect(option.textContent).toMatch(/\(requires CARTO API key\)$/);
+      }
+      expect(providerOption("osm").disabled).toBe(false);
+      expect(providerOption("openfreemap_dark").disabled).toBe(false);
+    });
+
+    it("enables CARTO options once a key is set", () => {
+      useSettingsStore.getState().setCartoApiKey("abc123");
+      render(<MapTab />);
+      for (const id of CARTO_IDS) {
+        const option = providerOption(id);
+        expect(option.disabled).toBe(false);
+        expect(option.textContent).not.toMatch(/requires CARTO API key/);
+      }
+    });
+
+    it("enables CARTO options as soon as a key is typed", () => {
+      render(<MapTab />);
+      expect(providerOption("carto_dark_all").disabled).toBe(true);
+      fireEvent.change(screen.getByLabelText("CARTO API key"), {
+        target: { value: "abc123" },
+      });
+      expect(providerOption("carto_dark_all").disabled).toBe(false);
+    });
+
+    it("shows the fallback notice when a CARTO provider is stored without a key", () => {
+      useSettingsStore.getState().setMapProvider("carto_dark_all", true);
+      render(<MapTab />);
+      expect(screen.getByText(/CARTO API key required:/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/theme default \(OpenFreeMap Dark\) is shown/),
+      ).toBeInTheDocument();
+    });
+
+    it("hides the fallback notice once a key is entered", () => {
+      useSettingsStore.getState().setMapProvider("carto_dark_all", true);
+      render(<MapTab />);
+      fireEvent.change(screen.getByLabelText("CARTO API key"), {
+        target: { value: "abc123" },
+      });
+      expect(
+        screen.queryByText(/CARTO API key required:/),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not show the fallback notice for non-CARTO providers", () => {
+      useSettingsStore.getState().setMapProvider("osm", true);
+      render(<MapTab />);
+      expect(
+        screen.queryByText(/CARTO API key required:/),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("custom tile URL", () => {
     it("typing a custom tile URL sets both the URL and provider to 'custom'", () => {
       render(<MapTab />);

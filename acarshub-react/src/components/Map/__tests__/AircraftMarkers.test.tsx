@@ -34,6 +34,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "../../../store/useAppStore";
 import { useSettingsStore } from "../../../store/useSettingsStore";
 import type { PairedAircraft } from "../../../utils/aircraftPairing";
+import { mapLogger } from "../../../utils/logger";
 
 // ---------------------------------------------------------------------------
 // Mocks — react-map-gl/maplibre
@@ -362,6 +363,31 @@ describe("AircraftMarkers", () => {
       );
       flushRAF();
       expect(screen.queryAllByTestId("aircraft-marker")).toHaveLength(0);
+    });
+  });
+
+  describe("settings logging", () => {
+    it("redacts the CARTO API key from the map settings debug log", () => {
+      const debugSpy = vi.spyOn(mapLogger, "debug");
+      const current = useSettingsStore.getState().settings;
+      useSettingsStore.setState({
+        settings: {
+          ...current,
+          map: { ...current.map, cartoApiKey: "super-secret-key" },
+        },
+      });
+
+      renderWithMap(makeFakeMap(WORLD_BOUNDS), <AircraftMarkers />);
+
+      expect(debugSpy).toHaveBeenCalledWith(
+        "Map settings loaded",
+        expect.objectContaining({
+          mapSettings: expect.objectContaining({ cartoApiKey: "[redacted]" }),
+        }),
+      );
+      expect(JSON.stringify(debugSpy.mock.calls)).not.toContain(
+        "super-secret-key",
+      );
     });
   });
 

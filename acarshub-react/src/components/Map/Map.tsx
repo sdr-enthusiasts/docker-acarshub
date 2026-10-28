@@ -70,6 +70,7 @@ import {
   getProviderConfig,
   getProviderTileUrl,
   getThemeDefaultProvider,
+  resolveEffectiveProvider,
 } from "../../config/mapProviders";
 import { useAppStore } from "../../store/useAppStore";
 import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
@@ -234,10 +235,15 @@ export function MapComponent({
     return () => clearTimeout(saveTimeout);
   }, [viewState.longitude, viewState.latitude, viewState.zoom]);
 
+  // The provider actually rendered: a provider whose required API key is
+  // missing (CARTO) resolves to the theme default. The stored choice is kept.
+  const effectiveProvider = resolveEffectiveProvider(mapSettings, theme);
+
   // Provider-specific style, or null when the base map must be the theme
   // default (no usable URL, or an aviation chart that needs a base beneath
   // it). `theme` is deliberately NOT a dependency here so raster style
-  // objects keep their identity across theme changes.
+  // objects keep their identity across theme changes; `effectiveProvider`
+  // only follows the theme while falling back to the theme default.
   const providerStyle = useMemo((): string | StyleSpecification | null => {
     // In E2E mode, return a minimal inline style with no external sources.
     // MapLibre can parse and load this instantly, firing onLoad reliably
@@ -248,7 +254,7 @@ export function MapComponent({
       return { version: 8, sources: {}, layers: [] };
     }
 
-    const provider = mapSettings.provider;
+    const provider = effectiveProvider;
     const providerConfig = getProviderConfig(provider);
 
     // For vector tile providers (OpenFreeMap), use the style URL directly
@@ -261,7 +267,9 @@ export function MapComponent({
     }
 
     // For raster tile providers, create a minimal style JSON
-    const tileUrl = getProviderTileUrl(provider, mapSettings.customTileUrl);
+    const tileUrl = getProviderTileUrl(provider, mapSettings.customTileUrl, {
+      carto: mapSettings.cartoApiKey,
+    });
 
     if (!tileUrl) {
       mapLogger.warn(
@@ -282,7 +290,9 @@ export function MapComponent({
 
     mapLogger.info("Using raster tile provider", {
       provider,
-      url: tileUrl,
+      // Unkeyed template where one exists, so API keys never reach the
+      // (optionally persisted) logs.
+      url: providerConfig?.url || tileUrl,
       minZoom: providerConfig?.minZoom,
       maxZoom: providerConfig?.maxZoom,
     });
@@ -307,7 +317,7 @@ export function MapComponent({
         },
       ],
     };
-  }, [mapSettings.provider, mapSettings.customTileUrl]);
+  }, [effectiveProvider, mapSettings.customTileUrl, mapSettings.cartoApiKey]);
 
   const mapStyle = useMemo((): string | StyleSpecification => {
     if (providerStyle !== null) {
@@ -332,12 +342,12 @@ export function MapComponent({
       return null;
     }
 
-    const providerConfig = getProviderConfig(mapSettings.provider);
+    const providerConfig = getProviderConfig(effectiveProvider);
     if (!providerConfig || !isZoomConstrainedChart(providerConfig)) {
       return null;
     }
 
-    const tileUrl = getProviderTileUrl(mapSettings.provider);
+    const tileUrl = getProviderTileUrl(effectiveProvider);
     if (!tileUrl) {
       return null;
     }
@@ -359,7 +369,7 @@ export function MapComponent({
         maxzoom: providerConfig.maxZoom,
       },
     };
-  }, [mapSettings.provider]);
+  }, [effectiveProvider]);
 
   // The map remounts on provider change. A theme-derived base must ALSO
   // remount on theme change: swapping the style URL in place makes MapLibre
@@ -368,8 +378,8 @@ export function MapComponent({
   // `beforeId`), so the chart could end up drawn above the overlays.
   const mapKey =
     providerStyle === null
-      ? `${mapSettings.provider}:${theme}`
-      : mapSettings.provider;
+      ? `${effectiveProvider}:${theme}`
+      : effectiveProvider;
 
   // Handle view state changes
   const handleMove = useCallback(

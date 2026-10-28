@@ -289,6 +289,7 @@ describe("LiveMapPage", () => {
           ...state.settings.map,
           provider: "openfreemap_dark",
           userSelectedProvider: false,
+          cartoApiKey: "",
           mapSidebarWidth: 408,
           mapSidebarCollapsed: false,
         },
@@ -364,6 +365,56 @@ describe("LiveMapPage", () => {
       renderPage();
       fireMapLoad();
       expect(screen.queryByText(/🎨/)).not.toBeInTheDocument();
+    });
+
+    it("labels the theme default with a key hint when a stored CARTO provider has no key", () => {
+      useSettingsStore.setState((state) => ({
+        settings: {
+          ...state.settings,
+          map: {
+            ...state.settings.map,
+            provider: "carto_dark_all",
+            userSelectedProvider: true,
+            cartoApiKey: "",
+          },
+        },
+      }));
+      renderPage();
+      fireMapLoad();
+      const label = screen.getByText(/provider:/i);
+      expect(label).toHaveTextContent("OpenFreeMap Dark");
+      expect(label).not.toHaveTextContent("CARTO.com Dark All");
+      expect(label).toHaveTextContent("CARTO needs an API key");
+    });
+
+    it("labels the CARTO provider without a hint once a key is set", () => {
+      useSettingsStore.setState((state) => ({
+        settings: {
+          ...state.settings,
+          map: {
+            ...state.settings.map,
+            provider: "carto_dark_all",
+            userSelectedProvider: true,
+            cartoApiKey: "abc123",
+          },
+        },
+      }));
+      renderPage();
+      fireMapLoad();
+      const label = screen.getByText(/provider:/i);
+      expect(label).toHaveTextContent("CARTO.com Dark All");
+      expect(label).not.toHaveTextContent("CARTO needs an API key");
+    });
+
+    it("shows no key hint for non-CARTO providers", () => {
+      renderPage();
+      fireMapLoad();
+      expect(screen.getByText(/provider:/i)).toHaveTextContent(
+        "OpenFreeMap Dark",
+      );
+      expect(
+        screen.queryByText(/CARTO needs an API key/),
+      ).not.toBeInTheDocument();
     });
   });
 
