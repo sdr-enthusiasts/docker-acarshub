@@ -73,6 +73,7 @@ export interface SettingsState {
   setMapProvider: (provider: MapProvider, userSelected?: boolean) => void;
   resetMapProviderToDefault: () => void;
   setCustomTileUrl: (url: string | undefined) => void;
+  setCartoApiKey: (key: string) => void;
   setStationLocation: (lat: number, lon: number) => void;
   setRangeRings: (rings: number[]) => void;
   setDefaultMapView: (lat: number, lon: number, zoom: number) => void;
@@ -152,6 +153,7 @@ const getDefaultSettings = (): UserSettings => {
       provider: getThemeDefaultProvider("mocha"),
       customTileUrl: undefined,
       userSelectedProvider: false,
+      cartoApiKey: "",
       stationLat: 0,
       stationLon: 0,
       rangeRings: [100, 200, 300],
@@ -184,7 +186,7 @@ const getDefaultSettings = (): UserSettings => {
       persistLogs: true,
     },
     updatedAt: Date.now(),
-    version: 10,
+    version: 11,
   };
   return defaults;
 };
@@ -404,6 +406,15 @@ export const useSettingsStore = create<SettingsState>()(
           settings: {
             ...state.settings,
             map: { ...state.settings.map, customTileUrl: url },
+          },
+        })),
+
+      setCartoApiKey: (key) =>
+        set((state) => ({
+          settings: {
+            ...state.settings,
+            map: { ...state.settings.map, cartoApiKey: key.trim() },
+            updatedAt: Date.now(),
           },
         })),
 
@@ -793,17 +804,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "acarshub-settings",
-      version: 10,
+      version: 11,
       // Migrate old settings if needed
       migrate: (persistedState: unknown, version: number) => {
         const state = persistedState as SettingsState;
 
-        // Version 0 -> 10: Reset to defaults
+        // Version 0 -> 11: Reset to defaults
         if (version === 0) {
           return { settings: getDefaultSettings() };
         }
 
-        // Version 1 -> 10: Add map settings and advanced settings
+        // Version 1 -> 11: Add map settings and advanced settings
         if (version === 1) {
           const defaults = getDefaultSettings();
           return {
@@ -812,12 +823,12 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: defaults.map,
               advanced: defaults.advanced,
-              version: 10,
+              version: 11,
             },
           };
         }
 
-        // Version 2 -> 10: Add showOnlyMilitary and showOnlyInteresting to map settings
+        // Version 2 -> 11: Add showOnlyMilitary and showOnlyInteresting to map settings
         if (version === 2) {
           return {
             ...state,
@@ -825,6 +836,7 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
+                cartoApiKey: "",
                 showOnlyMilitary: false,
                 showOnlyInteresting: false,
                 showOnlyPIA: false,
@@ -836,12 +848,12 @@ export const useSettingsStore = create<SettingsState>()(
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 10,
+              version: 11,
             },
           };
         }
 
-        // Version 3 -> 10: Add showOpenAIP and showRainViewer to map settings
+        // Version 3 -> 11: Add showOpenAIP and showRainViewer to map settings
         if (version === 3) {
           return {
             ...state,
@@ -849,6 +861,7 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
+                cartoApiKey: "",
                 showOpenAIP: false,
                 showRainViewer: false,
                 showHeyWhatsThat: true,
@@ -856,12 +869,12 @@ export const useSettingsStore = create<SettingsState>()(
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 10,
+              version: 11,
             },
           };
         }
 
-        // Version 4 -> 10: Add groundAltitudeThreshold to map settings
+        // Version 4 -> 11: Add groundAltitudeThreshold to map settings
         if (version === 4) {
           return {
             ...state,
@@ -869,6 +882,7 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
+                cartoApiKey: "",
                 groundAltitudeThreshold: 500,
                 useSprites: true,
                 showHeyWhatsThat: true,
@@ -876,12 +890,12 @@ export const useSettingsStore = create<SettingsState>()(
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 10,
+              version: 11,
             },
           };
         }
 
-        // Version 5 -> 10: Fix useSprites to default to true
+        // Version 5 -> 11: Fix useSprites to default to true
         if (version === 5) {
           return {
             ...state,
@@ -889,18 +903,19 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
+                cartoApiKey: "",
                 useSprites: true,
                 showHeyWhatsThat: true,
                 markerSize: "medium",
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 10,
+              version: 11,
             },
           };
         }
 
-        // Version 6 -> 10: Add mapSidebarWidth to map settings
+        // Version 6 -> 11: Add mapSidebarWidth to map settings
         if (version === 6) {
           return {
             ...state,
@@ -908,17 +923,18 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
+                cartoApiKey: "",
                 showHeyWhatsThat: true,
                 markerSize: "medium",
                 mapSidebarWidth: 408,
                 mapSidebarCollapsed: false,
               },
-              version: 10,
+              version: 11,
             },
           };
         }
 
-        // Version 7 -> 10: Add mapSidebarCollapsed to map settings
+        // Version 7 -> 11: Add mapSidebarCollapsed to map settings
         if (version === 7) {
           return {
             ...state,
@@ -926,16 +942,17 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
+                cartoApiKey: "",
                 showHeyWhatsThat: true,
                 markerSize: "medium",
                 mapSidebarCollapsed: false,
               },
-              version: 10,
+              version: 11,
             },
           };
         }
 
-        // Version 8 -> 10: Add showHeyWhatsThat to map settings
+        // Version 8 -> 11: Add showHeyWhatsThat to map settings
         if (version === 8) {
           return {
             ...state,
@@ -943,15 +960,16 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
+                cartoApiKey: "",
                 showHeyWhatsThat: true,
                 markerSize: "medium",
               },
-              version: 10,
+              version: 11,
             },
           };
         }
 
-        // Version 9 -> 10: Add markerSize to map settings (FEAT-MARKER-SIZE)
+        // Version 9 -> 11: Add markerSize to map settings (FEAT-MARKER-SIZE)
         if (version === 9) {
           return {
             ...state,
@@ -959,9 +977,25 @@ export const useSettingsStore = create<SettingsState>()(
               ...state.settings,
               map: {
                 ...state.settings.map,
+                cartoApiKey: "",
                 markerSize: "medium",
               },
-              version: 10,
+              version: 11,
+            },
+          };
+        }
+
+        // Version 10 -> 11: Add cartoApiKey to map settings
+        if (version === 10) {
+          return {
+            ...state,
+            settings: {
+              ...state.settings,
+              map: {
+                ...state.settings.map,
+                cartoApiKey: state.settings.map.cartoApiKey ?? "",
+              },
+              version: 11,
             },
           };
         }

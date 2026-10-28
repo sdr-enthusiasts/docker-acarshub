@@ -44,6 +44,7 @@ import {
 } from "../../../config/mapProviders";
 import { useSettingsStore } from "../../../store/useSettingsStore";
 import type { MapProvider, Theme, UserSettings } from "../../../types";
+import { mapLogger } from "../../../utils/logger";
 import { MapComponent } from "../Map";
 
 // ---------------------------------------------------------------------------
@@ -177,6 +178,7 @@ const makeSettings = (
     provider: "carto_dark_all",
     customTileUrl: undefined,
     userSelectedProvider: false,
+    cartoApiKey: "test-key",
     stationLat: 0,
     stationLon: 0,
     rangeRings: [100, 200, 300],
@@ -406,7 +408,9 @@ describe("MapComponent — mapStyle stability", () => {
 
   describe("getProviderTileUrl", () => {
     it("returns a non-empty URL for a known raster provider", () => {
-      const url = getProviderTileUrl("carto_dark_all");
+      const url = getProviderTileUrl("carto_dark_all", undefined, {
+        carto: "test-key",
+      });
       expect(url).toBeTruthy();
       expect(url).toContain("{z}");
     });
@@ -658,6 +662,152 @@ describe("MapComponent — mapStyle stability", () => {
           JSON.stringify(Object.fromEntries(capturedSourceProps)),
         ).not.toContain("cartocdn");
         unmount();
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // CARTO API key: no key -> theme default, key -> keyed raster tiles
+  // -------------------------------------------------------------------------
+
+  describe("CARTO API key", () => {
+    it.each([
+      ["mocha", "https://tiles.openfreemap.org/styles/dark"],
+      ["latte", "https://tiles.openfreemap.org/styles/positron"],
+    ] as const)(
+      "CARTO provider without a key uses the %s theme default style",
+      (theme, expectedUrl) => {
+        useSettingsStore.setState({
+          settings: makeSettings(
+            { provider: "carto_dark_all", cartoApiKey: "" },
+            theme,
+          ),
+        });
+
+        render(<MapHarness initialZoom={7} />);
+
+        expect(capturedMapStyleProps[0]).toBe(expectedUrl);
+        expect(JSON.stringify(capturedMapStyleProps)).not.toContain("cartocdn");
+      },
+    );
+
+    it("CARTO provider with a key renders raster tiles with the encoded key", () => {
+      useSettingsStore.setState({
+        settings: makeSettings({
+          provider: "carto_light_all",
+          cartoApiKey: "a b&c",
+        }),
+      });
+
+      render(<MapHarness initialZoom={7} />);
+
+      const style = capturedMapStyleProps[0] as {
+        sources: Record<string, { type: string; tiles: string[] }>;
+      };
+      expect(style.sources["raster-tiles"]?.type).toBe("raster");
+      expect(style.sources["raster-tiles"]?.tiles).toEqual([
+        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png?key=a%20b%26c",
+      ]);
+    });
+
+    it("never logs the API key", () => {
+      const infoSpy = vi.spyOn(mapLogger, "info");
+      const debugSpy = vi.spyOn(mapLogger, "debug");
+      useSettingsStore.setState({
+        settings: makeSettings({
+          provider: "carto_dark_all",
+          cartoApiKey: "super-secret-key",
+        }),
+      });
+
+      render(<MapHarness initialZoom={7} />);
+
+      expect(infoSpy).toHaveBeenCalledWith(
+        "Using raster tile provider",
+        expect.objectContaining({ provider: "carto_dark_all" }),
+      );
+      expect(JSON.stringify(infoSpy.mock.calls)).not.toContain(
+        "super-secret-key",
+      );
+      expect(JSON.stringify(debugSpy.mock.calls)).not.toContain(
+        "super-secret-key",
+      );
+    });
+
+    it("remounts on theme change while falling back (key follows the effective provider)", () => {
+      useSettingsStore.setState({
+        settings: makeSettings(
+          { provider: "carto_dark_all", cartoApiKey: "" },
+          "mocha",
+        ),
+      });
+
+      const { getByTestId } = render(<MapHarness initialZoom={7} />);
+      const mochaMap = getByTestId("mock-maplibre-map");
+
+      act(() => {
+        useSettingsStore.setState({
+          settings: makeSettings(
+            { provider: "carto_dark_all", cartoApiKey: "" },
+            "latte",
+          ),
+        });
+      });
+
+      expect(getByTestId("mock-maplibre-map")).not.toBe(mochaMap);
+      expect(capturedMapStyleProps[capturedMapStyleProps.length - 1]).toBe(
+        "https://tiles.openfreemap.org/styles/positron",
+      );
+    });
+
+    it("remounts onto the CARTO raster style when a key is entered", () => {
+      useSettingsStore.setState({
+        settings: makeSettings({ provider: "carto_dark_all", cartoApiKey: "" }),
+      });
+
+      const { getByTestId } = render(<MapHarness initialZoom={7} />);
+      const fallbackMap = getByTestId("mock-maplibre-map");
+
+      act(() => {
+        useSettingsStore.setState({
+          settings: makeSettings({
+            provider: "carto_dark_all",
+            cartoApiKey: "abc123",
+          }),
+        });
+      });
+
+      expect(getByTestId("mock-maplibre-map")).not.toBe(fallbackMap);
+      const style = capturedMapStyleProps[capturedMapStyleProps.length - 1] as {
+        sources: Record<string, { tiles: string[] }>;
+      };
+      expect(style.sources["raster-tiles"]?.tiles[0]).toMatch(/\?key=abc123$/);
+    });
+
+    it("keyed CARTO raster style keeps its identity across theme changes", () => {
+      useSettingsStore.setState({
+        settings: makeSettings(
+          { provider: "carto_dark_all", cartoApiKey: "abc123" },
+          "mocha",
+        ),
+      });
+
+      const { getByTestId } = render(<MapHarness initialZoom={7} />);
+      const firstStyle = capturedMapStyleProps[0];
+      const firstMap = getByTestId("mock-maplibre-map");
+
+      act(() => {
+        useSettingsStore.setState({
+          settings: makeSettings(
+            { provider: "carto_dark_all", cartoApiKey: "abc123" },
+            "latte",
+          ),
+        });
+      });
+
+      expect(getByTestId("mock-maplibre-map")).toBe(firstMap);
+      for (const style of capturedMapStyleProps) {
+        expect(style).toBe(firstStyle);
       }
     });
   });

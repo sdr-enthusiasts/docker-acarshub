@@ -242,6 +242,79 @@ describe("MapProviderSelector", () => {
     });
   });
 
+  describe("CARTO API key gating", () => {
+    async function openMenu(): Promise<ReturnType<typeof userEvent.setup>> {
+      const user = userEvent.setup();
+      render(<MapProviderSelector />);
+      await user.click(
+        screen.getByRole("button", { name: /select map provider/i }),
+      );
+      return user;
+    }
+
+    it("renders CARTO entries disabled with a hint when no key is set", async () => {
+      await openMenu();
+
+      const cartoItems = screen.getAllByRole("menuitem", { name: /^CARTO/ });
+      expect(cartoItems).toHaveLength(5);
+      for (const item of cartoItems) {
+        expect(item).toHaveAttribute("aria-disabled", "true");
+        expect(item).toHaveClass("map-provider-selector__item--disabled");
+        expect(item).toHaveTextContent("requires CARTO API key");
+      }
+
+      const osm = screen.getByRole("menuitem", { name: "OpenStreetMap" });
+      expect(osm).not.toHaveAttribute("aria-disabled");
+    });
+
+    it("ignores clicks on a disabled CARTO entry", async () => {
+      const user = await openMenu();
+
+      await user.click(
+        screen.getByRole("menuitem", { name: /^CARTO\.com Dark All/ }),
+      );
+
+      const { map } = useSettingsStore.getState().settings;
+      expect(map.provider).toBe("openfreemap_dark");
+      expect(map.userSelectedProvider).toBe(false);
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
+
+    it("lets CARTO entries be selected once a key is set", async () => {
+      useSettingsStore.getState().setCartoApiKey("abc123");
+      const user = await openMenu();
+
+      const item = screen.getByRole("menuitem", { name: "CARTO.com Dark All" });
+      expect(item).not.toHaveAttribute("aria-disabled");
+      expect(item).not.toHaveTextContent("requires CARTO API key");
+
+      await user.click(item);
+
+      const { map } = useSettingsStore.getState().settings;
+      expect(map.provider).toBe("carto_dark_all");
+      expect(map.userSelectedProvider).toBe(true);
+    });
+
+    it("shows the theme default as current when a stored CARTO choice has no key", async () => {
+      useSettingsStore.getState().setMapProvider("carto_dark_all", true);
+      await openMenu();
+
+      const current = screen.getByText(/Current:/i);
+      expect(current).toHaveTextContent("OpenFreeMap Dark");
+      expect(current).toHaveTextContent("CARTO needs an API key");
+    });
+
+    it("shows the CARTO provider as current once a key is set", async () => {
+      useSettingsStore.getState().setMapProvider("carto_dark_all", true);
+      useSettingsStore.getState().setCartoApiKey("abc123");
+      await openMenu();
+
+      const current = screen.getByText(/Current:/i);
+      expect(current).toHaveTextContent("CARTO.com Dark All");
+      expect(current).not.toHaveTextContent("CARTO needs an API key");
+    });
+  });
+
   describe("Accessibility", () => {
     it("should have proper ARIA attributes on button", () => {
       render(<MapProviderSelector />);

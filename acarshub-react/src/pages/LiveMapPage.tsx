@@ -21,7 +21,10 @@ import { IconChevronRight } from "../components/icons";
 import { MapComponent, MapControls, MapLegend } from "../components/Map";
 import { AircraftList } from "../components/Map/AircraftList";
 import type { ViewportBounds } from "../components/Map/AircraftMarkers";
-import { getProviderConfig } from "../config/mapProviders";
+import {
+  getProviderConfig,
+  resolveEffectiveProvider,
+} from "../config/mapProviders";
 import { useMapFollowedAircraft } from "../hooks/useMapFollowedAircraft";
 import { useMapLifecycle } from "../hooks/useMapLifecycle";
 import { useMapPauseState } from "../hooks/useMapPauseState";
@@ -67,6 +70,7 @@ export const LiveMapPage = () => {
     (state) => state.setMapSidebarCollapsed,
   );
   const theme = useTheme();
+  const effectiveProvider = resolveEffectiveProvider(mapSettings, theme);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const mapRef = useRef<MapRef>(null);
@@ -256,10 +260,13 @@ export const LiveMapPage = () => {
             <div className="live-map-page__map-info">
               <div className="live-map-page__map-provider">
                 Provider:{" "}
-                {getProviderConfig(mapSettings.provider)?.name ||
-                  (mapSettings.provider === "custom"
-                    ? "Custom"
-                    : "Theme-Aware")}
+                {getProviderConfig(effectiveProvider)?.name ||
+                  (effectiveProvider === "custom" ? "Custom" : "Theme-Aware")}
+                {effectiveProvider !== mapSettings.provider && (
+                  <span className="live-map-page__provider-hint">
+                    (CARTO needs an API key)
+                  </span>
+                )}
                 {!mapSettings.userSelectedProvider && (
                   <span className="live-map-page__theme-badge">
                     🎨 {theme === "mocha" ? "Dark" : "Light"}

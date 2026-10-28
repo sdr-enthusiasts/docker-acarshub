@@ -14,15 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import {
   ALL_PROVIDERS,
   getProviderConfig,
+  isProviderAvailable,
+  resolveEffectiveProvider,
   US_PROVIDERS,
   WORLDWIDE_PROVIDERS,
 } from "../../config/mapProviders";
-import { useSettingsStore } from "../../store/useSettingsStore";
-import type { MapProvider } from "../../types";
+import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
+import type { MapProvider, MapProviderConfig } from "../../types";
 import { mapLogger } from "../../utils/logger";
 import { IconLayerGroup, IconXmark } from "../icons";
 
@@ -38,6 +40,7 @@ import { IconLayerGroup, IconXmark } from "../icons";
  * - Click outside to close
  * - Keyboard navigation (Escape to close)
  * - Marks user-selected providers (prevents auto theme switching)
+ * - Disables providers whose required API key (CARTO) is not set
  */
 export function MapProviderSelector() {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,6 +53,8 @@ export function MapProviderSelector() {
   const userSelectedProvider = useSettingsStore(
     (state) => state.settings.map.userSelectedProvider,
   );
+  const mapSettings = useSettingsStore((state) => state.settings.map);
+  const theme = useTheme();
   const setMapProvider = useSettingsStore((state) => state.setMapProvider);
   const resetMapProviderToDefault = useSettingsStore(
     (state) => state.resetMapProviderToDefault,
@@ -109,8 +114,46 @@ export function MapProviderSelector() {
     buttonRef.current?.focus();
   };
 
+  const effectiveProvider = resolveEffectiveProvider(mapSettings, theme);
   const currentProviderName =
-    getProviderConfig(currentProvider)?.name || "Unknown Provider";
+    getProviderConfig(effectiveProvider)?.name || "Unknown Provider";
+  const apiKeys = { carto: mapSettings.cartoApiKey ?? "" };
+
+  const renderProviderItem = (provider: MapProviderConfig): ReactElement => {
+    const available = isProviderAvailable(provider, apiKeys);
+    const classes = [
+      "map-provider-selector__item",
+      currentProvider === provider.id && "map-provider-selector__item--active",
+      !available && "map-provider-selector__item--disabled",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return (
+      <button
+        key={provider.id}
+        type="button"
+        className={classes}
+        onClick={() => {
+          if (available) {
+            handleProviderSelect(provider.id);
+          }
+        }}
+        role="menuitem"
+        aria-disabled={available ? undefined : true}
+      >
+        {provider.name}
+        {!available && (
+          <span className="map-provider-selector__hint">
+            requires CARTO API key
+          </span>
+        )}
+        {provider.isVector && (
+          <span className="map-provider-selector__badge">Vector</span>
+        )}
+      </button>
+    );
+  };
 
   return (
     <div className="map-provider-selector">
@@ -152,6 +195,12 @@ export function MapProviderSelector() {
           {/* Current selection display */}
           <div className="map-provider-selector__current">
             Current: <strong>{currentProviderName}</strong>
+            {effectiveProvider !== currentProvider && (
+              <span className="map-provider-selector__hint">
+                {" "}
+                (CARTO needs an API key)
+              </span>
+            )}
           </div>
 
           {/* Default option */}
@@ -176,24 +225,7 @@ export function MapProviderSelector() {
           <div className="map-provider-selector__group">
             <div className="map-provider-selector__group-title">Worldwide</div>
             <div className="map-provider-selector__items">
-              {WORLDWIDE_PROVIDERS.map((provider) => (
-                <button
-                  key={provider.id}
-                  type="button"
-                  className={`map-provider-selector__item ${
-                    currentProvider === provider.id
-                      ? "map-provider-selector__item--active"
-                      : ""
-                  }`}
-                  onClick={() => handleProviderSelect(provider.id)}
-                  role="menuitem"
-                >
-                  {provider.name}
-                  {provider.isVector && (
-                    <span className="map-provider-selector__badge">Vector</span>
-                  )}
-                </button>
-              ))}
+              {WORLDWIDE_PROVIDERS.map(renderProviderItem)}
             </div>
           </div>
 
@@ -203,21 +235,7 @@ export function MapProviderSelector() {
               US Aviation Charts
             </div>
             <div className="map-provider-selector__items">
-              {US_PROVIDERS.map((provider) => (
-                <button
-                  key={provider.id}
-                  type="button"
-                  className={`map-provider-selector__item ${
-                    currentProvider === provider.id
-                      ? "map-provider-selector__item--active"
-                      : ""
-                  }`}
-                  onClick={() => handleProviderSelect(provider.id)}
-                  role="menuitem"
-                >
-                  {provider.name}
-                </button>
-              ))}
+              {US_PROVIDERS.map(renderProviderItem)}
             </div>
           </div>
 

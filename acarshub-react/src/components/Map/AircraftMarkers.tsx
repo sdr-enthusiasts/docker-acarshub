@@ -302,7 +302,14 @@ export function AircraftMarkers({
 
   // Preload spritesheet on mount with timeout
   useEffect(() => {
-    mapLogger.debug("Map settings loaded", { mapSettings, useSprites });
+    mapLogger.debug("Map settings loaded", {
+      // Keep the CARTO API key out of the (optionally persisted) logs
+      mapSettings: {
+        ...mapSettings,
+        cartoApiKey: mapSettings.cartoApiKey ? "[redacted]" : "",
+      },
+      useSprites,
+    });
     if (useSprites) {
       const loader = getSpriteLoader();
       mapLogger.debug("Sprite loader state", { isLoaded: loader.isLoaded() });

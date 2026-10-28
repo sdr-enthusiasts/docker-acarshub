@@ -96,7 +96,7 @@ describe("useSettingsStore", () => {
       expect(settings.map.mapSidebarCollapsed).toBe(false);
       expect(settings.map.showHeyWhatsThat).toBe(true);
       expect(settings.map.markerSize).toBe("medium");
-      expect(settings.version).toBe(10);
+      expect(settings.version).toBe(11);
       expect(settings.updatedAt).toBeGreaterThan(0);
     });
 
@@ -417,6 +417,36 @@ describe("useSettingsStore", () => {
       },
     );
 
+    it("should default cartoApiKey to an empty string", () => {
+      expect(useSettingsStore.getState().settings.map.cartoApiKey).toBe("");
+    });
+
+    it("should set the CARTO API key, trimming whitespace and bumping updatedAt", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(1_000);
+      useSettingsStore.getState().resetToDefaults();
+      vi.setSystemTime(2_000);
+
+      useSettingsStore.getState().setCartoApiKey("  abc123 \n");
+
+      const { settings } = useSettingsStore.getState();
+      expect(settings.map.cartoApiKey).toBe("abc123");
+      expect(settings.updatedAt).toBe(2_000);
+      vi.useRealTimers();
+    });
+
+    it("should clear the CARTO API key without touching the provider choice", () => {
+      const { setMapProvider, setCartoApiKey } = useSettingsStore.getState();
+      setMapProvider("carto_light_all", true);
+      setCartoApiKey("abc123");
+      setCartoApiKey("   ");
+
+      const { settings } = useSettingsStore.getState();
+      expect(settings.map.cartoApiKey).toBe("");
+      expect(settings.map.provider).toBe("carto_light_all");
+      expect(settings.map.userSelectedProvider).toBe(true);
+    });
+
     it("should update station location", () => {
       const { setStationLocation } = useSettingsStore.getState();
 
@@ -613,7 +643,7 @@ describe("useSettingsStore", () => {
       expect(typeof exported).toBe("string");
       const parsed = JSON.parse(exported) as UserSettings;
       expect(parsed.appearance.theme).toBe("latte");
-      expect(parsed.version).toBe(10);
+      expect(parsed.version).toBe(11);
     });
 
     it("should import valid settings JSON", () => {
@@ -647,6 +677,7 @@ describe("useSettingsStore", () => {
           provider: "carto_dark_all",
           customTileUrl: undefined,
           userSelectedProvider: false,
+          cartoApiKey: "",
           stationLat: 51.5,
           stationLon: -0.1,
           rangeRings: [50, 100, 150],
@@ -753,6 +784,7 @@ describe("useSettingsStore", () => {
           provider: "carto_dark_all",
           customTileUrl: undefined,
           userSelectedProvider: false,
+          cartoApiKey: "",
           stationLat: 0,
           stationLon: 0,
           rangeRings: [100, 200, 300],
@@ -853,7 +885,7 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(oldState, 0);
 
-      expect(migrated.settings.version).toBe(10);
+      expect(migrated.settings.version).toBe(11);
       expect(migrated.settings.appearance.theme).toBe("mocha"); // Reset to default
       expect(migrated.settings.map).toBeDefined();
       expect(migrated.settings.map.markerSize).toBe("medium");
@@ -897,7 +929,7 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v1State, 1);
 
-      expect(migrated.settings.version).toBe(10);
+      expect(migrated.settings.version).toBe(11);
       expect(migrated.settings.map.mapSidebarWidth).toBe(408);
       expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
       expect(migrated.settings.map.showHeyWhatsThat).toBe(true);
@@ -973,7 +1005,7 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v3State, 3);
-      expect(migrated.settings.version).toBe(10);
+      expect(migrated.settings.version).toBe(11);
       // Existing settings preserved
       expect(migrated.settings.map.showNexrad).toBe(false);
       expect(migrated.settings.map.showOnlyMilitary).toBe(false);
@@ -1048,7 +1080,7 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v4State, 4);
-      expect(migrated.settings.version).toBe(10);
+      expect(migrated.settings.version).toBe(11);
       // Existing settings preserved
       expect(migrated.settings.map.showOpenAIP).toBe(false);
       expect(migrated.settings.map.showRainViewer).toBe(false);
@@ -1060,7 +1092,7 @@ describe("useSettingsStore", () => {
     });
 
     // FEAT-MARKER-SIZE
-    it("should migrate from version 9 to version 10 (add markerSize)", () => {
+    it("should migrate from version 9 to version 11 (add markerSize + cartoApiKey)", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
       const { migrate } = (useSettingsStore as any).persist.getOptions();
 
@@ -1075,9 +1107,67 @@ describe("useSettingsStore", () => {
 
       const migrated = migrate(v9State, 9);
 
-      expect(migrated.settings.version).toBe(10);
+      expect(migrated.settings.version).toBe(11);
       expect(migrated.settings.map.markerSize).toBe("medium");
+      expect(migrated.settings.map.cartoApiKey).toBe("");
     });
+
+    it("should migrate from version 10 to version 11 (add cartoApiKey, keep provider choice)", () => {
+      // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
+      const { migrate } = (useSettingsStore as any).persist.getOptions();
+
+      const base = useSettingsStore.getState().settings;
+      const v10State = {
+        settings: {
+          ...base,
+          map: {
+            ...base.map,
+            provider: "carto_dark_all",
+            userSelectedProvider: true,
+            customTileUrl: "https://tiles.example.com/{z}/{x}/{y}.png",
+          },
+          version: 10,
+        },
+      };
+      // biome-ignore lint/suspicious/noExplicitAny: simulating a pre-v11 persisted shape
+      delete (v10State.settings.map as any).cartoApiKey;
+
+      const migrated = migrate(v10State, 10);
+
+      expect(migrated.settings.version).toBe(11);
+      expect(migrated.settings.map.cartoApiKey).toBe("");
+      // Nothing else changes: an explicit CARTO choice is kept as-is
+      expect(migrated.settings.map.provider).toBe("carto_dark_all");
+      expect(migrated.settings.map.userSelectedProvider).toBe(true);
+      expect(migrated.settings.map.customTileUrl).toBe(
+        "https://tiles.example.com/{z}/{x}/{y}.png",
+      );
+      expect(migrated.settings.map).toEqual({
+        ...v10State.settings.map,
+        cartoApiKey: "",
+      });
+      expect(migrated.settings.appearance).toEqual(base.appearance);
+    });
+
+    it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])(
+      "migrating from version %i ends with cartoApiKey set to an empty string",
+      (version) => {
+        // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
+        const { migrate } = (useSettingsStore as any).persist.getOptions();
+
+        const base = useSettingsStore.getState().settings;
+        const oldState = {
+          settings: { ...base, map: { ...base.map }, version },
+        };
+        // biome-ignore lint/suspicious/noExplicitAny: simulating a pre-v11 persisted shape
+        delete (oldState.settings.map as any).cartoApiKey;
+
+        const migrated = migrate(oldState, version);
+
+        expect(migrated.settings.version).toBe(11);
+        expect(migrated.settings.map.cartoApiKey).toBe("");
+      },
+    );
 
     it("should return unchanged state for current version", () => {
       // biome-ignore lint/suspicious/noExplicitAny: Zustand persist API doesn't expose migrate type
@@ -1087,8 +1177,8 @@ describe("useSettingsStore", () => {
         settings: useSettingsStore.getState().settings,
       };
 
-      // Version 10 is the current version; migrate should return the state unchanged
-      const migrated = migrate(currentState, 10);
+      // Version 11 is the current version; migrate should return the state unchanged
+      const migrated = migrate(currentState, 11);
 
       expect(migrated).toEqual(currentState);
     });
@@ -1160,7 +1250,7 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v7State, 7);
-      expect(migrated.settings.version).toBe(10);
+      expect(migrated.settings.version).toBe(11);
       // Existing settings preserved
       expect(migrated.settings.map.mapSidebarWidth).toBe(450);
       expect(migrated.settings.appearance.theme).toBe("mocha");
@@ -1239,7 +1329,7 @@ describe("useSettingsStore", () => {
       };
 
       const migrated = migrate(v8State, 8);
-      expect(migrated.settings.version).toBe(10);
+      expect(migrated.settings.version).toBe(11);
       // Existing settings preserved
       expect(migrated.settings.map.mapSidebarWidth).toBe(408);
       expect(migrated.settings.map.mapSidebarCollapsed).toBe(false);
@@ -1378,7 +1468,7 @@ describe("useSettingsStore", () => {
       if (!stored) throw new Error("Expected stored to be truthy");
       const parsed = JSON.parse(stored);
 
-      expect(parsed.version).toBe(10);
+      expect(parsed.version).toBe(11);
     });
   });
 

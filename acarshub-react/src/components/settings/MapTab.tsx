@@ -21,7 +21,10 @@
 
 import {
   ALL_PROVIDERS,
+  getProviderConfig,
   getThemeDefaultProvider,
+  isProviderAvailable,
+  resolveEffectiveProvider,
 } from "../../config/mapProviders";
 import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
 import type { MapProvider, MarkerSize } from "../../types";
@@ -42,10 +45,18 @@ export function MapTab() {
   );
   const setMapProvider = useSettingsStore((state) => state.setMapProvider);
   const setCustomTileUrl = useSettingsStore((state) => state.setCustomTileUrl);
+  const cartoApiKey = useSettingsStore(
+    (state) => state.settings.map.cartoApiKey ?? "",
+  );
+  const setCartoApiKey = useSettingsStore((state) => state.setCartoApiKey);
   const setGroundAltitudeThreshold = useSettingsStore(
     (state) => state.setGroundAltitudeThreshold,
   );
   const setMarkerSize = useSettingsStore((state) => state.setMarkerSize);
+
+  const apiKeys = { carto: cartoApiKey };
+  const effectiveProvider = resolveEffectiveProvider(settings.map, theme);
+  const isFallingBack = effectiveProvider !== mapProvider;
 
   return (
     <div
@@ -57,8 +68,9 @@ export function MapTab() {
       <Card title="Map Provider" variant="default" className="settings-card">
         <div className="settings-card__content">
           <p className="settings-card__help">
-            Choose your preferred map tile provider. All providers are free and
-            do not require API keys.
+            Choose your preferred map tile provider. All providers are free.
+            CARTO providers also need a free CARTO API key (see below); the
+            others work without one.
           </p>
 
           {!userSelectedProvider && (
@@ -86,12 +98,56 @@ export function MapTab() {
               }}
               options={[
                 { value: "", label: "Default (Theme Aware)" },
-                ...ALL_PROVIDERS.map((p) => ({
-                  value: p.id,
-                  label: p.name,
-                })),
+                ...ALL_PROVIDERS.map((p) => {
+                  const available = isProviderAvailable(p, apiKeys);
+                  return {
+                    value: p.id,
+                    label: available
+                      ? p.name
+                      : `${p.name} (requires CARTO API key)`,
+                    disabled: !available,
+                  };
+                }),
               ]}
             />
+          </div>
+
+          {isFallingBack && (
+            <div className="settings-card__info">
+              <p>
+                <strong>CARTO API key required:</strong>{" "}
+                {getProviderConfig(mapProvider)?.name} is selected, but the
+                theme default ({getProviderConfig(effectiveProvider)?.name}) is
+                shown until you enter a CARTO API key below.
+              </p>
+            </div>
+          )}
+
+          <div className="settings-form-field">
+            <label htmlFor="carto-api-key">CARTO API key</label>
+          </div>
+          <div className="settings-form-field">
+            <input
+              id="carto-api-key"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              className="settings-input settings-input--full"
+              value={cartoApiKey}
+              onChange={(e) => setCartoApiKey(e.target.value)}
+              aria-describedby="carto-api-key-help"
+            />
+            <p id="carto-api-key-help" className="settings-card__help">
+              Only needed for the CARTO providers. Get a free key at{" "}
+              <a
+                href="https://carto.com/basemaps/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                carto.com/basemaps/apikey
+              </a>
+              . The key is stored only in this browser.
+            </p>
           </div>
 
           <div className="settings-form-field">
@@ -165,7 +221,7 @@ export function MapTab() {
             </li>
             <li>
               <strong>CARTO.com:</strong> Clean, professional maps with
-              light/dark variants
+              light/dark variants (requires a free CARTO API key)
             </li>
             <li>
               <strong>OpenFreeMap:</strong> Vector tile maps with multiple
@@ -192,8 +248,8 @@ export function MapTab() {
           </ul>
 
           <p className="settings-card__help">
-            All providers are free to use and do not require API keys. Based on
-            tar1090's map provider selection.
+            All providers are free to use. Only CARTO requires an API key. Based
+            on tar1090's map provider selection.
           </p>
         </div>
       </Card>

@@ -279,10 +279,32 @@
       }
     }
 
+    // Unavailable (missing API key): focusable for discoverability, but muted
+    // and not selectable.
+    &--disabled {
+      color: var(--color-subtext0);
+      cursor: not-allowed;
+
+      &:hover,
+      &:active {
+        background-color: transparent;
+        color: var(--color-subtext0);
+      }
+    }
+
     // Reduce motion support
     @media (prefers-reduced-motion: reduce) {
       transition: none;
     }
+  }
+
+  /**
+   * Hint (e.g., "requires CARTO API key")
+   */
+  &__hint {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--color-subtext0);
   }
 
   /**
