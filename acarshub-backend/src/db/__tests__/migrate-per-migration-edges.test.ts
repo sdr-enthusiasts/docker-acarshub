@@ -5,7 +5,8 @@
  * empty messages, and no pre-existing later-migration tables.
  *
  * Branches under test:
- *   migration02 L406-409 — IMSL and IRDM freq_type rows route to imsl/irdm.
+ *   migration03 — IMSL / IMS-L and IRDM freq_type rows route to imsl/irdm.
+ *   migration02 + migration16 — IMS-L / IMSL messages populate level_imsl.
  *   migration11 L828-829 — timeseries_stats already exists, skip create.
  *
  * Unreachable branches (documented, not tested):
@@ -228,6 +229,7 @@ describe("Per-migration edge-case branches", () => {
       insertFreq.run("136.975", "VDL-M2", 150);
       insertFreq.run("21.9340", "HFDL", 80);
       insertFreq.run("1626.5", "IMSL", 7);
+      insertFreq.run("1545.0", "IMS-L", 11);
       insertFreq.run("1612.0", "IRDM", 3);
     });
 
@@ -237,13 +239,74 @@ describe("Per-migration edge-case branches", () => {
     const imslRow = db
       .prepare("SELECT freq, count FROM freqs_imsl WHERE freq = ?")
       .get("1626.5") as { freq: string; count: number } | undefined;
+    const imslLegacyRow = db
+      .prepare("SELECT freq, count FROM freqs_imsl WHERE freq = ?")
+      .get("1545.0") as { freq: string; count: number } | undefined;
     const irdmRow = db
       .prepare("SELECT freq, count FROM freqs_irdm WHERE freq = ?")
       .get("1612.0") as { freq: string; count: number } | undefined;
     db.close();
 
     expect(imslRow?.count).toBe(7);
+    expect(imslLegacyRow?.count).toBe(11);
     expect(irdmRow?.count).toBe(3);
+  });
+
+  it("full chain: IMS-L and IMSL messages populate level_imsl", () => {
+    buildInitialState((db) => {
+      const columns = [
+        "station_id",
+        "toaddr",
+        "fromaddr",
+        "depa",
+        "dsta",
+        "eta",
+        "gtout",
+        "gtin",
+        "wloff",
+        "wlin",
+        "lat",
+        "lon",
+        "alt",
+        "msg_text",
+        "tail",
+        "flight",
+        "icao",
+        "freq",
+        "ack",
+        "mode",
+        "label",
+        "block_id",
+        "msgno",
+        "is_response",
+        "is_onground",
+        "error",
+        "libacars",
+      ];
+      const insertMessage = db.prepare(
+        `INSERT INTO messages (message_type, msg_time, level, ${columns.join(", ")})
+         VALUES (?, ?, ?, ${columns.map(() => "''").join(", ")})`,
+      );
+      insertMessage.run("IMS-L", 1, "-10");
+      insertMessage.run("IMS-L", 2, "-10");
+      insertMessage.run("IMSL", 3, "-10");
+      insertMessage.run("IMS-L", 4, "");
+      insertMessage.run("ACARS", 5, "-10");
+    });
+
+    runMigrations(TEST_DB_PATH);
+
+    const db = new Database(TEST_DB_PATH);
+    const imsl = db
+      .prepare("SELECT level, count FROM level_imsl ORDER BY level")
+      .all() as Array<{ level: number; count: number }>;
+    const acars = db
+      .prepare("SELECT level, count FROM level_acars ORDER BY level")
+      .all() as Array<{ level: number; count: number }>;
+    db.close();
+
+    expect(imsl).toEqual([{ level: -10, count: 3 }]);
+    expect(acars).toEqual([{ level: -10, count: 1 }]);
   });
 
   it("migration11: skips timeseries_stats creation when table already exists", () => {
