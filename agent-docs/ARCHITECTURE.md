@@ -558,8 +558,9 @@ final image)
 
 ### Frontend Security
 
-- **No API keys in code**: map tiles use CartoDB (no key required) or
-  a user-provided Maptiler key
+- **No API keys in code**: the default OpenFreeMap base map needs no key;
+  the optional user-supplied CARTO API key is stored in the browser's
+  localStorage settings and is never sent to the backend
 - **Input sanitisation**: all user input escaped before display
 - **XSS prevention**: React automatically escapes JSX content
 
