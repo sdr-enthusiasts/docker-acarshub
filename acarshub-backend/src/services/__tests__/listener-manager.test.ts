@@ -29,19 +29,19 @@ import type {
   DecoderListenerStats,
   IDecoderListener,
 } from "../decoder-listener.js";
-import type { MessageType } from "../tcp-listener.js";
+import type { ListenerType } from "../listener-types.js";
 
 class FakeListener
   extends EventEmitter<DecoderListenerEvents>
   implements IDecoderListener
 {
-  public readonly type: MessageType;
+  public readonly type: ListenerType;
   public readonly descriptor: ConnectionDescriptor;
   private _connected = false;
   public startCalled = false;
   public stopCalled = false;
 
-  constructor(type: MessageType, descriptor: ConnectionDescriptor) {
+  constructor(type: ListenerType, descriptor: ConnectionDescriptor) {
     super();
     this.type = type;
     this.descriptor = descriptor;
@@ -95,7 +95,7 @@ vi.mock("../decoder-listener.js", async (importOriginal) => {
   return {
     ...original,
     createDecoderListener: (
-      type: MessageType,
+      type: ListenerType,
       descriptor: ConnectionDescriptor,
     ): IDecoderListener => {
       const fake = new FakeListener(type, descriptor);
@@ -147,6 +147,7 @@ describe("ListenerManager", () => {
       HFDL: false,
       IMSL: false,
       IRDM: false,
+      XNG: false,
     });
   });
 
@@ -319,5 +320,27 @@ describe("ListenerManager", () => {
     const status = manager.getConnectionStatus();
     expect(status.ACARS).toBe(true);
     expect(status.VDLM2).toBe(false);
+  });
+
+  it("tracks XNG listeners independently and forwards their messages labelled XNG", async () => {
+    const onMessage = vi.fn();
+    const { ListenerManager } = await import("../listener-manager.js");
+    const manager = new ListenerManager({
+      onMessage,
+      onStatusChange: vi.fn(),
+    });
+
+    manager.setupDecoderConnections("ACARS", [makeDescriptor(5550)]);
+    manager.setupDecoderConnections("XNG", [makeDescriptor(5559)]);
+
+    const xngListener = createdListeners.find((l) => l.type === "XNG");
+    expect(xngListener).toBeDefined();
+    xngListener?.simulateConnect();
+    xngListener?.simulateMessage({ mode: "vdl2" });
+
+    const status = manager.getConnectionStatus();
+    expect(status.XNG).toBe(true);
+    expect(status.ACARS).toBe(false);
+    expect(onMessage).toHaveBeenCalledWith("XNG", { mode: "vdl2" });
   });
 });

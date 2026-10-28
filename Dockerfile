@@ -292,6 +292,7 @@ EXPOSE 5555/udp
 EXPOSE 5556/udp
 EXPOSE 5557/udp
 EXPOSE 5558/udp
+EXPOSE 5559/udp
 
 ENV ENABLE_ACARS="false" \
     ENABLE_VDLM="false" \
@@ -310,6 +311,7 @@ ENV ENABLE_ACARS="false" \
     VDLM_CONNECTIONS="udp" \
     HFDL_CONNECTIONS="udp" \
     IMSL_CONNECTIONS="udp" \
-    IRDM_CONNECTIONS="udp"
+    IRDM_CONNECTIONS="udp" \
+    XNG_CONNECTIONS="udp"
 
 HEALTHCHECK --start-period=3600s --interval=600s CMD ["/scripts/healthcheck.sh"]

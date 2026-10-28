@@ -31,6 +31,7 @@ import {
   IMSL_CONNECTIONS,
   IRDM_CONNECTIONS,
   VDLM_CONNECTIONS,
+  XNG_CONNECTIONS,
 } from "../config.js";
 import {
   addMessageFromJson,
@@ -43,6 +44,7 @@ import {
 import type { RawMessage } from "../db/queries/messageTransform.js";
 import { enrichMessage } from "../formatters/enrichment.js";
 import { formatAcarsMessage } from "../formatters/index.js";
+import { routeListenerMessage } from "../formatters/xng.js";
 import { createLogger } from "../utils/logger.js";
 import {
   type AdsbData,
@@ -120,7 +122,10 @@ export class BackgroundServices extends EventEmitter {
     super();
     this.config = config;
     this.listenerManager = new ListenerManager({
-      onMessage: (type, data) => getMessageQueue().push(type, data),
+      onMessage: (type, data) =>
+        routeListenerMessage(type, data, (carrier, payload) =>
+          getMessageQueue().push(carrier, payload),
+        ),
       onStatusChange: () => this.emitSystemStatus(),
     });
   }
@@ -167,6 +172,13 @@ export class BackgroundServices extends EventEmitter {
       this.listenerManager.setupDecoderConnections(
         "IRDM",
         IRDM_CONNECTIONS.descriptors,
+      );
+    }
+
+    if (appConfig.enableXng) {
+      this.listenerManager.setupDecoderConnections(
+        "XNG",
+        XNG_CONNECTIONS.descriptors,
       );
     }
 

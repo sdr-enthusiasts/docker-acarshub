@@ -21,7 +21,7 @@ import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
-  MessageType,
+  ListenerType,
 } from "./listener-types.js";
 
 const logger = createLogger("services:zmq-listener");
@@ -36,7 +36,12 @@ interface ZmqSubscriberLike {
   subscribe(topic: string): void | Promise<void>;
   close(): void;
   events: AsyncIterable<{ type: string }>;
-  [Symbol.asyncIterator](): AsyncIterator<[Buffer]>;
+  /**
+   * Each iteration yields every frame of one multipart message.  Single-frame
+   * publishers (acars_router, dumpvdl2) yield `[json]`; xng yields
+   * `[topic, json]`.
+   */
+  [Symbol.asyncIterator](): AsyncIterator<Buffer[]>;
 }
 
 interface ZmqModuleLike {
@@ -68,7 +73,7 @@ export class ZmqListener
   extends EventEmitter<DecoderListenerEvents>
   implements IDecoderListener
 {
-  private readonly messageType: MessageType;
+  private readonly messageType: ListenerType;
   private readonly host: string;
   private readonly port: number;
 
@@ -82,7 +87,7 @@ export class ZmqListener
   // needing the native add-on compiled.
   private socket: ZmqSubscriberLike | null = null;
 
-  constructor(type: MessageType, descriptor: ConnectionDescriptor) {
+  constructor(type: ListenerType, descriptor: ConnectionDescriptor) {
     super();
     this.messageType = type;
     this.host = descriptor.host;
@@ -241,20 +246,26 @@ export class ZmqListener
   }
 
   /**
-   * Receive loop — iterates over incoming frames and emits `message` events.
+   * Receive loop — iterates over incoming messages and emits `message` events.
    *
-   * libzmq delivers one frame per await.  The }{→}\n{ split is applied
-   * defensively in case a publisher concatenates multiple JSON objects into
-   * one frame.
+   * libzmq delivers one multipart message per await.  The payload is always
+   * the LAST frame: xng publishes `[topic, json]`, while single-frame
+   * publishers send `[json]` (where last === first).  The }{→}\n{ split is
+   * applied defensively in case a publisher concatenates multiple JSON
+   * objects into one frame.
    */
-  private async runReceiveLoop(sock: AsyncIterable<[Buffer]>): Promise<void> {
+  private async runReceiveLoop(sock: AsyncIterable<Buffer[]>): Promise<void> {
     /* eslint-disable-next-line @typescript-eslint/no-unused-expressions */
     try {
-      for await (const [frame] of sock) {
+      for await (const frames of sock) {
         if (!this.isRunning) {
           break;
         }
-        this.handleFrame(frame);
+        const payload = frames.at(-1);
+        if (payload === undefined) {
+          continue;
+        }
+        this.handleFrame(payload);
       }
     } catch (error) {
       // ETERM / ENOTSUP are thrown when the socket is closed — that is the

@@ -19,6 +19,7 @@ import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
+  ListenerType,
   MessageType,
 } from "./listener-types.js";
 import { TcpListener } from "./tcp-listener.js";
@@ -38,6 +39,7 @@ export type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
+  ListenerType,
   MessageType,
 };
 
@@ -54,7 +56,7 @@ export type {
  * already wired up before data begins flowing.
  */
 export function createDecoderListener(
-  type: MessageType,
+  type: ListenerType,
   descriptor: ConnectionDescriptor,
 ): IDecoderListener {
   switch (descriptor.listenType) {

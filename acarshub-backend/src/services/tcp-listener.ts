@@ -23,6 +23,7 @@ import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
+  ListenerType,
   MessageType,
 } from "./listener-types.js";
 
@@ -35,7 +36,7 @@ const logger = createLogger("services:tcp-listener");
 export type { MessageType };
 
 export interface TcpListenerConfig {
-  type: MessageType;
+  type: ListenerType;
   host: string;
   port: number;
   reconnectDelay?: number;
@@ -64,7 +65,7 @@ export class TcpListener
   implements IDecoderListener
 {
   private socket: Socket | null = null;
-  private readonly messageType: MessageType;
+  private readonly messageType: ListenerType;
   private readonly host: string;
   private readonly port: number;
   private readonly reconnectDelay: number;
@@ -74,13 +75,13 @@ export class TcpListener
   private partialMessage: string | null = null;
 
   constructor(
-    type: MessageType,
+    type: ListenerType,
     descriptor: ConnectionDescriptor,
     reconnectDelay?: number,
   );
   constructor(config: TcpListenerConfig);
   constructor(
-    typeOrConfig: MessageType | TcpListenerConfig,
+    typeOrConfig: ListenerType | TcpListenerConfig,
     descriptor?: ConnectionDescriptor,
     reconnectDelay = 1000,
   ) {

@@ -30,7 +30,7 @@ import {
   createDecoderListener,
   type IDecoderListener,
 } from "./decoder-listener.js";
-import type { MessageType } from "./tcp-listener.js";
+import type { ListenerType } from "./listener-types.js";
 
 const logger = createLogger("services:listener-manager");
 
@@ -40,18 +40,19 @@ export interface ConnectionStatus {
   HFDL: boolean;
   IMSL: boolean;
   IRDM: boolean;
+  XNG: boolean;
 }
 
 export interface ListenerManagerCallbacks {
   /** Invoked for every inbound decoder message, regardless of which
    * fan-in listener produced it. */
-  onMessage: (type: MessageType, data: unknown) => void;
+  onMessage: (type: ListenerType, data: unknown) => void;
   /** Invoked after connectionStatus changes (connect or all-disconnected). */
   onStatusChange: () => void;
 }
 
 /**
- * Manages the set of decoder listeners (one or more per MessageType, per the
+ * Manages the set of decoder listeners (one or more per ListenerType, per the
  * fan-in *_CONNECTIONS descriptors) and the derived per-type connection
  * status.
  */
@@ -68,6 +69,7 @@ export class ListenerManager {
     HFDL: false,
     IMSL: false,
     IRDM: false,
+    XNG: false,
   };
 
   constructor(private callbacks: ListenerManagerCallbacks) {}
@@ -80,7 +82,7 @@ export class ListenerManager {
    * ANY of its listeners reports connected.
    */
   public setupDecoderConnections(
-    type: MessageType,
+    type: ListenerType,
     descriptors: ConnectionDescriptor[],
   ): void {
     if (descriptors.length === 0) {
@@ -97,7 +99,7 @@ export class ListenerManager {
 
       const listener = createDecoderListener(type, descriptor);
 
-      listener.on("connected", (listenerType: MessageType) => {
+      listener.on("connected", (listenerType: ListenerType) => {
         this.connectionStatus[listenerType] = true;
         this.callbacks.onStatusChange();
 
@@ -106,7 +108,7 @@ export class ListenerManager {
         });
       });
 
-      listener.on("disconnected", (listenerType: MessageType) => {
+      listener.on("disconnected", (listenerType: ListenerType) => {
         // Only flip to false when ALL listeners for this type are disconnected.
         const anyConnected = this.isAnyListenerConnected(listenerType);
         this.connectionStatus[listenerType] = anyConnected;
@@ -117,14 +119,14 @@ export class ListenerManager {
         });
       });
 
-      listener.on("error", (listenerType: MessageType, error: Error) => {
+      listener.on("error", (listenerType: ListenerType, error: Error) => {
         logger.error(`${listenerType} listener error`, {
           ...listener.getStats(),
           error: error.message,
         });
       });
 
-      listener.on("message", (listenerType: MessageType, data: unknown) => {
+      listener.on("message", (listenerType: ListenerType, data: unknown) => {
         this.callbacks.onMessage(listenerType, data);
       });
 
@@ -140,11 +142,11 @@ export class ListenerManager {
   }
 
   /**
-   * Returns true if at least one listener for the given MessageType is
+   * Returns true if at least one listener for the given ListenerType is
    * currently connected.  Used to compute the per-type connection status when
    * one of several fan-in listeners disconnects.
    */
-  private isAnyListenerConnected(type: MessageType): boolean {
+  private isAnyListenerConnected(type: ListenerType): boolean {
     const prefix = `${type}-`;
     for (const [key, listener] of this.decoderListeners.entries()) {
       if (key.startsWith(prefix) && listener.connected) {

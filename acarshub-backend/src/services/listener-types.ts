@@ -44,20 +44,28 @@ import type { ListenType } from "../config.js";
 export type MessageType = "ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM";
 
 /**
+ * Label carried by a listener and its events.  `XNG` is an ingest-only
+ * label: xng envelopes are re-labelled to their carrier `MessageType`
+ * (see `routeListenerMessage` in `formatters/xng.ts`) before they reach the
+ * message queue, so nothing downstream of the listeners ever sees `XNG`.
+ */
+export type ListenerType = MessageType | "XNG";
+
+/**
  * Event signatures emitted by every `IDecoderListener` implementation.
  */
 export interface DecoderListenerEvents {
-  message: [type: MessageType, data: unknown];
-  connected: [type: MessageType];
-  disconnected: [type: MessageType];
-  error: [type: MessageType, error: Error];
+  message: [type: ListenerType, data: unknown];
+  connected: [type: ListenerType];
+  disconnected: [type: ListenerType];
+  error: [type: ListenerType, error: Error];
 }
 
 /**
  * Snapshot of a listener's state for status reporting.
  */
 export interface DecoderListenerStats {
-  type: MessageType;
+  type: ListenerType;
   listenType: ListenType;
   /** Human-readable "host:port" or "bind:port" connection point */
   connectionPoint: string;
