@@ -17,6 +17,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getOverlaysByCategory } from "../config/geojsonOverlays";
+import { getThemeDefaultProvider } from "../config/mapProviders";
 import type {
   AdvancedSettings,
   AltitudeUnit,
@@ -148,7 +149,7 @@ const getDefaultSettings = (): UserSettings => {
       autoClearMinutes: 60,
     },
     map: {
-      provider: "carto_dark_all",
+      provider: getThemeDefaultProvider("mocha"),
       customTileUrl: undefined,
       userSelectedProvider: false,
       stationLat: 0,
@@ -389,7 +390,9 @@ export const useSettingsStore = create<SettingsState>()(
             ...state.settings,
             map: {
               ...state.settings.map,
-              provider: "carto_dark_all",
+              provider: getThemeDefaultProvider(
+                state.settings.appearance.theme,
+              ),
               userSelectedProvider: false,
             },
             updatedAt: Date.now(),

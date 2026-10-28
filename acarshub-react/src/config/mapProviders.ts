@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
-import type { MapProviderConfig } from "../types";
+import type { MapProvider, MapProviderConfig, Theme } from "../types";
 
 /**
  * Map Provider Configurations
  * Based on tar1090's base_layers.js
  * All providers are free and do not require API keys
+ * Theme-aware default: OpenFreeMap Dark (Mocha) / Positron (Latte),
+ * see getThemeDefaultProvider()
  */
 
 /**
@@ -220,6 +222,20 @@ export const ALL_PROVIDERS: MapProviderConfig[] = [
   ...WORLDWIDE_PROVIDERS,
   ...US_PROVIDERS,
 ];
+
+/**
+ * Get the theme-aware default map provider for a Catppuccin theme.
+ *
+ * Uses OpenFreeMap vector styles: no API key and no registration required.
+ * They share the OpenMapTiles lineage of CARTO's Positron / Dark Matter
+ * styles, so the look matches the former CARTO raster defaults.
+ *
+ * - Mocha (dark) → OpenFreeMap Dark
+ * - Latte (light) → OpenFreeMap Positron
+ */
+export function getThemeDefaultProvider(theme: Theme): MapProvider {
+  return theme === "mocha" ? "openfreemap_dark" : "openfreemap_positron";
+}
 
 /**
  * Get provider configuration by ID

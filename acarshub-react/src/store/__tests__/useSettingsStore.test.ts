@@ -79,7 +79,7 @@ describe("useSettingsStore", () => {
       expect(settings.data.enableCaching).toBe(true);
       expect(settings.data.autoClearMinutes).toBe(60);
 
-      expect(settings.map.provider).toBe("carto_dark_all");
+      expect(settings.map.provider).toBe("openfreemap_dark");
       expect(settings.map.stationLat).toBe(0);
       expect(settings.map.stationLon).toBe(0);
       expect(settings.map.rangeRings).toEqual([100, 200, 300]);
@@ -397,6 +397,25 @@ describe("useSettingsStore", () => {
       const { settings } = useSettingsStore.getState();
       expect(settings.map.provider).toBe("carto_dark_all");
     });
+
+    it.each([
+      ["mocha", "openfreemap_dark"],
+      ["latte", "openfreemap_positron"],
+    ] as const)(
+      "resetMapProviderToDefault on %s restores %s and re-enables theme-aware mode",
+      (theme, expected) => {
+        const { setTheme, setMapProvider, resetMapProviderToDefault } =
+          useSettingsStore.getState();
+        setTheme(theme);
+        setMapProvider("osm", true);
+
+        resetMapProviderToDefault();
+
+        const { settings } = useSettingsStore.getState();
+        expect(settings.map.provider).toBe(expected);
+        expect(settings.map.userSelectedProvider).toBe(false);
+      },
+    );
 
     it("should update station location", () => {
       const { setStationLocation } = useSettingsStore.getState();
@@ -890,7 +909,7 @@ describe("useSettingsStore", () => {
       expect(migrated.settings.data.maxMessagesPerAircraft).toBe(100);
       // New sections added with defaults
       expect(migrated.settings.map).toBeDefined();
-      expect(migrated.settings.map.provider).toBe("carto_dark_all");
+      expect(migrated.settings.map.provider).toBe("openfreemap_dark");
       expect(migrated.settings.advanced).toBeDefined();
       expect(migrated.settings.advanced.logLevel).toBeDefined();
     });

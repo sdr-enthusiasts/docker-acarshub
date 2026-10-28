@@ -7,7 +7,7 @@
  *
  * Why this exists: this hook is the only mechanism that keeps the map
  * tile provider visually aligned with the Catppuccin theme (Mocha →
- * carto_dark_all, Latte → carto_light_all).  It also implements an
+ * openfreemap_dark, Latte → openfreemap_positron).  It also implements an
  * explicit-override escape hatch: once the user picks a provider from
  * Settings (userSelectedProvider=true) the hook MUST stop auto-
  * switching, forever, until they reset.
@@ -24,8 +24,8 @@
  *     on every render, which would in turn re-fire the effect because
  *     setMapProvider mutates state the effect depends on.  Render loop.
  *
- *  3. Mapping regression — if the THEME_MAP_PROVIDERS lookup gets
- *     swapped (Mocha→light_all, Latte→dark_all) the map will be
+ *  3. Mapping regression — if the getThemeDefaultProvider lookup gets
+ *     swapped (Mocha→positron, Latte→dark) the map will be
  *     un-readable against the theme.  Catppuccin contrast contract
  *     broken; sighted-user UX regression.
  *
@@ -54,18 +54,18 @@ beforeEach(() => {
   store.setTheme("mocha");
   // Land on the wrong-for-mocha provider with userSelected=false so
   // the hook has work to do unless explicitly overridden.
-  store.setMapProvider("carto_light_all", false);
+  store.setMapProvider("openfreemap_positron", false);
 });
 
 describe("useThemeAwareMapProvider", () => {
   describe("auto-switching (no user override)", () => {
-    it("switches to carto_dark_all when theme is mocha", () => {
+    it("switches to openfreemap_dark when theme is mocha", () => {
       useSettingsStore.getState().setTheme("mocha");
 
       renderHook(() => useThemeAwareMapProvider());
 
       const map = useSettingsStore.getState().settings.map;
-      expect(map.provider).toBe("carto_dark_all");
+      expect(map.provider).toBe("openfreemap_dark");
       // Critical: auto-switch MUST preserve userSelectedProvider=false
       // so subsequent theme changes are still picked up. A regression
       // that flips this would freeze the map provider after first
@@ -73,16 +73,16 @@ describe("useThemeAwareMapProvider", () => {
       expect(map.userSelectedProvider).toBe(false);
     });
 
-    it("switches to carto_light_all when theme is latte", () => {
+    it("switches to openfreemap_positron when theme is latte", () => {
       useSettingsStore.getState().setTheme("latte");
       // Reset provider to something other than the latte target so
       // the hook has work to do.
-      useSettingsStore.getState().setMapProvider("carto_dark_all", false);
+      useSettingsStore.getState().setMapProvider("openfreemap_dark", false);
 
       renderHook(() => useThemeAwareMapProvider());
 
       const map = useSettingsStore.getState().settings.map;
-      expect(map.provider).toBe("carto_light_all");
+      expect(map.provider).toBe("openfreemap_positron");
       expect(map.userSelectedProvider).toBe(false);
     });
 
@@ -91,9 +91,9 @@ describe("useThemeAwareMapProvider", () => {
       // is ever dropped from the effect deps, this fails.
       const { rerender } = renderHook(() => useThemeAwareMapProvider());
 
-      // Initial mount lands on carto_dark_all (mocha baseline).
+      // Initial mount lands on openfreemap_dark (mocha baseline).
       expect(useSettingsStore.getState().settings.map.provider).toBe(
-        "carto_dark_all",
+        "openfreemap_dark",
       );
 
       // Flip theme; the hook's effect should re-run and re-sync.
@@ -101,9 +101,31 @@ describe("useThemeAwareMapProvider", () => {
       rerender();
 
       expect(useSettingsStore.getState().settings.map.provider).toBe(
-        "carto_light_all",
+        "openfreemap_positron",
       );
     });
+
+    it.each([
+      ["mocha", "carto_dark_all", "openfreemap_dark"],
+      ["mocha", "carto_light_all", "openfreemap_dark"],
+      ["latte", "carto_light_all", "openfreemap_positron"],
+      ["latte", "carto_dark_all", "openfreemap_positron"],
+    ] as const)(
+      "replaces a persisted legacy CARTO default on %s (%s → %s)",
+      (theme, legacy, expected) => {
+        // Users who never picked a provider may still have the former
+        // CARTO theme default persisted. CARTO now requires an API key,
+        // so the hook must move them onto the OpenFreeMap default.
+        useSettingsStore.getState().setTheme(theme);
+        useSettingsStore.getState().setMapProvider(legacy, false);
+
+        renderHook(() => useThemeAwareMapProvider());
+
+        const map = useSettingsStore.getState().settings.map;
+        expect(map.provider).toBe(expected);
+        expect(map.userSelectedProvider).toBe(false);
+      },
+    );
   });
 
   describe("user-override escape hatch (the most dangerous regression surface)", () => {
@@ -112,7 +134,7 @@ describe("useThemeAwareMapProvider", () => {
       // user's deliberate choice gets clobbered on every theme change.
       useSettingsStore.getState().setMapProvider("osm", true);
       // Theme is mocha (from beforeEach); without the guard the hook
-      // would force carto_dark_all here.
+      // would force openfreemap_dark here.
       renderHook(() => useThemeAwareMapProvider());
 
       const map = useSettingsStore.getState().settings.map;
@@ -156,9 +178,9 @@ describe("useThemeAwareMapProvider", () => {
       // effect, which... — render loop. We can't directly assert
       // "setMapProvider was not called" without mocking the store,
       // but we CAN assert userSelectedProvider stays exactly false
-      // and provider stays exactly carto_dark_all across multiple
+      // and provider stays exactly openfreemap_dark across multiple
       // rerenders without any test-side mutation.
-      useSettingsStore.getState().setMapProvider("carto_dark_all", false);
+      useSettingsStore.getState().setMapProvider("openfreemap_dark", false);
 
       const { rerender } = renderHook(() => useThemeAwareMapProvider());
       const beforeUpdatedAt = useSettingsStore.getState().settings.updatedAt;
@@ -170,7 +192,7 @@ describe("useThemeAwareMapProvider", () => {
 
       const after = useSettingsStore.getState().settings.map;
       const afterUpdatedAt = useSettingsStore.getState().settings.updatedAt;
-      expect(after.provider).toBe("carto_dark_all");
+      expect(after.provider).toBe("openfreemap_dark");
       expect(after.userSelectedProvider).toBe(false);
       // settings.updatedAt is the cheapest tripwire for "did
       // setMapProvider fire?": setMapProvider stamps it on every

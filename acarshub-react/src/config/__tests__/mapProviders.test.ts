@@ -55,15 +55,24 @@
  *     - Known id → returns that provider's url field.
  *     - Unknown id → returns "" (NOT undefined, NOT null — the SCSS
  *       and Leaflet glue code rely on the empty-string fallback).
+ *
+ *  6. getThemeDefaultProvider:
+ *     - Mocha → openfreemap_dark, Latte → openfreemap_positron. These
+ *       need no API key; the former CARTO defaults now do.
+ *     - Both results are published providers (resolvable config).
+ *     - DEFAULT_SETTINGS (which hard-codes a literal to avoid an
+ *       import cycle) stays in sync with the Mocha default.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_SETTINGS } from "../../types";
 import {
   ALL_PROVIDERS,
   getGibsCloudsUrl,
   getProviderConfig,
   getProvidersByCategory,
   getProviderTileUrl,
+  getThemeDefaultProvider,
   US_PROVIDERS,
   WORLDWIDE_PROVIDERS,
 } from "../mapProviders";
@@ -283,5 +292,33 @@ describe("getProviderTileUrl", () => {
       const url = getProviderTileUrl("nope_definitely_not_a_provider");
       expect(url).toBe("");
     });
+  });
+});
+
+describe("getThemeDefaultProvider", () => {
+  it("returns openfreemap_dark for mocha", () => {
+    expect(getThemeDefaultProvider("mocha")).toBe("openfreemap_dark");
+  });
+
+  it("returns openfreemap_positron for latte", () => {
+    expect(getThemeDefaultProvider("latte")).toBe("openfreemap_positron");
+  });
+
+  it.each(["mocha", "latte"] as const)(
+    "returns a published, non-CARTO provider for %s",
+    (theme) => {
+      const id = getThemeDefaultProvider(theme);
+      const config = getProviderConfig(id);
+      expect(config).toBeDefined();
+      expect(config?.url).toContain("tiles.openfreemap.org");
+      expect(id.startsWith("carto")).toBe(false);
+    },
+  );
+
+  it("matches DEFAULT_SETTINGS.map.provider for the default (mocha) theme", () => {
+    expect(DEFAULT_SETTINGS.appearance.theme).toBe("mocha");
+    expect(DEFAULT_SETTINGS.map.provider).toBe(
+      getThemeDefaultProvider(DEFAULT_SETTINGS.appearance.theme),
+    );
   });
 });

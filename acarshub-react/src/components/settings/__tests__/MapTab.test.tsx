@@ -98,18 +98,25 @@ describe("MapTab", () => {
       expect(state.userSelectedProvider).toBe(true);
     });
 
-    it("selecting the empty 'Default' option switches to the theme-appropriate carto provider", async () => {
-      const user = userEvent.setup();
-      useSettingsStore.getState().setMapProvider("osm", true);
-      render(<MapTab />);
+    it.each([
+      ["mocha", "openfreemap_dark"],
+      ["latte", "openfreemap_positron"],
+    ] as const)(
+      "selecting the empty 'Default' option on %s switches to %s",
+      async (theme, expected) => {
+        const user = userEvent.setup();
+        useSettingsStore.getState().setTheme(theme);
+        useSettingsStore.getState().setMapProvider("osm", true);
+        render(<MapTab />);
 
-      const select = screen.getByLabelText("Map Provider");
-      await user.selectOptions(select, "");
+        const select = screen.getByLabelText("Map Provider");
+        await user.selectOptions(select, "");
 
-      const state = useSettingsStore.getState().settings.map;
-      expect(state.userSelectedProvider).toBe(false);
-      expect(["carto_dark_all", "carto_light_all"]).toContain(state.provider);
-    });
+        const state = useSettingsStore.getState().settings.map;
+        expect(state.userSelectedProvider).toBe(false);
+        expect(state.provider).toBe(expected);
+      },
+    );
 
     it("displays the current provider's friendly name", () => {
       useSettingsStore.getState().setMapProvider("osm", true);

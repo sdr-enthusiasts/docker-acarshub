@@ -15,18 +15,9 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useEffect } from "react";
+import { getThemeDefaultProvider } from "../config/mapProviders";
 import { useSettingsStore, useTheme } from "../store/useSettingsStore";
-import type { MapProvider } from "../types";
 import { mapLogger } from "../utils/logger";
-
-/**
- * Theme-aware map provider mappings
- * Automatically switches between light/dark map variants based on theme
- */
-const THEME_MAP_PROVIDERS: Record<"mocha" | "latte", MapProvider> = {
-  mocha: "carto_dark_all", // Dark theme → dark map
-  latte: "carto_light_all", // Light theme → light map
-};
 
 /**
  * Hook: useThemeAwareMapProvider
@@ -35,8 +26,9 @@ const THEME_MAP_PROVIDERS: Record<"mocha" | "latte", MapProvider> = {
  * ONLY if the user hasn't explicitly selected a provider.
  *
  * Default behavior:
- * - Mocha theme → CARTO dark_all
- * - Latte theme → CARTO light_all
+ * - Mocha theme → OpenFreeMap Dark
+ * - Latte theme → OpenFreeMap Positron
+ * (see getThemeDefaultProvider in config/mapProviders)
  *
  * User override:
  * - If user selects a provider in Settings, this hook stops auto-switching
@@ -58,7 +50,7 @@ export function useThemeAwareMapProvider(): void {
     }
 
     // Get theme-appropriate provider
-    const themeProvider = THEME_MAP_PROVIDERS[theme];
+    const themeProvider = getThemeDefaultProvider(theme);
 
     // Only update if different from current
     if (mapSettings.provider !== themeProvider) {

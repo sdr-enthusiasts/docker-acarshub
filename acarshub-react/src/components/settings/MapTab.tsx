@@ -19,7 +19,10 @@
 // useSettingsStore/useTheme — no props needed from the parent.
 // ----------------------------------------------------------------------------
 
-import { ALL_PROVIDERS } from "../../config/mapProviders";
+import {
+  ALL_PROVIDERS,
+  getThemeDefaultProvider,
+} from "../../config/mapProviders";
 import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
 import type { MapProvider, MarkerSize } from "../../types";
 import { Button } from "../Button";
@@ -76,9 +79,7 @@ export function MapTab() {
               onChange={(value) => {
                 if (value === "") {
                   // Reset to theme-aware mode - trigger immediate theme switch
-                  const themeProvider =
-                    theme === "mocha" ? "carto_dark_all" : "carto_light_all";
-                  setMapProvider(themeProvider as MapProvider, false);
+                  setMapProvider(getThemeDefaultProvider(theme), false);
                 } else {
                   setMapProvider(value as MapProvider);
                 }
