@@ -528,7 +528,10 @@ export const DEFAULT_SETTINGS: UserSettings = {
     autoClearMinutes: 60,
   },
   map: {
-    provider: "carto_dark_all", // Default for Mocha theme
+    // Must equal getThemeDefaultProvider("mocha") (config/mapProviders).
+    // Literal here because importing it would create a types <-> config
+    // import cycle; a unit test pins the two together.
+    provider: "openfreemap_dark",
     customTileUrl: undefined,
     userSelectedProvider: false, // Allow theme-aware switching
     stationLat: 0,

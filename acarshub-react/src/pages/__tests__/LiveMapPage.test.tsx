@@ -287,7 +287,7 @@ describe("LiveMapPage", () => {
         ...state.settings,
         map: {
           ...state.settings.map,
-          provider: "carto_dark_all",
+          provider: "openfreemap_dark",
           userSelectedProvider: false,
           mapSidebarWidth: 408,
           mapSidebarCollapsed: false,
