@@ -28,6 +28,12 @@
  */
 
 import { createLogger } from "../utils/logger.js";
+import {
+  decodeAvlcAddresses,
+  isXngEnvelope,
+  type XngEnvelope,
+  xngCarrierType,
+} from "./xng.js";
 
 const logger = createLogger("formatters");
 
@@ -81,6 +87,11 @@ export interface FormattedMessage {
 export function formatAcarsMessage(
   message: Record<string, unknown>,
 ): FormattedMessage | null {
+  // xng envelope (any carrier) — checked first, it is self-describing
+  if (isXngEnvelope(message)) {
+    return formatXngMessage(message);
+  }
+
   // VDLM2 (dumpvdl2)
   if ("vdl2" in message) {
     return formatVdlm2Message(message);
@@ -1001,6 +1012,274 @@ export function formatVdlm2Message(
   // Ensure timestamp is set
   if (!formatted.timestamp) {
     formatted.timestamp = Date.now() / 1000;
+  }
+
+  return formatted;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function normalizeIcaoHex(value: unknown): string | undefined {
+  return typeof value === "string" && /^[0-9A-Fa-f]{6}$/.test(value)
+    ? value.toUpperCase()
+    : undefined;
+}
+
+/** acars_poa flat app fields copied 1:1 onto the formatted message. */
+const XNG_POA_STRING_KEYS = [
+  "depa",
+  "dsta",
+  "eta",
+  "gtout",
+  "gtin",
+  "wloff",
+  "wlin",
+] as const;
+
+/** All acars_poa flat app fields; excluded from the stored libacars JSON. */
+const XNG_POA_FLAT_KEYS: ReadonlySet<string> = new Set<string>([
+  ...XNG_POA_STRING_KEYS,
+  "position",
+  "wind_dir_deg",
+  "wind_speed_kt",
+  "temperature_c",
+  "true_airspeed_kt",
+  "altitude_ft",
+]);
+
+/**
+ * Format the carrier-specific frequency so xng messages store the same
+ * representation as the native decoder for that message type.
+ */
+function formatXngFreq(
+  carrier: string,
+  frequencyHz: number,
+): string | number | undefined {
+  if (!Number.isFinite(frequencyHz)) {
+    return undefined;
+  }
+  switch (carrier) {
+    case "VDLM2":
+      return reformatDumpvdl2Freq(frequencyHz);
+    case "HFDL":
+      return formatHfdlFreq(frequencyHz);
+    case "IRDM":
+      return (irdmChannelizeFreq(frequencyHz) / 1e6).toFixed(6);
+    default:
+      return Number((frequencyHz / 1e6).toFixed(6));
+  }
+}
+
+/** Set lat/lon (and alt) from the first ADS-C basic report tag. */
+function applyXngAdscPosition(
+  formatted: FormattedMessage,
+  structured: Record<string, unknown>,
+): void {
+  if (
+    structured.app !== "adsc" ||
+    !Array.isArray(structured.tags) ||
+    formatted.lat !== undefined ||
+    formatted.lon !== undefined
+  ) {
+    return;
+  }
+  for (const entry of structured.tags) {
+    const tag = asRecord(entry);
+    if (
+      tag?.tag === "report" &&
+      typeof tag.lat === "number" &&
+      typeof tag.lon === "number"
+    ) {
+      formatted.lat = tag.lat;
+      formatted.lon = tag.lon;
+      if (typeof tag.alt_ft === "number") {
+        formatted.alt = tag.alt_ft;
+      }
+      return;
+    }
+  }
+}
+
+/** Map the xng ACARS `app` object (structured decode and/or POA fields). */
+function applyXngAcarsApp(
+  formatted: FormattedMessage,
+  app: Record<string, unknown>,
+): void {
+  for (const key of XNG_POA_STRING_KEYS) {
+    const value = app[key];
+    if (typeof value === "string") {
+      formatted[key] = value;
+    }
+  }
+
+  const position = asRecord(app.position);
+  if (
+    typeof position?.latitude === "number" &&
+    typeof position.longitude === "number"
+  ) {
+    formatted.lat = position.latitude;
+    formatted.lon = position.longitude;
+  }
+  if (typeof app.altitude_ft === "number") {
+    formatted.alt = app.altitude_ft;
+  }
+
+  let structured: Record<string, unknown> | undefined;
+  if (typeof app.app === "string") {
+    structured = Object.fromEntries(
+      Object.entries(app).filter(([key]) => !XNG_POA_FLAT_KEYS.has(key)),
+    );
+  } else {
+    structured = asRecord(app.app);
+  }
+  if (structured) {
+    formatted.libacars = JSON.stringify(structured);
+    applyXngAdscPosition(formatted, structured);
+  }
+}
+
+function applyXngAcarsBody(
+  formatted: FormattedMessage,
+  envelope: XngEnvelope,
+  carrier: string,
+): void {
+  const body = envelope.body;
+  for (const key of ["mode", "label", "text", "tail", "flight"] as const) {
+    const value = body[key];
+    if (typeof value === "string") {
+      formatted[key] = value;
+    }
+  }
+  if (typeof body.block_id === "string") {
+    formatted.block_id = body.block_id;
+  }
+  if (typeof body.msg_num === "string") {
+    formatted.msgno = body.msg_num;
+  }
+  if (typeof body.more_to_come === "boolean") {
+    formatted.end = !body.more_to_come;
+  }
+  // xng omits `ack` for a NAK; leave it unset to match the native formatters.
+  if (typeof body.ack === "string") {
+    formatted.ack = body.ack;
+  }
+
+  const app = asRecord(body.app);
+  if (app) {
+    applyXngAcarsApp(formatted, app);
+  }
+
+  if (carrier === "VDLM2" && typeof envelope.raw === "string") {
+    const addresses = decodeAvlcAddresses(envelope.raw);
+    if (addresses) {
+      formatted.toaddr = Number.parseInt(addresses.dst.addr, 16);
+      formatted.fromaddr = Number.parseInt(addresses.src.addr, 16);
+      if (addresses.src.kind === "aircraft") {
+        formatted.icao = addresses.src.addr;
+      }
+    }
+  }
+}
+
+function applyXngNonAcarsBody(
+  formatted: FormattedMessage,
+  body: Record<string, unknown>,
+  carrier: string,
+): void {
+  const details = asRecord(body.details) ?? {};
+  const kind = typeof body.kind === "string" ? body.kind : body.type;
+  // Keyed by kind so the frontend's top-level `freq_data` handling (which
+  // expects dumphfdl's shape) never sees xng's different structure.
+  formatted.libacars = JSON.stringify({ [String(kind)]: details });
+
+  if (typeof details.flight === "string") {
+    formatted.flight = details.flight;
+  }
+
+  const position = asRecord(details.position);
+  if (typeof details.lat === "number" && typeof details.lon === "number") {
+    formatted.lat = details.lat;
+    formatted.lon = details.lon;
+  } else if (
+    typeof position?.lat === "number" &&
+    typeof position.lon === "number"
+  ) {
+    formatted.lat = position.lat;
+    formatted.lon = position.lon;
+  }
+
+  const src = asRecord(details.src);
+  const dst = asRecord(details.dst);
+  const icao =
+    normalizeIcaoHex(details.icao) ??
+    normalizeIcaoHex(asRecord(details.who)?.icao) ??
+    normalizeIcaoHex(details.aes_id) ??
+    (src?.kind === "aircraft" ? normalizeIcaoHex(src.addr) : undefined);
+  if (icao !== undefined) {
+    formatted.icao = icao;
+  }
+
+  if (carrier === "VDLM2") {
+    if (typeof dst?.addr === "string") {
+      formatted.toaddr = Number.parseInt(dst.addr, 16);
+    }
+    if (typeof src?.addr === "string") {
+      formatted.fromaddr = Number.parseInt(src.addr, 16);
+    }
+  }
+}
+
+/**
+ * Format an xng envelope (any carrier) into the normalized message shape,
+ * matching the conventions of the native formatter for its carrier type.
+ *
+ * @param envelope - xng envelope
+ * @returns Formatted message, or null for unhandled modes / undecoded bodies
+ */
+export function formatXngMessage(
+  envelope: XngEnvelope,
+): FormattedMessage | null {
+  const carrier = xngCarrierType(envelope.mode);
+  if (carrier === null || envelope.body.type === "undecoded") {
+    return null;
+  }
+
+  const parsed = Date.parse(envelope.timestamp);
+  const formatted: FormattedMessage = {
+    timestamp: Number.isNaN(parsed) ? Date.now() / 1000 : parsed / 1000,
+  };
+
+  const station = asRecord(asRecord(envelope.source)?.station);
+  if (typeof station?.ident === "string") {
+    formatted.station_id = station.ident;
+  }
+
+  const decode = asRecord(envelope.decode);
+  if (typeof decode?.errors === "number") {
+    formatted.error = decode.errors;
+  } else {
+    formatted.error = decode?.crc_ok === true ? 0 : 1;
+  }
+
+  const freq = formatXngFreq(carrier, envelope.frequency_hz);
+  if (freq !== undefined) {
+    formatted.freq = freq;
+  }
+
+  const rssi = asRecord(envelope.signal)?.rssi_db;
+  if (typeof rssi === "number") {
+    formatted.level =
+      carrier === "IRDM" ? rssi.toFixed(1) : formatDumpvdl2Level(rssi);
+  }
+
+  if (envelope.body.type === "acars") {
+    applyXngAcarsBody(formatted, envelope, carrier);
+  } else {
+    applyXngNonAcarsBody(formatted, envelope.body, carrier);
   }
 
   return formatted;
