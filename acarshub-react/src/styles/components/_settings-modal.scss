@@ -297,6 +297,29 @@
   }
 }
 
+// Links inside help/info text blocks — mirrors the About page link styling.
+// text-decoration: underline is required for WCAG 1.4.1 (Use of Color):
+// links in text blocks must be distinguishable by more than color alone.
+// --color-link is remapped to mauve in Latte to keep 4.5:1 contrast
+// (see pages/_about.scss for the full contrast rationale).
+.settings-card__help a,
+.settings-card__info a {
+  color: var(--color-link);
+  text-decoration: underline;
+  transition: color 0.2s ease-in-out;
+
+  &:hover {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-link);
+    outline-offset: 2px;
+    border-radius: var(--border-radius-sm);
+  }
+}
+
 // Reference bullet list (MapTab "Map Provider Reference" card). Previously
 // unstyled -> inherited 1rem. Align to the shared help-text scale.
 .settings-list {
