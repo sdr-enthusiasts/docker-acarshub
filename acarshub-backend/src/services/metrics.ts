@@ -77,15 +77,7 @@
  */
 
 import { collectDefaultMetrics, Gauge, Registry } from "prom-client";
-import {
-  ENABLE_ACARS,
-  ENABLE_ADSB,
-  ENABLE_HFDL,
-  ENABLE_IMSL,
-  ENABLE_IRDM,
-  ENABLE_VDLM,
-  VERSION,
-} from "../config.js";
+import { ENABLE_ADSB, VERSION } from "../config.js";
 import {
   getAlertCounts,
   getAllFreqCounts,
@@ -95,6 +87,7 @@ import {
   getSavedAlertCount,
 } from "../db/index.js";
 import { createLogger } from "../utils/logger.js";
+import { isDecoderEnabled } from "./decoder-activity.js";
 import { getLatestTimeseriesData } from "./rrd-migration.js";
 
 const logger = createLogger("services:metrics");
@@ -496,13 +489,13 @@ function buildRegistry(): Registry {
     collect() {
       this.reset();
       this.labels(
-        pyBool(ENABLE_ACARS),
+        pyBool(isDecoderEnabled("ACARS")),
         pyBool(ENABLE_ADSB),
         process.arch,
-        pyBool(ENABLE_HFDL),
-        pyBool(ENABLE_IMSL),
-        pyBool(ENABLE_IRDM),
-        pyBool(ENABLE_VDLM),
+        pyBool(isDecoderEnabled("HFDL")),
+        pyBool(isDecoderEnabled("IMSL")),
+        pyBool(isDecoderEnabled("IRDM")),
+        pyBool(isDecoderEnabled("VDLM2")),
         VERSION,
       ).set(1);
     },

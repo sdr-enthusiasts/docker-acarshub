@@ -196,6 +196,10 @@ import {
 } from "../../db/index.js";
 import { enrichMessage, enrichMessages } from "../../formatters/enrichment.js";
 import { getAdsbPoller } from "../../services/adsb-poller.js";
+import {
+  markDecoderActive,
+  resetDecoderActivity,
+} from "../../services/decoder-activity.js";
 import { getMessageQueue } from "../../services/message-queue.js";
 import {
   getRecentAlerts,
@@ -367,6 +371,9 @@ beforeEach(() => {
   // block's own cleanup runs) would leak "in progress" into the next test.
   resetAlertRegenStateForTesting();
 
+  // Runtime decoder activation is module-level; clear it between tests.
+  resetDecoderActivity();
+
   // Default config
   mockGetConfig.mockReturnValue(makeDefaultConfig());
 
@@ -511,6 +518,30 @@ describe("handleConnect", () => {
     expect(payload?.acars).toBe(true);
     expect(payload?.vdlm).toBe(true);
     expect(payload?.hfdl).toBe(false);
+  });
+
+  it("should report a runtime-activated decoder as enabled in features_enabled", () => {
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({
+        enableAcars: false,
+        enableVdlm: false,
+        enableHfdl: false,
+      }),
+    );
+    markDecoderActive("HFDL");
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+
+    const payload = firstEmit<{
+      acars: boolean;
+      vdlm: boolean;
+      hfdl: boolean;
+    }>(socket, "features_enabled");
+
+    expect(payload?.acars).toBe(false);
+    expect(payload?.vdlm).toBe(false);
+    expect(payload?.hfdl).toBe(true);
   });
 
   it("should emit terms with alert terms from the cache", () => {
@@ -1385,6 +1416,48 @@ describe("handleRequestStatus", () => {
     // Coarse counters (999, 888) must NOT appear
     expect(global.ACARS?.LastMinute).not.toBe(999);
     expect(global.VDLM2?.LastMinute).not.toBe(888);
+  });
+
+  it("includes a runtime-activated decoder whose config flag is off", () => {
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ enableAcars: false, enableVdlm: false }),
+    );
+    mockGetMessageQueue.mockReturnValue({
+      getStats: vi.fn().mockReturnValue({
+        acars: { lastMinute: 0, total: 0 },
+        vdlm2: { lastMinute: 0, total: 0 },
+        hfdl: { lastMinute: 0, total: 0 },
+        imsl: { lastMinute: 0, total: 0 },
+        irdm: { lastMinute: 0, total: 0 },
+        error: { lastMinute: 0, total: 0 },
+      }),
+      getRollingRates: vi.fn().mockReturnValue({
+        total: 4,
+        acars: 0,
+        vdlm2: 4,
+        hfdl: 0,
+        imsl: 0,
+        irdm: 0,
+      }),
+      length: 0,
+    } as unknown as ReturnType<typeof getMessageQueue>);
+    markDecoderActive("VDLM2");
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const statuses = emittedAs<{
+      status: {
+        decoders: Record<string, unknown>;
+        global: Record<string, { LastMinute?: number }>;
+      };
+    }>(socket, "system_status");
+
+    expect(statuses).toHaveLength(1);
+    expect(statuses[0].status.decoders.VDLM2).toBeDefined();
+    expect(statuses[0].status.global.VDLM2?.LastMinute).toBe(4);
+    expect(statuses[0].status.decoders.ACARS).toBeUndefined();
   });
 
   it("should not throw when getPerDecoderMessageCounts throws", () => {

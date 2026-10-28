@@ -31,6 +31,10 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, getDatabase, initDatabase } from "../../db/index.js";
+import {
+  markDecoderActive,
+  resetDecoderActivity,
+} from "../decoder-activity.js";
 import { collectMetrics, resetMetricsForTesting } from "../metrics.js";
 
 // ---------------------------------------------------------------------------
@@ -262,6 +266,7 @@ function createTables(): void {
 describe("collectMetrics", () => {
   beforeEach(() => {
     resetMetricsForTesting();
+    resetDecoderActivity();
     initDatabase(":memory:");
     createTables();
   });
@@ -269,6 +274,7 @@ describe("collectMetrics", () => {
   afterEach(() => {
     closeDatabase();
     resetMetricsForTesting();
+    resetDecoderActivity();
   });
 
   // -------------------------------------------------------------------------
@@ -660,6 +666,24 @@ describe("collectMetrics", () => {
       expect(line).toMatch(/imsl_enabled="(True|False)"/);
       expect(line).toMatch(/irdm_enabled="(True|False)"/);
       expect(line).toMatch(/adsb_enabled="(True|False)"/);
+    });
+
+    it("reports a runtime-activated decoder as enabled", async () => {
+      // ENABLE_VDLM is unset in the test environment, so only runtime
+      // activation can flip the label.
+      const before = getSamples(
+        await collectMetrics(),
+        "acarshub_application_info",
+      );
+      expect(before[0]).toContain('vdlm_enabled="False"');
+
+      markDecoderActive("VDLM2");
+
+      const after = getSamples(
+        await collectMetrics(),
+        "acarshub_application_info",
+      );
+      expect(after[0]).toContain('vdlm_enabled="True"');
     });
 
     it("should include arch label", async () => {

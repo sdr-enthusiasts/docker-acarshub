@@ -24,8 +24,8 @@
 // ----------------------------------------------------------------------------
 
 import type { MessageRateData, SystemStatus } from "@acarshub/types";
-import { getConfig } from "../config.js";
 import { getPerDecoderMessageCounts } from "../db/index.js";
+import { isDecoderEnabled } from "./decoder-activity.js";
 import type { ConnectionStatus } from "./listener-manager.js";
 import { getMessageQueue } from "./message-queue.js";
 
@@ -40,7 +40,6 @@ import { getMessageQueue } from "./message-queue.js";
 export function buildSystemStatus(
   connectionStatus: ConnectionStatus,
 ): SystemStatus {
-  const config = getConfig();
   const decoderCounts = getPerDecoderMessageCounts();
   const queueStats = getMessageQueue().getStats();
 
@@ -55,7 +54,7 @@ export function buildSystemStatus(
     { Status: string; Count: number; LastMinute?: number }
   > = {};
 
-  if (config.enableAcars) {
+  if (isDecoderEnabled("ACARS")) {
     const connected = connectionStatus.ACARS;
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.ACARS = {
@@ -74,7 +73,7 @@ export function buildSystemStatus(
     };
   }
 
-  if (config.enableVdlm) {
+  if (isDecoderEnabled("VDLM2")) {
     const connected = connectionStatus.VDLM2;
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.VDLM2 = {
@@ -93,7 +92,7 @@ export function buildSystemStatus(
     };
   }
 
-  if (config.enableHfdl) {
+  if (isDecoderEnabled("HFDL")) {
     const connected = connectionStatus.HFDL;
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.HFDL = {
@@ -112,7 +111,7 @@ export function buildSystemStatus(
     };
   }
 
-  if (config.enableImsl) {
+  if (isDecoderEnabled("IMSL")) {
     const connected = connectionStatus.IMSL;
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.IMSL = {
@@ -131,7 +130,7 @@ export function buildSystemStatus(
     };
   }
 
-  if (config.enableIrdm) {
+  if (isDecoderEnabled("IRDM")) {
     const connected = connectionStatus.IRDM;
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.IRDM = {

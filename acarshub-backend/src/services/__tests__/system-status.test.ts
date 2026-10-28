@@ -83,6 +83,11 @@ vi.mock("../message-queue.js", () => ({
   }),
 }));
 
+import {
+  markDecoderActive,
+  resetDecoderActivity,
+} from "../decoder-activity.js";
+
 const emptyConnectionStatus: ConnectionStatus = {
   ACARS: false,
   VDLM2: false,
@@ -107,6 +112,7 @@ describe("system-status", () => {
     mockDecoderCounts.irdm = 0;
     mockStats = defaultStats;
     mockRollingRates = { acars: 0, vdlm2: 0, hfdl: 0, imsl: 0, irdm: 0 };
+    resetDecoderActivity();
   });
 
   afterEach(() => {
@@ -189,6 +195,19 @@ describe("system-status", () => {
       expect(status.status.decoders.IRDM?.Connected).toBe(true);
       expect(status.status.decoders.ACARS).toBeUndefined();
       expect(status.status.decoders.VDLM2).toBeUndefined();
+    });
+
+    it("includes a runtime-activated decoder whose config flag is off", async () => {
+      mockDecoderCounts.vdlm2 = 5;
+      markDecoderActive("VDLM2");
+
+      const { buildSystemStatus } = await import("../system-status.js");
+      const status = buildSystemStatus(emptyConnectionStatus);
+
+      expect(status.status.decoders.VDLM2).toBeDefined();
+      expect(status.status.servers.vdlm2_server?.Messages).toBe(5);
+      expect(status.status.global.VDLM2?.Count).toBe(5);
+      expect(status.status.decoders.ACARS).toBeUndefined();
     });
 
     it("passes through queue error stats unconditionally", async () => {

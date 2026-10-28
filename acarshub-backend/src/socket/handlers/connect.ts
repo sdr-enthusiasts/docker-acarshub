@@ -39,7 +39,7 @@ import {
   getRowCount,
 } from "../../db/index.js";
 import { getAdsbPoller } from "../../services/adsb-poller.js";
-import { getHeyWhatsThatUrl } from "../../services/heywhatsthat.js";
+import { buildDecoderFeatures } from "../../services/decoder-activity.js";
 import {
   getRecentAlerts,
   getRecentMessages,
@@ -79,21 +79,7 @@ export function handleConnect(
   try {
     // 1. Send features/decoders configuration
     // Python sends "features_enabled" event, NOT "decoders"
-    const decoders: Decoders = {
-      acars: config.enableAcars,
-      vdlm: config.enableVdlm,
-      hfdl: config.enableHfdl,
-      imsl: config.enableImsl,
-      irdm: config.enableIrdm,
-      allow_remote_updates: config.allowRemoteUpdates,
-      adsb: {
-        enabled: config.enableAdsb,
-        lat: config.adsbLat,
-        lon: config.adsbLon,
-        range_rings: config.enableRangeRings,
-        heywhatsthat_url: getHeyWhatsThatUrl(),
-      },
-    };
+    const decoders: Decoders = buildDecoderFeatures();
     socket.emit("features_enabled", decoders);
 
     // 2. Send station IDs (known sources seen across all message types)
