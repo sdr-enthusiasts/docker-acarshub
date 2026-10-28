@@ -26,7 +26,6 @@ import type {
   SignalFreqData,
   SystemStatus,
 } from "@acarshub/types";
-import { getConfig } from "../../config.js";
 import {
   getAlertCounts,
   getAllFreqCounts,
@@ -34,6 +33,7 @@ import {
   getErrors,
   getPerDecoderMessageCounts,
 } from "../../db/index.js";
+import { isDecoderEnabled } from "../../services/decoder-activity.js";
 import { getMessageQueue } from "../../services/message-queue.js";
 import { createLogger } from "../../utils/logger.js";
 import type { TypedSocket } from "../types.js";
@@ -48,7 +48,6 @@ const logger = createLogger("socket:handlers-stats");
  * and includes per-decoder entries in global status
  */
 function getSystemStatus(): SystemStatus {
-  const config = getConfig();
   const decoderCounts = getPerDecoderMessageCounts();
   const queueStats = getMessageQueue().getStats();
   const rollingRates = getMessageQueue().getRollingRates();
@@ -65,7 +64,7 @@ function getSystemStatus(): SystemStatus {
   > = {};
 
   // ACARS status
-  if (config.enableAcars) {
+  if (isDecoderEnabled("ACARS")) {
     decodersStatus.ACARS = {
       Status: "Ok",
       Connected: true,
@@ -83,7 +82,7 @@ function getSystemStatus(): SystemStatus {
   }
 
   // VDLM2 status
-  if (config.enableVdlm) {
+  if (isDecoderEnabled("VDLM2")) {
     decodersStatus.VDLM2 = {
       Status: "Ok",
       Connected: true,
@@ -101,7 +100,7 @@ function getSystemStatus(): SystemStatus {
   }
 
   // HFDL status
-  if (config.enableHfdl) {
+  if (isDecoderEnabled("HFDL")) {
     decodersStatus.HFDL = {
       Status: "Ok",
       Connected: true,
@@ -119,7 +118,7 @@ function getSystemStatus(): SystemStatus {
   }
 
   // IMSL status
-  if (config.enableImsl) {
+  if (isDecoderEnabled("IMSL")) {
     decodersStatus.IMSL = {
       Status: "Ok",
       Connected: true,
@@ -137,7 +136,7 @@ function getSystemStatus(): SystemStatus {
   }
 
   // IRDM status
-  if (config.enableIrdm) {
+  if (isDecoderEnabled("IRDM")) {
     decodersStatus.IRDM = {
       Status: "Ok",
       Connected: true,

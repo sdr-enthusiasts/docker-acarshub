@@ -43,7 +43,7 @@ import type {
   DecoderListenerStats,
   IDecoderListener,
 } from "../decoder-listener.js";
-import type { MessageType } from "../tcp-listener.js";
+import type { ListenerType } from "../listener-types.js";
 
 // ---------------------------------------------------------------------------
 // Minimal mock IDecoderListener
@@ -58,13 +58,13 @@ class FakeListener
   extends EventEmitter<DecoderListenerEvents>
   implements IDecoderListener
 {
-  public readonly type: MessageType;
+  public readonly type: ListenerType;
   public readonly descriptor: ConnectionDescriptor;
   private _connected = false;
   public startCalled = false;
   public stopCalled = false;
 
-  constructor(type: MessageType, descriptor: ConnectionDescriptor) {
+  constructor(type: ListenerType, descriptor: ConnectionDescriptor) {
     super();
     this.type = type;
     this.descriptor = descriptor;
@@ -126,7 +126,7 @@ vi.mock("../decoder-listener.js", async (importOriginal) => {
   return {
     ...original,
     createDecoderListener: (
-      type: MessageType,
+      type: ListenerType,
       descriptor: ConnectionDescriptor,
     ): IDecoderListener => {
       const fake = new FakeListener(type, descriptor);
@@ -144,6 +144,7 @@ let mockVdlmConnections: DecoderConnections = { descriptors: [] };
 let mockHfdlConnections: DecoderConnections = { descriptors: [] };
 let mockImslConnections: DecoderConnections = { descriptors: [] };
 let mockIrdmConnections: DecoderConnections = { descriptors: [] };
+let mockXngConnections: DecoderConnections = { descriptors: [] };
 
 vi.mock("../../config.js", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../config.js")>();
@@ -164,6 +165,9 @@ vi.mock("../../config.js", async (importOriginal) => {
     get IRDM_CONNECTIONS(): DecoderConnections {
       return mockIrdmConnections;
     },
+    get XNG_CONNECTIONS(): DecoderConnections {
+      return mockXngConnections;
+    },
     getConfig: () => ({
       ...original.getConfig(),
       enableAcars: true,
@@ -171,6 +175,7 @@ vi.mock("../../config.js", async (importOriginal) => {
       enableHfdl: false,
       enableImsl: false,
       enableIrdm: false,
+      enableXng: true,
       enableAdsb: false,
     }),
   };
@@ -253,6 +258,7 @@ vi.mock("../../formatters/enrichment.js", () => ({
 // ---------------------------------------------------------------------------
 
 import { pruneDatabase } from "../../db/index.js";
+import { resetDecoderActivity } from "../decoder-activity.js";
 import { reheatMessageBuffers } from "../message-ring-buffer.js";
 
 const mockPruneDatabase = vi.mocked(pruneDatabase);
@@ -261,6 +267,21 @@ const mockReheatMessageBuffers = vi.mocked(reheatMessageBuffers);
 // ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
+
+function makeXngEnvelope(mode: string): Record<string, unknown> {
+  return {
+    mode,
+    timestamp: "2026-01-01T00:00:00Z",
+    frequency_hz: 136_975_000,
+    signal: {},
+    decode: { crc_ok: true },
+    body: { type: "test" },
+    source: {
+      station: { id: "s1", ident: "TEST" },
+      app: { name: "xng", version: "0.0.0" },
+    },
+  };
+}
 
 function makeDescriptor(
   port: number,
@@ -283,6 +304,8 @@ describe("BackgroundServices — fan-in architecture", () => {
     mockHfdlConnections = { descriptors: [] };
     mockImslConnections = { descriptors: [] };
     mockIrdmConnections = { descriptors: [] };
+    mockXngConnections = { descriptors: [] };
+    resetDecoderActivity();
   });
 
   afterEach(() => {
@@ -498,6 +521,71 @@ describe("BackgroundServices — fan-in architecture", () => {
       expect(stats.acars.total).toBe(1);
 
       destroyMessageQueue();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // XNG runtime decoder activation
+  // -------------------------------------------------------------------------
+
+  describe("XNG runtime decoder activation", () => {
+    async function setupXng(): Promise<{
+      emit: ReturnType<typeof vi.fn>;
+      xng: FakeListener;
+      destroy: () => void;
+    }> {
+      mockXngConnections = { descriptors: [makeDescriptor(5560)] };
+
+      const { BackgroundServices } = await import("../index.js");
+      const { destroyMessageQueue, getMessageQueue } =
+        await import("../message-queue.js");
+      destroyMessageQueue();
+      getMessageQueue(100);
+
+      const emit = vi.fn();
+      const svc = new BackgroundServices({ socketio: { emit } });
+      await svc.initialize();
+
+      const [xng] = createdListeners.filter((l) => l.type === "XNG");
+      return { emit, xng, destroy: destroyMessageQueue };
+    }
+
+    function emitsOf(emit: ReturnType<typeof vi.fn>, event: string): unknown[] {
+      return emit.mock.calls
+        .filter(([name]) => name === event)
+        .map(([, data]) => data);
+    }
+
+    it("activates a config-disabled carrier once and refreshes clients once", async () => {
+      const { emit, xng, destroy } = await setupXng();
+      const { isDecoderEnabled } = await import("../decoder-activity.js");
+
+      expect(isDecoderEnabled("VDLM2")).toBe(false);
+
+      xng.simulateMessage(makeXngEnvelope("vdl2"));
+      xng.simulateMessage(makeXngEnvelope("vdl2"));
+      xng.simulateMessage(makeXngEnvelope("vdl2"));
+
+      expect(isDecoderEnabled("VDLM2")).toBe(true);
+
+      const features = emitsOf(emit, "features_enabled");
+      expect(features).toHaveLength(1);
+      expect(features[0]).toMatchObject({ vdlm: true, acars: true });
+      expect(emitsOf(emit, "system_status")).toHaveLength(1);
+
+      destroy();
+    });
+
+    it("does not refresh clients for a carrier whose config flag is already on", async () => {
+      const { emit, xng, destroy } = await setupXng();
+
+      // ACARS is config-enabled in the getConfig mock.
+      xng.simulateMessage(makeXngEnvelope("acars_poa"));
+
+      expect(emitsOf(emit, "features_enabled")).toHaveLength(0);
+      expect(emitsOf(emit, "system_status")).toHaveLength(0);
+
+      destroy();
     });
   });
 

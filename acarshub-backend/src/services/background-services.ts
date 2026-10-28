@@ -51,6 +51,7 @@ import {
   destroyAdsbPoller,
   getAdsbPoller,
 } from "./adsb-poller.js";
+import { buildDecoderFeatures, markDecoderActive } from "./decoder-activity.js";
 import { type ConnectionStatus, ListenerManager } from "./listener-manager.js";
 import {
   destroyMessageQueue,
@@ -123,9 +124,12 @@ export class BackgroundServices extends EventEmitter {
     this.config = config;
     this.listenerManager = new ListenerManager({
       onMessage: (type, data) =>
-        routeListenerMessage(type, data, (carrier, payload) =>
-          getMessageQueue().push(carrier, payload),
-        ),
+        routeListenerMessage(type, data, (carrier, payload) => {
+          getMessageQueue().push(carrier, payload);
+          if (type === "XNG" && markDecoderActive(carrier)) {
+            this.onDecoderActivated(carrier);
+          }
+        }),
       onStatusChange: () => this.emitSystemStatus(),
     });
   }
@@ -613,6 +617,17 @@ export class BackgroundServices extends EventEmitter {
       this.listenerManager.getConnectionStatus(),
     );
     this.config.socketio.emit("system_status", systemStatus);
+  }
+
+  /**
+   * A decoder type became visible at runtime (first xng message of that
+   * carrier with its ENABLE_* flag off).  Refresh clients so the type shows
+   * up without a reconnect.
+   */
+  private onDecoderActivated(type: MessageType): void {
+    logger.info(`xng: enabling ${type} (first message received)`);
+    this.emitSystemStatus();
+    this.config.socketio.emit("features_enabled", buildDecoderFeatures());
   }
 
   /**
