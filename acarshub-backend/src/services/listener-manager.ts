@@ -26,22 +26,16 @@
 
 import type { ConnectionDescriptor } from "../config.js";
 import { createLogger } from "../utils/logger.js";
+import { publishConnectionStatus } from "./connection-state.js";
 import {
   createDecoderListener,
   type IDecoderListener,
 } from "./decoder-listener.js";
-import type { ListenerType } from "./listener-types.js";
+import type { ConnectionStatus, ListenerType } from "./listener-types.js";
 
 const logger = createLogger("services:listener-manager");
 
-export interface ConnectionStatus {
-  ACARS: boolean;
-  VDLM2: boolean;
-  HFDL: boolean;
-  IMSL: boolean;
-  IRDM: boolean;
-  XNG: boolean;
-}
+export type { ConnectionStatus } from "./listener-types.js";
 
 export interface ListenerManagerCallbacks {
   /** Invoked for every inbound decoder message, regardless of which
@@ -72,7 +66,9 @@ export class ListenerManager {
     XNG: false,
   };
 
-  constructor(private callbacks: ListenerManagerCallbacks) {}
+  constructor(private callbacks: ListenerManagerCallbacks) {
+    publishConnectionStatus(this.connectionStatus);
+  }
 
   /**
    * Wire up one IDecoderListener per ConnectionDescriptor for `type`.
@@ -101,6 +97,7 @@ export class ListenerManager {
 
       listener.on("connected", (listenerType: ListenerType) => {
         this.connectionStatus[listenerType] = true;
+        publishConnectionStatus(this.connectionStatus);
         this.callbacks.onStatusChange();
 
         logger.info(`${listenerType} listener connected`, {
@@ -112,6 +109,7 @@ export class ListenerManager {
         // Only flip to false when ALL listeners for this type are disconnected.
         const anyConnected = this.isAnyListenerConnected(listenerType);
         this.connectionStatus[listenerType] = anyConnected;
+        publishConnectionStatus(this.connectionStatus);
         this.callbacks.onStatusChange();
 
         logger.warn(`${listenerType} listener disconnected`, {

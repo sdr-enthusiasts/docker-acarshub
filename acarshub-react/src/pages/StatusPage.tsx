@@ -105,7 +105,11 @@ export const StatusPage = () => {
     status: string,
   ): "success" | "warning" | "error" | "default" => {
     if (status === "Ok") return "success";
-    if (status === "Disconnected" || status === "Waiting for first message")
+    if (
+      status === "Disconnected" ||
+      status === "Not Connected" ||
+      status === "Waiting for first message"
+    )
       return "warning";
     if (status === "Dead" || status === "Bad") return "error";
     return "default";

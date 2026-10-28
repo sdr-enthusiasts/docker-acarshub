@@ -67,6 +67,8 @@
  *      1-minute average immediately without waiting for the 5-second scheduler
  *    - regression: system_status.global LastMinute is the rolling rate (not the
  *      coarse per-minute counter) so the Status page always shows a live value
+ *    - regression: decoder Status reflects the published connection state
+ *      (Not Connected when down) rather than a hard-coded Ok
  *
  *  handleSignalFreqs:
  *    - emits signal_freqs with formatted freq data
@@ -196,6 +198,10 @@ import {
 } from "../../db/index.js";
 import { enrichMessage, enrichMessages } from "../../formatters/enrichment.js";
 import { getAdsbPoller } from "../../services/adsb-poller.js";
+import {
+  publishConnectionStatus,
+  resetConnectionStatus,
+} from "../../services/connection-state.js";
 import {
   markDecoderActive,
   recordXngMessage,
@@ -372,8 +378,10 @@ beforeEach(() => {
   // block's own cleanup runs) would leak "in progress" into the next test.
   resetAlertRegenStateForTesting();
 
-  // Runtime decoder activation is module-level; clear it between tests.
+  // Runtime decoder activation and published connection state are
+  // module-level; clear them between tests.
   resetDecoderActivity();
+  resetConnectionStatus();
 
   // Default config
   mockGetConfig.mockReturnValue(makeDefaultConfig());
@@ -1368,28 +1376,23 @@ describe("handleRequestStatus", () => {
     expect(rates[0].vdlm2).toBe(10);
   });
 
-  it("regression: system_status.global LastMinute uses rolling rate not the per-minute counter", () => {
-    // WHY: getStats().lastMinute is a coarse counter that resets at minute
-    // boundaries (hard jump to 0). getRollingRates() is the smooth 12×5s
-    // window that gives a real msgs/min value at any point in time.
-    // getSystemStatus() must use getRollingRates() so the Status page always
-    // shows a live rolling average rather than an ever-accumulating counter.
-    mockGetConfig.mockReturnValue(
-      makeDefaultConfig({ enableAcars: true, enableVdlm: true }),
-    );
+  it("regression: system_status.global LastMinute uses the rolling rate", () => {
+    // The rolling-vs-per-minute-counter rule itself is pinned in
+    // services/__tests__/system-status.test.ts; this guards the wiring.
+    mockGetConfig.mockReturnValue(makeDefaultConfig({ enableAcars: true }));
     mockGetMessageQueue.mockReturnValue({
       getStats: vi.fn().mockReturnValue({
-        acars: { lastMinute: 999, total: 0 }, // coarse counter — must NOT appear
-        vdlm2: { lastMinute: 888, total: 0 },
+        acars: { lastMinute: 999, total: 0 },
+        vdlm2: { lastMinute: 0, total: 0 },
         hfdl: { lastMinute: 0, total: 0 },
         imsl: { lastMinute: 0, total: 0 },
         irdm: { lastMinute: 0, total: 0 },
         error: { lastMinute: 0, total: 0 },
       }),
       getRollingRates: vi.fn().mockReturnValue({
-        total: 35,
+        total: 20,
         acars: 20,
-        vdlm2: 15,
+        vdlm2: 0,
         hfdl: 0,
         imsl: 0,
         irdm: 0,
@@ -1402,21 +1405,65 @@ describe("handleRequestStatus", () => {
     socket.handlers.request_status();
 
     const statuses = emittedAs<{
+      status: { global: Record<string, { LastMinute?: number }> };
+    }>(socket, "system_status");
+
+    expect(statuses[0].status.global.ACARS?.LastMinute).toBe(20);
+  });
+
+  it("regression: reports the published connection state, not a hard-coded Ok", () => {
+    // Before the fix request_status answered with Status "Ok" for every
+    // enabled decoder, overwriting the real status broadcast every poll.
+    mockGetConfig.mockReturnValue(
+      makeDefaultConfig({ enableAcars: true, enableVdlm: true }),
+    );
+    publishConnectionStatus({
+      ACARS: true,
+      VDLM2: false,
+      HFDL: false,
+      IMSL: false,
+      IRDM: false,
+      XNG: false,
+    });
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const statuses = emittedAs<{
       status: {
-        global: Record<string, { LastMinute?: number }>;
+        decoders: Record<
+          string,
+          { Status: string; Connected: boolean; Alive: boolean }
+        >;
       };
     }>(socket, "system_status");
 
-    expect(statuses).toHaveLength(1);
-    const global = statuses[0].status.global;
+    expect(statuses[0].status.decoders.ACARS).toEqual({
+      Status: "Ok",
+      Connected: true,
+      Alive: true,
+    });
+    expect(statuses[0].status.decoders.VDLM2).toEqual({
+      Status: "Not Connected",
+      Connected: false,
+      Alive: false,
+    });
+  });
 
-    // Rolling rate values must appear — not the coarse lastMinute counters
-    expect(global.ACARS?.LastMinute).toBe(20);
-    expect(global.VDLM2?.LastMinute).toBe(15);
+  it("reports every enabled decoder as Not Connected before any status is published", () => {
+    // Sockets can connect during migration, before ListenerManager exists.
+    mockGetConfig.mockReturnValue(makeDefaultConfig({ enableAcars: true }));
 
-    // Coarse counters (999, 888) must NOT appear
-    expect(global.ACARS?.LastMinute).not.toBe(999);
-    expect(global.VDLM2?.LastMinute).not.toBe(888);
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const statuses = emittedAs<{
+      status: { decoders: Record<string, { Status: string }> };
+    }>(socket, "system_status");
+
+    expect(statuses[0].status.decoders.ACARS?.Status).toBe("Not Connected");
   });
 
   it("includes a runtime-activated decoder whose config flag is off", () => {
@@ -1479,8 +1526,16 @@ describe("handleRequestStatus", () => {
     expect(statuses[0].status.global.XNG).toBeUndefined();
   });
 
-  it("includes an XNG entry with the routed envelope count when ENABLE_XNG is on", () => {
+  it("includes an XNG entry with the routed envelope count when XNG is connected", () => {
     mockGetConfig.mockReturnValue(makeDefaultConfig({ enableXng: true }));
+    publishConnectionStatus({
+      ACARS: false,
+      VDLM2: false,
+      HFDL: false,
+      IMSL: false,
+      IRDM: false,
+      XNG: true,
+    });
     recordXngMessage();
     recordXngMessage();
 
@@ -1501,6 +1556,36 @@ describe("handleRequestStatus", () => {
       Alive: true,
     });
     expect(statuses[0].status.global.XNG).toEqual({ Status: "Ok", Count: 2 });
+  });
+
+  it("reports XNG as Not Connected when the XNG listener is disconnected", () => {
+    mockGetConfig.mockReturnValue(makeDefaultConfig({ enableXng: true }));
+    publishConnectionStatus({
+      ACARS: false,
+      VDLM2: false,
+      HFDL: false,
+      IMSL: false,
+      IRDM: false,
+      XNG: false,
+    });
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const statuses = emittedAs<{
+      status: {
+        decoders: Record<string, unknown>;
+        global: Record<string, { Status: string; Count: number }>;
+      };
+    }>(socket, "system_status");
+
+    expect(statuses[0].status.decoders.XNG).toEqual({
+      Status: "Not Connected",
+      Connected: false,
+      Alive: false,
+    });
+    expect(statuses[0].status.global.XNG?.Status).toBe("Not Connected");
   });
 
   it("should not throw when getPerDecoderMessageCounts throws", () => {

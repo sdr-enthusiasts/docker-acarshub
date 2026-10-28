@@ -288,6 +288,13 @@ describe("StatusPage", () => {
       expect(badge.className).toContain("status-badge--warning");
     });
 
+    it("maps 'Not Connected' to the warning variant", () => {
+      // The backend's real connection status for an enabled decoder
+      // with no live listener.
+      const badge = renderWithDecoderStatus("Not Connected");
+      expect(badge.className).toContain("status-badge--warning");
+    });
+
     it("maps 'Waiting for first message' to the warning variant", () => {
       // The literal-string match is what's interesting here — a
       // typo on the backend side breaks the mapping silently.

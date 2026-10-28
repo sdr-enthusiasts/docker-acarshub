@@ -21,179 +21,29 @@
  * Covers: request_status, signal_freqs, signal_count, signal_graphs.
  */
 
-import type {
-  SignalCountData,
-  SignalFreqData,
-  SystemStatus,
-} from "@acarshub/types";
-import { getConfig } from "../../config.js";
+import type { SignalCountData, SignalFreqData } from "@acarshub/types";
 import {
   getAlertCounts,
   getAllFreqCounts,
   getAllSignalLevels,
   getErrors,
-  getPerDecoderMessageCounts,
 } from "../../db/index.js";
-import {
-  getXngMessageCount,
-  isDecoderEnabled,
-} from "../../services/decoder-activity.js";
+import { getConnectionStatus } from "../../services/connection-state.js";
 import { getMessageQueue } from "../../services/message-queue.js";
+import { buildSystemStatus } from "../../services/system-status.js";
 import { createLogger } from "../../utils/logger.js";
 import type { TypedSocket } from "../types.js";
 
 const logger = createLogger("socket:handlers-stats");
 
 /**
- * Get system status data
- *
- * Matches Python format from get_realtime_status()
- * Python uses uppercase decoder names (ACARS, VDLM2, HFDL, IMSL, IRDM)
- * and includes per-decoder entries in global status
- */
-function getSystemStatus(): SystemStatus {
-  const decoderCounts = getPerDecoderMessageCounts();
-  const queueStats = getMessageQueue().getStats();
-  const rollingRates = getMessageQueue().getRollingRates();
-
-  const decodersStatus: Record<
-    string,
-    { Status: string; Connected: boolean; Alive: boolean }
-  > = {};
-  const serversStatus: Record<string, { Status: string; Messages: number }> =
-    {};
-  const globalStatus: Record<
-    string,
-    { Status: string; Count: number; LastMinute?: number }
-  > = {};
-
-  // ACARS status
-  if (isDecoderEnabled("ACARS")) {
-    decodersStatus.ACARS = {
-      Status: "Ok",
-      Connected: true,
-      Alive: true,
-    };
-    serversStatus.acars_server = {
-      Status: "Ok",
-      Messages: decoderCounts.acars,
-    };
-    globalStatus.ACARS = {
-      Status: "Ok",
-      Count: decoderCounts.acars,
-      LastMinute: rollingRates.acars,
-    };
-  }
-
-  // VDLM2 status
-  if (isDecoderEnabled("VDLM2")) {
-    decodersStatus.VDLM2 = {
-      Status: "Ok",
-      Connected: true,
-      Alive: true,
-    };
-    serversStatus.vdlm2_server = {
-      Status: "Ok",
-      Messages: decoderCounts.vdlm2,
-    };
-    globalStatus.VDLM2 = {
-      Status: "Ok",
-      Count: decoderCounts.vdlm2,
-      LastMinute: rollingRates.vdlm2,
-    };
-  }
-
-  // HFDL status
-  if (isDecoderEnabled("HFDL")) {
-    decodersStatus.HFDL = {
-      Status: "Ok",
-      Connected: true,
-      Alive: true,
-    };
-    serversStatus.hfdl_server = {
-      Status: "Ok",
-      Messages: decoderCounts.hfdl,
-    };
-    globalStatus.HFDL = {
-      Status: "Ok",
-      Count: decoderCounts.hfdl,
-      LastMinute: rollingRates.hfdl,
-    };
-  }
-
-  // IMSL status
-  if (isDecoderEnabled("IMSL")) {
-    decodersStatus.IMSL = {
-      Status: "Ok",
-      Connected: true,
-      Alive: true,
-    };
-    serversStatus.imsl_server = {
-      Status: "Ok",
-      Messages: decoderCounts.imsl,
-    };
-    globalStatus.IMSL = {
-      Status: "Ok",
-      Count: decoderCounts.imsl,
-      LastMinute: rollingRates.imsl,
-    };
-  }
-
-  // IRDM status
-  if (isDecoderEnabled("IRDM")) {
-    decodersStatus.IRDM = {
-      Status: "Ok",
-      Connected: true,
-      Alive: true,
-    };
-    serversStatus.irdm_server = {
-      Status: "Ok",
-      Messages: decoderCounts.irdm,
-    };
-    globalStatus.IRDM = {
-      Status: "Ok",
-      Count: decoderCounts.irdm,
-      LastMinute: rollingRates.irdm,
-    };
-  }
-
-  // XNG status
-  if (getConfig().enableXng) {
-    decodersStatus.XNG = {
-      Status: "Ok",
-      Connected: true,
-      Alive: true,
-    };
-    globalStatus.XNG = {
-      Status: "Ok",
-      Count: getXngMessageCount(),
-    };
-  }
-
-  return {
-    status: {
-      error_state: false,
-      decoders: decodersStatus,
-      servers: serversStatus,
-      global: globalStatus,
-      stats: {}, // Legacy compatibility (empty)
-      external_formats: {}, // Legacy compatibility (empty)
-      errors: {
-        Total: queueStats.error.total,
-        LastMinute: queueStats.error.lastMinute,
-      },
-      threads: {
-        database: true,
-        scheduler: true, // TypeScript backend doesn't have separate scheduler thread
-      },
-    },
-  };
-}
-
-/**
  * Handle system status request
  *
  * Mirrors Python: @socketio.on("request_status", namespace="/main")
+ *
+ * Uses the same builder and the real connection state as the scheduled
+ * BackgroundServices broadcast, so a poll never overwrites the real status
+ * with a stale or fabricated one.
  *
  * Emits both system_status and message_rate so the Status page receives the
  * rolling 1-minute message average immediately on demand, rather than waiting
@@ -201,7 +51,7 @@ function getSystemStatus(): SystemStatus {
  */
 export function handleRequestStatus(socket: TypedSocket): void {
   try {
-    const status = getSystemStatus();
+    const status = buildSystemStatus(getConnectionStatus());
     socket.emit("system_status", status);
 
     // Also emit the current rolling rate so the Status page can display it
