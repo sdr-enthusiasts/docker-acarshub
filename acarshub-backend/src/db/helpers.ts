@@ -11,6 +11,7 @@
  * - find_airline_code_from_icao(): Lookup airline by ICAO code
  */
 
+import { type DecoderKey, decoderKeyFromMessageType } from "@acarshub/types";
 import { eq, sql } from "drizzle-orm";
 import {
   airlines,
@@ -96,6 +97,23 @@ export function isMessageNotEmpty(message: {
   return false;
 }
 
+const FREQ_TABLES: Readonly<
+  Record<
+    DecoderKey,
+    | typeof freqsAcars
+    | typeof freqsVdlm2
+    | typeof freqsHfdl
+    | typeof freqsImsl
+    | typeof freqsIrdm
+  >
+> = {
+  acars: freqsAcars,
+  vdlm2: freqsVdlm2,
+  hfdl: freqsHfdl,
+  imsl: freqsImsl,
+  irdm: freqsIrdm,
+};
+
 /**
  * Update frequency count tables per decoder
  *
@@ -104,30 +122,13 @@ export function isMessageNotEmpty(message: {
  * Maps message_type to appropriate freqs_* table and increments count.
  *
  * @param freq Frequency string (e.g., "131.550", "136.975")
- * @param messageType Message type (ACARS, VDLM2, HFDL, IMSL, IRDM)
+ * @param messageType Message type, any spelling accepted by decoderKeyFromMessageType
  */
 export function updateFrequencies(freq: string, messageType: string): void {
   const db = getDatabase();
 
-  // Map message_type to appropriate frequency table
-  const freqTableMap: Record<
-    string,
-    | typeof freqsAcars
-    | typeof freqsVdlm2
-    | typeof freqsHfdl
-    | typeof freqsImsl
-    | typeof freqsIrdm
-  > = {
-    ACARS: freqsAcars,
-    "VDL-M2": freqsVdlm2,
-    VDLM2: freqsVdlm2, // Alternative spelling
-    HFDL: freqsHfdl,
-    IMSL: freqsImsl,
-    "IMS-L": freqsImsl, // Normalized form produced by normalizeMessageType()
-    IRDM: freqsIrdm,
-  };
-
-  const freqTable = freqTableMap[messageType];
+  const decoderKey = decoderKeyFromMessageType(messageType);
+  const freqTable = decoderKey === null ? undefined : FREQ_TABLES[decoderKey];
 
   if (!freqTable) {
     logger.warn(`Unknown message_type for frequency: ${messageType}`);

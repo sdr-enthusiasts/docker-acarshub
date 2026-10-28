@@ -24,6 +24,7 @@
 // ----------------------------------------------------------------------------
 
 import { EventEmitter } from "node:events";
+import { toStoredMessageType } from "@acarshub/types";
 import {
   ACARS_CONNECTIONS,
   getConfig,
@@ -74,26 +75,6 @@ import { buildMessageRate, buildSystemStatus } from "./system-status.js";
 import type { MessageType } from "./tcp-listener.js";
 
 export type { ConnectionStatus } from "./listener-manager.js";
-
-/**
- * Convert MessageType enum to database format
- * Matches Python getQueType() function behavior
- *
- * Python stores: "VDL-M2", "ACARS", "HFDL", "IMS-L", "IRDM"
- * TypeScript receives: "VDLM2", "ACARS", "HFDL", "IMSL", "IRDM"
- */
-function normalizeMessageType(type: MessageType): string {
-  switch (type) {
-    case "VDLM2":
-      return "VDL-M2";
-    case "IMSL":
-      return "IMS-L";
-    case "ACARS":
-    case "HFDL":
-    case "IRDM":
-      return type;
-  }
-}
 
 const logger = createLogger("services:background-services");
 
@@ -324,12 +305,12 @@ export class BackgroundServices extends EventEmitter {
 
         // Normalize message type to DB format BEFORE the DB call so the same
         // string is used for both insertion and Socket.IO emission.
-        // Maps: VDLM2 → VDL-M2, IMSL → IMS-L, others unchanged.
+        // Stored values are the legacy Python names (VDL-M2, IMS-L, ...).
         // NOTE: We do NOT set formattedMessage.message_type yet — if that key
         // is present when createDbSafeParams iterates the object it falls into
         // the unrecognized-key debug-log branch (noise). The type is passed as
         // the explicit first argument to addMessageFromJson instead.
-        const dbMessageType = normalizeMessageType(queuedMessage.type);
+        const dbMessageType = toStoredMessageType(queuedMessage.type);
 
         logger.trace("Message formatted", {
           type: queuedMessage.type,

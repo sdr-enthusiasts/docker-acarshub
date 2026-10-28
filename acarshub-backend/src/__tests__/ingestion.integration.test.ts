@@ -20,7 +20,7 @@
  *  - Formatter output keys mismatching what createDbSafeParams reads
  *    (the entire ACARS column set is keyed by string and silently
  *    defaults to "" when a key is missing).
- *  - normalizeMessageType in services/background-services.ts being skipped or run
+ *  - toStoredMessageType in services/background-services.ts being skipped or run
  *    in the wrong order (must be BEFORE addMessageFromJson AND
  *    BEFORE the Socket.IO emit so DB rows and clients see the same
  *    "VDL-M2"/"IMS-L" form, not the wire-format "VDLM2"/"IMSL").
@@ -62,6 +62,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { toStoredMessageType } from "@acarshub/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addMessageFromJson,
@@ -88,28 +89,10 @@ import {
   pushMessage,
   resetMessageBuffersForTesting,
 } from "../services/message-ring-buffer.js";
-import type { MessageType } from "../services/tcp-listener.js";
 
 // ---------------------------------------------------------------------------
 // Production handler — kept in sync with services/background-services.ts::setupMessageQueue
 // ---------------------------------------------------------------------------
-
-/**
- * Wire format -> DB format. Mirrors normalizeMessageType() in
- * services/background-services.ts. Kept as a free function (rather than imported)
- * because the production copy is private.  If they ever diverge, the
- * "DB row uses VDL-M2 not VDLM2" test below catches it.
- */
-function normalizeMessageType(type: MessageType): string {
-  switch (type) {
-    case "VDLM2":
-      return "VDL-M2";
-    case "IMSL":
-      return "IMS-L";
-    default:
-      return type;
-  }
-}
 
 interface FakeSocket {
   emit: ReturnType<typeof vi.fn>;
@@ -130,7 +113,7 @@ function ingestMessage(
   if (!formattedMessage) {
     return null;
   }
-  const dbMessageType = normalizeMessageType(queued.type);
+  const dbMessageType = toStoredMessageType(queued.type);
 
   const alertMetadata = addMessageFromJson(
     dbMessageType,
@@ -309,7 +292,7 @@ describe("ingestion pipeline (integration)", () => {
   describe("message-type normalization across the seam", () => {
     it("VDLM2 wire-format is stored as 'VDL-M2' in DB AND emitted as 'VDL-M2'", () => {
       // Critical seam test: the production handler calls
-      // normalizeMessageType() BEFORE both addMessageFromJson and
+      // toStoredMessageType() BEFORE both addMessageFromJson and
       // the socket emit, so DB and clients agree.  A regression where
       // the normalize happens only on the DB side (or only on the
       // emit side) would silently drift the two apart and break

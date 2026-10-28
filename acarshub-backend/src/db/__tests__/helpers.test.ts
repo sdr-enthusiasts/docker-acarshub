@@ -283,8 +283,8 @@ describe("Database Helper Functions", () => {
       expect(rows[0].count).toBe(1);
     });
 
-    it("regression: should write to freqs_imsl for IMS-L (normalizeMessageType output)", () => {
-      // normalizeMessageType("IMSL") returns "IMS-L".  Prior to the fix,
+    it("regression: should write to freqs_imsl for IMS-L (stored form)", () => {
+      // toStoredMessageType("IMSL") returns "IMS-L".  Prior to the fix,
       // freqTableMap did not contain an "IMS-L" key, so no row was ever
       // written to freqs_imsl and the Status page IMSL frequency chart was
       // permanently empty.
@@ -303,12 +303,20 @@ describe("Database Helper Functions", () => {
       expect(rows).toHaveLength(1);
     });
 
-    it("should write to freqs_vdlm2 for VDL-M2 (normalizeMessageType output)", () => {
+    it("should write to freqs_vdlm2 for VDL-M2 (stored form)", () => {
       updateFrequencies("136.900", "VDL-M2");
       const testDb = drizzle(db, { schema });
       const rows = testDb.select().from(freqsVdlm2).all();
       expect(rows).toHaveLength(1);
       expect(rows[0].freq).toBe("136.900");
+    });
+
+    it("should accept case variants and surrounding whitespace", () => {
+      updateFrequencies("10.500", " ims-l ");
+      updateFrequencies("136.900", "vdlm");
+      const testDb = drizzle(db, { schema });
+      expect(testDb.select().from(freqsImsl).all()).toHaveLength(1);
+      expect(testDb.select().from(freqsVdlm2).all()).toHaveLength(1);
     });
 
     it("should write to freqs_vdlm2 for un-normalized VDLM2", () => {

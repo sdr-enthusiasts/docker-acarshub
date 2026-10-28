@@ -18,7 +18,11 @@
  * Socket.IO database-search handler (GOD-01 split from socket/handlers.ts)
  */
 
-import type { CurrentSearch, SearchHtmlMsg } from "@acarshub/types";
+import {
+  type CurrentSearch,
+  type SearchHtmlMsg,
+  toStoredMessageType,
+} from "@acarshub/types";
 import { SEARCH_PAGE_SIZE } from "../../config.js";
 import { databaseSearch } from "../../db/index.js";
 import type { SearchParams } from "../../db/queries/messages/index.js";
@@ -55,16 +59,11 @@ export function handleQuerySearch(
     const limit = SEARCH_PAGE_SIZE;
     const offset = page * limit;
 
-    // Normalize msg_type from display values to database storage format.
-    // Python getQueType() and TypeScript normalizeMessageType() both store:
-    //   VDLM2 → "VDL-M2",  IMSL → "IMS-L",  all others unchanged.
-    const msgTypeNormalizationMap: Record<string, string> = {
-      VDLM2: "VDL-M2",
-      IMSL: "IMS-L",
-    };
+    // Normalize msg_type from any display spelling to the stored format.
+    // Unrecognised values pass through unchanged (and simply match nothing).
     const rawMsgType = params.search_term.msg_type || "";
     const normalizedMsgType = rawMsgType
-      ? (msgTypeNormalizationMap[rawMsgType] ?? rawMsgType)
+      ? (toStoredMessageType(rawMsgType) ?? rawMsgType)
       : undefined;
 
     // Convert CurrentSearch to SearchParams format
