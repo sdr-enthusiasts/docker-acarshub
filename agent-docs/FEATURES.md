@@ -205,12 +205,28 @@ This document describes the key features of ACARS Hub.
 
 **Map Providers**:
 
-- CartoDB (default, no API key required)
-  - Dark Matter (dark theme)
-  - Light All (light theme)
-- Maptiler (optional, requires API key)
-  - Vector tiles
-  - Additional professional styles
+- Theme-aware default: OpenFreeMap vector styles (no API key or registration)
+  - OpenFreeMap Dark (Mocha theme)
+  - OpenFreeMap Positron (Latte theme)
+  - Follows the theme until the user explicitly picks a provider
+- Selectable providers (map layers button or Settings → Map):
+  - OpenStreetMap and OpenStreetMap DE
+  - OpenFreeMap styles (Bright, Liberty, Positron, Dark, Fiord)
+  - CARTO (English, Dark/Light, with or without labels) - requires a free,
+    user-supplied CARTO API key
+  - ESRI (Satellite, Gray, Streets)
+  - GIBS Clouds (NASA MODIS imagery from yesterday)
+  - US aviation charts (VFR Sectional, VFR Terminal, IFR Enroute Low/High),
+    drawn as an overlay on the theme default base map
+  - Custom raster tile URL
+- CARTO API key:
+  - Free key from `carto.com/basemaps/apikey` (free up to 5M tile requests
+    per month for non-commercial use)
+  - Entered in Settings → Map, stored only in that browser, and appended to
+    CARTO tile URLs
+  - Without a key, CARTO providers are listed but disabled ("requires CARTO
+    API key"); a previously selected CARTO provider shows the theme default
+    until a key is entered
 
 ### Aircraft Display
 
@@ -507,8 +523,8 @@ npm run generate-sprites
 
 ### Map Settings
 
-- Map provider (CartoDB/Maptiler)
-- Maptiler API key
+- Map provider (theme-aware OpenFreeMap default or an explicit choice)
+- CARTO API key (optional, only needed for CARTO providers)
 - Station lat/lon
 - Range ring radii
 - Default center/zoom

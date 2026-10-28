@@ -26,6 +26,7 @@ Builds and runs on `amd64`, and `arm64` architectures.
     - [General](#general)
     - [Logging](#logging)
     - [ADSB](#adsb)
+      - [Live Map base layers](#live-map-base-layers)
     - [Connection Descriptor Format](#connection-descriptor-format)
     - [ACARS](#acars)
     - [VDLM2](#vdlm2)
@@ -184,6 +185,14 @@ For enhanced ADS-B and ACARS message matching (coloured aircraft icons on the Li
 ```
 
 In the configuration options for tar1090. Setting this will include additional aircraft information in the `aircraft.json` file that is not normally part of the ADSB broadcast, such as the aircraft's tail number and aircraft type. Please enable this with caution: there is increased memory usage in the tar1090 container so RAM constrained systems should be cautious enabling this.
+
+#### Live Map base layers
+
+By default the Live Map uses [OpenFreeMap](https://openfreemap.org) (Dark for the dark theme, Positron for the light theme). No API key or registration is needed.
+
+To use a different base map, open the map layers button on the Live Map or go to Settings → Map. Choices include OpenStreetMap, other OpenFreeMap styles, CARTO, ESRI, NASA GIBS clouds, US aviation charts and a custom tile URL.
+
+CARTO base maps need a free API key from [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey) (free up to 5 million tile requests per month for non-commercial use). Enter it in Settings → Map. The key is saved only in that browser. Until a key is entered, the CARTO options are disabled and the default base map is shown.
 
 ### Connection Descriptor Format
 
