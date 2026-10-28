@@ -925,6 +925,39 @@ describe("handleQuerySearch", () => {
     );
   });
 
+  it.each([
+    { input: "IMS-L", expected: "IMS-L" },
+    { input: "VDL-M2", expected: "VDL-M2" },
+    { input: "vdlm", expected: "VDL-M2" },
+    { input: "acars", expected: "ACARS" },
+    { input: "BOGUS", expected: "BOGUS" },
+  ])(
+    "should normalise msg_type $input → $expected (unknown passes through)",
+    ({ input, expected }) => {
+      mockDatabaseSearch.mockReturnValue({ messages: [], totalCount: 0 });
+      mockEnrichMessages.mockReturnValue([]);
+
+      const socket = makeMockSocket();
+      triggerSearch(socket, { search_term: { msg_type: input } });
+
+      expect(mockDatabaseSearch).toHaveBeenCalledWith(
+        expect.objectContaining({ messageType: expected }),
+      );
+    },
+  );
+
+  it("should not filter by type when msg_type is empty", () => {
+    mockDatabaseSearch.mockReturnValue({ messages: [], totalCount: 0 });
+    mockEnrichMessages.mockReturnValue([]);
+
+    const socket = makeMockSocket();
+    triggerSearch(socket, { search_term: { msg_type: "" } });
+
+    expect(mockDatabaseSearch).toHaveBeenCalledWith(
+      expect.objectContaining({ messageType: undefined }),
+    );
+  });
+
   it("should use results_after as the page offset", () => {
     mockDatabaseSearch.mockReturnValue({ messages: [], totalCount: 0 });
     mockEnrichMessages.mockReturnValue([]);

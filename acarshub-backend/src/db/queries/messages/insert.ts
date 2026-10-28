@@ -6,6 +6,7 @@
 // to the Python add_message() function.
 // ----------------------------------------------------------------------------
 
+import { type DecoderKey, decoderKeyFromMessageType } from "@acarshub/types";
 import { eq, sql } from "drizzle-orm";
 import { DB_SAVEALL } from "../../../config.js";
 import { createLogger } from "../../../utils/logger.js";
@@ -28,6 +29,23 @@ import { getCachedAlertIgnoreTerms, getCachedAlertTerms } from "../alerts.js";
 import { incrementMessageCounter } from "../statistics.js";
 
 const logger = createLogger("db:messages-insert");
+
+const LEVEL_TABLES: Readonly<
+  Record<
+    DecoderKey,
+    | typeof levelAcars
+    | typeof levelVdlm2
+    | typeof levelHfdl
+    | typeof levelImsl
+    | typeof levelIrdm
+  >
+> = {
+  acars: levelAcars,
+  vdlm2: levelVdlm2,
+  hfdl: levelHfdl,
+  imsl: levelImsl,
+  irdm: levelIrdm,
+};
 
 /**
  * Monotonically decreasing counter for unsaved messages (those skipped by
@@ -210,17 +228,9 @@ export function addMessage(
       if (Number.isNaN(levelValue)) {
         logger.warn("Invalid level value", { level: message.level });
       } else {
-        const levelTableMap = {
-          ACARS: levelAcars,
-          "VDL-M2": levelVdlm2,
-          VDLM2: levelVdlm2,
-          HFDL: levelHfdl,
-          IMSL: levelImsl,
-          IRDM: levelIrdm,
-        };
-
+        const decoderKey = decoderKeyFromMessageType(message.messageType);
         const levelTable =
-          levelTableMap[message.messageType as keyof typeof levelTableMap];
+          decoderKey === null ? undefined : LEVEL_TABLES[decoderKey];
 
         if (levelTable) {
           const existing = db

@@ -15,6 +15,7 @@
  * - Synchronous API
  */
 
+import { decoderKeyFromMessageType } from "@acarshub/types";
 import { count, eq } from "drizzle-orm";
 import { createLogger } from "../../utils/logger.js";
 import { getDatabase } from "../client.js";
@@ -340,19 +341,15 @@ export function initializeMessageCounters(): void {
     messageCounterState.set(newCounters);
 
     for (const row of results) {
-      const messageType = row.messageType?.toUpperCase();
       const count = row.count ?? 0;
+      const decoderKey =
+        row.messageType === null
+          ? null
+          : decoderKeyFromMessageType(row.messageType);
 
-      if (messageType === "ACARS") {
-        messageCounterState.get().acars = count;
-      } else if (messageType === "VDLM2" || messageType === "VDL-M2") {
-        messageCounterState.get().vdlm2 += count; // Use += to handle both formats
-      } else if (messageType === "HFDL") {
-        messageCounterState.get().hfdl = count;
-      } else if (messageType === "IMSL" || messageType === "IMS-L") {
-        messageCounterState.get().imsl += count; // Use += to handle both formats
-      } else if (messageType === "IRDM") {
-        messageCounterState.get().irdm = count;
+      // += because several spellings of one decoder may each have a row
+      if (decoderKey !== null) {
+        messageCounterState.get()[decoderKey] += count;
       }
 
       messageCounterState.get().total += count;
@@ -392,18 +389,9 @@ export function incrementMessageCounter(messageType: string | null): void {
     return;
   }
 
-  const upperType = messageType.toUpperCase();
-
-  if (upperType === "ACARS") {
-    messageCounterState.get().acars++;
-  } else if (upperType === "VDLM2" || upperType === "VDL-M2") {
-    messageCounterState.get().vdlm2++;
-  } else if (upperType === "HFDL") {
-    messageCounterState.get().hfdl++;
-  } else if (upperType === "IMSL" || upperType === "IMS-L") {
-    messageCounterState.get().imsl++;
-  } else if (upperType === "IRDM") {
-    messageCounterState.get().irdm++;
+  const decoderKey = decoderKeyFromMessageType(messageType);
+  if (decoderKey !== null) {
+    messageCounterState.get()[decoderKey]++;
   }
 
   messageCounterState.get().total++;

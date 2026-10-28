@@ -456,6 +456,31 @@ describe("initializeMessageCounters", () => {
     expect(counts.vdlm2).toBe(2);
   });
 
+  it("should read IMSL message count from database (both spellings)", () => {
+    insertMessage("IMSL");
+    insertMessage("IMS-L");
+    insertMessage("IMS-L");
+
+    initializeMessageCounters();
+
+    const counts = getPerDecoderMessageCounts();
+    expect(counts.imsl).toBe(3);
+  });
+
+  it("should sum rows whose message_type differs only in case", () => {
+    // GROUP BY is case-sensitive, so "ACARS" and "acars" arrive as separate
+    // rows; they must add up rather than the last row overwriting the first.
+    insertMessage("ACARS");
+    insertMessage("ACARS");
+    insertMessage("acars");
+
+    initializeMessageCounters();
+
+    const counts = getPerDecoderMessageCounts();
+    expect(counts.acars).toBe(3);
+    expect(counts.total).toBe(3);
+  });
+
   it("should read HFDL message count from database", () => {
     insertMessage("HFDL");
     insertMessage("HFDL");
@@ -520,6 +545,11 @@ describe("incrementMessageCounter", () => {
     incrementMessageCounter("VDL-M2");
     expect(getPerDecoderMessageCounts().vdlm2).toBe(1);
     expect(getPerDecoderMessageCounts().total).toBe(1);
+  });
+
+  it("should increment the VDLM2 counter (config VDLM spelling)", () => {
+    incrementMessageCounter("VDLM");
+    expect(getPerDecoderMessageCounts().vdlm2).toBe(1);
   });
 
   it("should increment the HFDL counter", () => {

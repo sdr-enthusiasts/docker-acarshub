@@ -38,6 +38,15 @@ export type {
   AircraftIcon,
   SvgIcon,
 } from "./adsb.js";
+// Re-export the canonical message-type mapping (runtime values)
+export {
+  type DecoderKey,
+  decoderKeyFromMessageType,
+  type MessageTypeSpelling,
+  STORED_MESSAGE_TYPES,
+  type StoredMessageType,
+  toStoredMessageType,
+} from "./message-types.js";
 // Re-export all message types
 export type {
   AcarsMsg,
