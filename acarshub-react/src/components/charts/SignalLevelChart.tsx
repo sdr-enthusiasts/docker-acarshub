@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import { type DecoderKey, decoderKeyFromMessageType } from "@acarshub/types";
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -82,24 +83,24 @@ export const SignalLevelChart = ({
     }
 
     // Decoder color palette (consistent with other charts)
-    const decoderColors: Record<string, { border: string; bg: string }> = {
-      ACARS: {
+    const decoderColors: Record<DecoderKey, { border: string; bg: string }> = {
+      acars: {
         border: isDark ? "rgb(137, 180, 250)" : "rgb(30, 102, 245)", // Blue
         bg: isDark ? "rgba(137, 180, 250, 0.1)" : "rgba(30, 102, 245, 0.1)",
       },
-      "VDL-M2": {
+      vdlm2: {
         border: isDark ? "rgb(166, 227, 161)" : "rgb(64, 160, 43)", // Green
         bg: isDark ? "rgba(166, 227, 161, 0.1)" : "rgba(64, 160, 43, 0.1)",
       },
-      HFDL: {
+      hfdl: {
         border: isDark ? "rgb(245, 194, 231)" : "rgb(234, 118, 203)", // Pink
         bg: isDark ? "rgba(245, 194, 231, 0.1)" : "rgba(234, 118, 203, 0.1)",
       },
-      IMSL: {
+      imsl: {
         border: isDark ? "rgb(249, 226, 175)" : "rgb(223, 142, 29)", // Yellow
         bg: isDark ? "rgba(249, 226, 175, 0.1)" : "rgba(223, 142, 29, 0.1)",
       },
-      IRDM: {
+      irdm: {
         border: isDark ? "rgb(203, 166, 247)" : "rgb(136, 57, 239)", // Mauve
         bg: isDark ? "rgba(203, 166, 247, 0.1)" : "rgba(136, 57, 239, 0.1)",
       },
@@ -156,8 +157,10 @@ export const SignalLevelChart = ({
       // Map sorted levels to counts (0 if level not present for this decoder)
       const data = sortedLevels.map((level) => levelMap.get(level) || 0);
 
-      // Get colors for this decoder (fallback to blue if unknown)
-      const colors = decoderColors[decoder] || decoderColors.ACARS;
+      // Get colors for this decoder, accepting any spelling of the payload
+      // key (fallback to blue if unknown). The label stays the raw key.
+      const decoderKey = decoderKeyFromMessageType(decoder);
+      const colors = decoderColors[decoderKey ?? "acars"];
 
       datasets.push({
         label: decoder,

@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getAircraftColor,
   getBaseMarker,
+  getDecoderSpriteClass,
   shouldRotate,
   svgShapeToURI,
 } from "../aircraftIcons";
@@ -286,6 +287,20 @@ describe("getAircraftColor", () => {
       );
     });
 
+    // Regression: only "IMSL" was recognised, but the backend emits the
+    // stored spelling "IMS-L" on acars_msg.
+    it("returns peach for IMS-L decoder type (stored spelling)", () => {
+      expect(getAircraftColor(false, false, undefined, true, "IMS-L")).toBe(
+        "#ffaa00",
+      );
+    });
+
+    it("returns green for VDLM2 decoder type (wire spelling)", () => {
+      expect(getAircraftColor(false, false, undefined, true, "VDLM2")).toBe(
+        "#00ff00",
+      );
+    });
+
     it("returns mauve for IRDM decoder type", () => {
       expect(getAircraftColor(false, false, undefined, true, "IRDM")).toBe(
         "#aa00ff",
@@ -350,6 +365,30 @@ describe("getAircraftColor", () => {
     it("returns text color when altitude is undefined", () => {
       expect(getAircraftColor(false, false, undefined)).toBe("#ffffff");
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getDecoderSpriteClass
+// ---------------------------------------------------------------------------
+
+describe("getDecoderSpriteClass", () => {
+  it.each([
+    ["ACARS", "decoder-acars"],
+    ["VDL-M2", "decoder-vdlm"],
+    ["VDLM2", "decoder-vdlm"],
+    ["VDLM", "decoder-vdlm"],
+    ["HFDL", "decoder-hfdl"],
+    ["IMS-L", "decoder-imsl"],
+    ["IMSL", "decoder-imsl"],
+    ["IRDM", "decoder-irdm"],
+    ["ims-l", "decoder-imsl"],
+  ])("maps %s to %s", (messageType, expected) => {
+    expect(getDecoderSpriteClass(messageType)).toBe(expected);
+  });
+
+  it("returns default for an unknown decoder type", () => {
+    expect(getDecoderSpriteClass("BOGUS")).toBe("default");
   });
 });
 

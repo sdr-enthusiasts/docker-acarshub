@@ -30,6 +30,7 @@
  * TypeDescriptionIcons, CategoryIcons) live in data.ts.
  */
 
+import { type DecoderKey, decoderKeyFromMessageType } from "@acarshub/types";
 import {
   CategoryIcons,
   shapes,
@@ -178,6 +179,36 @@ export function svgShapeToURI(
   };
 }
 
+/** Catppuccin CSS variable used for each decoder when coloring by decoder. */
+const DECODER_COLOR_VAR: Readonly<Record<DecoderKey, string>> = {
+  acars: "--color-blue",
+  vdlm2: "--color-green",
+  hfdl: "--color-yellow",
+  imsl: "--color-peach",
+  irdm: "--color-mauve",
+};
+
+/** Sprite state class used for each decoder when coloring by decoder. */
+const DECODER_SPRITE_CLASS: Readonly<Record<DecoderKey, string>> = {
+  acars: "decoder-acars",
+  vdlm2: "decoder-vdlm",
+  hfdl: "decoder-hfdl",
+  imsl: "decoder-imsl",
+  irdm: "decoder-irdm",
+};
+
+/**
+ * Get the sprite state class for an aircraft colored by decoder type.
+ *
+ * @param decoderType - Message type in any known spelling (ACARS, VDL-M2,
+ *   VDLM2, VDLM, HFDL, IMS-L, IMSL, IRDM)
+ * @returns The decoder sprite class, or "default" for an unrecognised type
+ */
+export function getDecoderSpriteClass(decoderType: string): string {
+  const key = decoderKeyFromMessageType(decoderType);
+  return key === null ? "default" : DECODER_SPRITE_CLASS[key];
+}
+
 /**
  * Get aircraft icon color based on state or decoder type
  *
@@ -187,7 +218,8 @@ export function svgShapeToURI(
  * @param hasMessages - Aircraft has ACARS messages
  * @param altitude - Current altitude (number or "ground" literal)
  * @param colorByDecoder - Color by decoder type instead of message state
- * @param decoderType - Decoder type (ACARS, VDLM, HFDL, IMSL, IRDM)
+ * @param decoderType - Message type in any known spelling (ACARS, VDL-M2,
+ *   VDLM2, VDLM, HFDL, IMS-L, IMSL, IRDM)
  * @param groundThreshold - Altitude threshold (ft MSL) for "on ground" color
  * @returns Hex color code from current theme
  */
@@ -210,19 +242,9 @@ export function getAircraftColor(
 
   // Color by decoder type (if enabled and decoder type is available)
   if (colorByDecoder && decoderType) {
-    const normalizedType = decoderType.toUpperCase();
-    switch (normalizedType) {
-      case "ACARS":
-        return computedStyle.getPropertyValue("--color-blue").trim();
-      case "VDLM":
-      case "VDL-M2":
-        return computedStyle.getPropertyValue("--color-green").trim();
-      case "HFDL":
-        return computedStyle.getPropertyValue("--color-yellow").trim();
-      case "IMSL":
-        return computedStyle.getPropertyValue("--color-peach").trim();
-      case "IRDM":
-        return computedStyle.getPropertyValue("--color-mauve").trim();
+    const key = decoderKeyFromMessageType(decoderType);
+    if (key !== null) {
+      return computedStyle.getPropertyValue(DECODER_COLOR_VAR[key]).trim();
     }
   }
 

@@ -209,6 +209,34 @@ describe("SignalLevelChart", () => {
     });
   });
 
+  describe("decoder colors accept any payload-key spelling", () => {
+    // Mocha palette border colors from the SUT.
+    const BLUE = "rgb(137, 180, 250)";
+    const GREEN = "rgb(166, 227, 161)";
+    const YELLOW = "rgb(249, 226, 175)";
+
+    it.each([
+      ["VDL-M2", GREEN],
+      ["VDLM2", GREEN],
+      ["IMSL", YELLOW],
+      ["IMS-L", YELLOW],
+    ])(
+      "colors %s with its decoder color and keeps the raw key as the label",
+      (key, expectedBorder) => {
+        const signalData: SignalLevelData = {
+          [key]: [{ level: -12.5, count: 3 }],
+        };
+
+        render(<SignalLevelChart signalData={signalData} />);
+
+        const ds = capturedLine?.data.datasets.find((d) => d.label === key);
+        expect(ds).toBeDefined();
+        expect(ds?.borderColor).toBe(expectedBorder);
+        expect(ds?.borderColor).not.toBe(BLUE);
+      },
+    );
+  });
+
   describe("unknown decoder fallback", () => {
     it("renders an unknown decoder using the fallback color palette without crashing", () => {
       const signalData: SignalLevelData = {
@@ -222,8 +250,8 @@ describe("SignalLevelChart", () => {
       );
       expect(ds).toBeDefined();
       expect(ds?.data).toEqual([3]);
-      // Fallback color exists (non-empty string)
-      expect(ds?.borderColor.length).toBeGreaterThan(0);
+      // Falls back to the ACARS (blue) palette
+      expect(ds?.borderColor).toBe("rgb(137, 180, 250)");
     });
   });
 });

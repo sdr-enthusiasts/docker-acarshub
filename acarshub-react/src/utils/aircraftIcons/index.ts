@@ -22,7 +22,8 @@
  * Split into:
  *   - data.ts  — ShapeDefinition interface + shapes/TypeDesignatorIcons/
  *     TypeDescriptionIcons/CategoryIcons lookup tables (data only, no logic)
- *   - logic.ts — getBaseMarker/svgShapeToURI/getAircraftColor/shouldRotate
+ *   - logic.ts — getBaseMarker/svgShapeToURI/getAircraftColor/
+ *     getDecoderSpriteClass/shouldRotate
  *     (the functions that consume the lookup tables)
  *
  * Re-exported here so existing consumers (AircraftMarkers.tsx, the test
@@ -33,6 +34,7 @@ export type { ShapeDefinition } from "./data";
 export {
   getAircraftColor,
   getBaseMarker,
+  getDecoderSpriteClass,
   type SVGResult,
   shouldRotate,
   svgShapeToURI,
