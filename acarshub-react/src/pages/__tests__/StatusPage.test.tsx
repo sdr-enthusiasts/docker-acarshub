@@ -54,6 +54,9 @@
  *     decoder shipped before the rate map is updated) must fall
  *     through to the status fallback instead of crashing.
  *
+ *     An unknown name with no LastMinute either (XNG reports only a
+ *     running total) hides the rate row instead of showing 0.
+ *
  *  8. Empty-state strings: each card shows a specific "no X
  *     configured" message when its respective map is empty. Lost
  *     in a refactor that shifts the empty check.
@@ -380,6 +383,46 @@ describe("StatusPage", () => {
       expect(screen.getByText("3 msg/min")).toBeInTheDocument();
       // The 99 from acars MUST NOT leak through.
       expect(screen.queryByText("99 msg/min")).toBeNull();
+    });
+
+    it("hides the rate row for an entry with no rate source (XNG)", () => {
+      useAppStore.setState({
+        systemStatus: makeStatus({
+          global: {
+            XNG: { Status: "Ok", Count: 4321 },
+          },
+        }),
+        messageRate: {
+          total: 99,
+          acars: 99,
+          vdlm2: 99,
+          hfdl: 99,
+          imsl: 99,
+          irdm: 99,
+        },
+      });
+      render(<StatusPage />);
+      expect(screen.getByText("XNG Messages")).toBeInTheDocument();
+      expect(screen.getByText("4,321")).toBeInTheDocument();
+      expect(screen.queryByText("Rate (1 min):")).toBeNull();
+      expect(screen.queryByText(/msg\/min/)).toBeNull();
+    });
+  });
+
+  describe("XNG decoder row", () => {
+    it("renders the XNG connection like any other decoder", () => {
+      useAppStore.setState({
+        systemStatus: makeStatus({
+          decoders: {
+            XNG: { Status: "Not Connected", Connected: false, Alive: false },
+          },
+        }),
+      });
+      render(<StatusPage />);
+      expect(screen.getByText("XNG")).toBeInTheDocument();
+      expect(screen.getByText("Not Connected")).toBeInTheDocument();
+      expect(screen.getByText("No")).toBeInTheDocument();
+      expect(screen.getByText("Stopped")).toBeInTheDocument();
     });
   });
 

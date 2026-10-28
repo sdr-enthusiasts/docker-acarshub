@@ -26,6 +26,7 @@ import type {
   SignalFreqData,
   SystemStatus,
 } from "@acarshub/types";
+import { getConfig } from "../../config.js";
 import {
   getAlertCounts,
   getAllFreqCounts,
@@ -33,7 +34,10 @@ import {
   getErrors,
   getPerDecoderMessageCounts,
 } from "../../db/index.js";
-import { isDecoderEnabled } from "../../services/decoder-activity.js";
+import {
+  getXngMessageCount,
+  isDecoderEnabled,
+} from "../../services/decoder-activity.js";
 import { getMessageQueue } from "../../services/message-queue.js";
 import { createLogger } from "../../utils/logger.js";
 import type { TypedSocket } from "../types.js";
@@ -150,6 +154,19 @@ function getSystemStatus(): SystemStatus {
       Status: "Ok",
       Count: decoderCounts.irdm,
       LastMinute: rollingRates.irdm,
+    };
+  }
+
+  // XNG status
+  if (getConfig().enableXng) {
+    decodersStatus.XNG = {
+      Status: "Ok",
+      Connected: true,
+      Alive: true,
+    };
+    globalStatus.XNG = {
+      Status: "Ok",
+      Count: getXngMessageCount(),
     };
   }
 

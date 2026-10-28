@@ -41,6 +41,7 @@ let mockEnabled = {
   enableHfdl: false,
   enableImsl: false,
   enableIrdm: false,
+  enableXng: false,
 };
 
 vi.mock("../../config.js", async (importOriginal) => {
@@ -85,6 +86,7 @@ vi.mock("../message-queue.js", () => ({
 
 import {
   markDecoderActive,
+  recordXngMessage,
   resetDecoderActivity,
 } from "../decoder-activity.js";
 
@@ -94,6 +96,7 @@ const emptyConnectionStatus: ConnectionStatus = {
   HFDL: false,
   IMSL: false,
   IRDM: false,
+  XNG: false,
 };
 
 describe("system-status", () => {
@@ -104,6 +107,7 @@ describe("system-status", () => {
       enableHfdl: false,
       enableImsl: false,
       enableIrdm: false,
+      enableXng: false,
     };
     mockDecoderCounts.acars = 0;
     mockDecoderCounts.vdlm2 = 0;
@@ -180,6 +184,7 @@ describe("system-status", () => {
         enableHfdl: true,
         enableImsl: true,
         enableIrdm: true,
+        enableXng: false,
       };
 
       const { buildSystemStatus } = await import("../system-status.js");
@@ -208,6 +213,90 @@ describe("system-status", () => {
       expect(status.status.servers.vdlm2_server?.Messages).toBe(5);
       expect(status.status.global.VDLM2?.Count).toBe(5);
       expect(status.status.decoders.ACARS).toBeUndefined();
+    });
+
+    it("reports an xng-fed decoder with no listener of its own as connected when XNG is connected", async () => {
+      mockEnabled.enableXng = true;
+      markDecoderActive("VDLM2");
+
+      const { buildSystemStatus } = await import("../system-status.js");
+      const status = buildSystemStatus({
+        ...emptyConnectionStatus,
+        XNG: true,
+      });
+
+      expect(status.status.decoders.VDLM2).toEqual({
+        Status: "Ok",
+        Connected: true,
+        Alive: true,
+      });
+      expect(status.status.global.VDLM2?.Status).toBe("Ok");
+    });
+
+    it("reports an xng-fed decoder as Not Connected when XNG is disconnected", async () => {
+      mockEnabled.enableXng = true;
+      markDecoderActive("VDLM2");
+
+      const { buildSystemStatus } = await import("../system-status.js");
+      const status = buildSystemStatus(emptyConnectionStatus);
+
+      expect(status.status.decoders.VDLM2).toEqual({
+        Status: "Not Connected",
+        Connected: false,
+        Alive: false,
+      });
+    });
+
+    it("does not let XNG stand in for a decoder that xng has not fed", async () => {
+      mockEnabled.enableAcars = true;
+      mockEnabled.enableXng = true;
+
+      const { buildSystemStatus } = await import("../system-status.js");
+      const status = buildSystemStatus({
+        ...emptyConnectionStatus,
+        XNG: true,
+      });
+
+      expect(status.status.decoders.ACARS?.Connected).toBe(false);
+    });
+
+    it("omits the XNG entry when ENABLE_XNG is off", async () => {
+      const { buildSystemStatus } = await import("../system-status.js");
+      const status = buildSystemStatus({
+        ...emptyConnectionStatus,
+        XNG: true,
+      });
+
+      expect(status.status.decoders.XNG).toBeUndefined();
+      expect(status.status.global.XNG).toBeUndefined();
+    });
+
+    it("reports the XNG connection and routed envelope count when ENABLE_XNG is on", async () => {
+      mockEnabled.enableXng = true;
+      recordXngMessage();
+      recordXngMessage();
+
+      const { buildSystemStatus } = await import("../system-status.js");
+      const connected = buildSystemStatus({
+        ...emptyConnectionStatus,
+        XNG: true,
+      });
+
+      expect(connected.status.decoders.XNG).toEqual({
+        Status: "Ok",
+        Connected: true,
+        Alive: true,
+      });
+      expect(connected.status.global.XNG).toEqual({ Status: "Ok", Count: 2 });
+
+      const disconnected = buildSystemStatus(emptyConnectionStatus);
+
+      expect(disconnected.status.decoders.XNG).toEqual({
+        Status: "Not Connected",
+        Connected: false,
+        Alive: false,
+      });
+      expect(disconnected.status.global.XNG?.Status).toBe("Not Connected");
     });
 
     it("passes through queue error stats unconditionally", async () => {

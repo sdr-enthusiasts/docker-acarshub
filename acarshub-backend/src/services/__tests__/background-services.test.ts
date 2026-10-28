@@ -587,6 +587,34 @@ describe("BackgroundServices — fan-in architecture", () => {
 
       destroy();
     });
+
+    it("counts every routed xng envelope", async () => {
+      const { xng, destroy } = await setupXng();
+      const { getXngMessageCount } = await import("../decoder-activity.js");
+
+      xng.simulateMessage(makeXngEnvelope("vdl2"));
+      xng.simulateMessage(makeXngEnvelope("acars_poa"));
+      xng.simulateMessage(makeXngEnvelope("vdl2"));
+
+      expect(getXngMessageCount()).toBe(3);
+
+      destroy();
+    });
+
+    it("does not count messages from non-XNG listeners", async () => {
+      mockAcarsConnections = { descriptors: [makeDescriptor(5550)] };
+      const { destroy } = await setupXng();
+      const { getXngMessageCount, isFedByXng } =
+        await import("../decoder-activity.js");
+
+      const [acars] = createdListeners.filter((l) => l.type === "ACARS");
+      acars.simulateMessage({ text: "hello" });
+
+      expect(getXngMessageCount()).toBe(0);
+      expect(isFedByXng("ACARS")).toBe(false);
+
+      destroy();
+    });
   });
 
   // -------------------------------------------------------------------------

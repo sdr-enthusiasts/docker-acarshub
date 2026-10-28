@@ -198,6 +198,7 @@ import { enrichMessage, enrichMessages } from "../../formatters/enrichment.js";
 import { getAdsbPoller } from "../../services/adsb-poller.js";
 import {
   markDecoderActive,
+  recordXngMessage,
   resetDecoderActivity,
 } from "../../services/decoder-activity.js";
 import { getMessageQueue } from "../../services/message-queue.js";
@@ -1458,6 +1459,48 @@ describe("handleRequestStatus", () => {
     expect(statuses[0].status.decoders.VDLM2).toBeDefined();
     expect(statuses[0].status.global.VDLM2?.LastMinute).toBe(4);
     expect(statuses[0].status.decoders.ACARS).toBeUndefined();
+  });
+
+  it("omits the XNG entry when ENABLE_XNG is off", () => {
+    mockGetConfig.mockReturnValue(makeDefaultConfig({ enableXng: false }));
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const statuses = emittedAs<{
+      status: {
+        decoders: Record<string, unknown>;
+        global: Record<string, unknown>;
+      };
+    }>(socket, "system_status");
+
+    expect(statuses[0].status.decoders.XNG).toBeUndefined();
+    expect(statuses[0].status.global.XNG).toBeUndefined();
+  });
+
+  it("includes an XNG entry with the routed envelope count when ENABLE_XNG is on", () => {
+    mockGetConfig.mockReturnValue(makeDefaultConfig({ enableXng: true }));
+    recordXngMessage();
+    recordXngMessage();
+
+    const socket = makeMockSocket();
+    simulateConnect(socket);
+    socket.handlers.request_status();
+
+    const statuses = emittedAs<{
+      status: {
+        decoders: Record<string, unknown>;
+        global: Record<string, { Status: string; Count: number }>;
+      };
+    }>(socket, "system_status");
+
+    expect(statuses[0].status.decoders.XNG).toEqual({
+      Status: "Ok",
+      Connected: true,
+      Alive: true,
+    });
+    expect(statuses[0].status.global.XNG).toEqual({ Status: "Ok", Count: 2 });
   });
 
   it("should not throw when getPerDecoderMessageCounts throws", () => {

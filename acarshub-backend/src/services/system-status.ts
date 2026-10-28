@@ -24,10 +24,27 @@
 // ----------------------------------------------------------------------------
 
 import type { MessageRateData, SystemStatus } from "@acarshub/types";
+import { getConfig } from "../config.js";
 import { getPerDecoderMessageCounts } from "../db/index.js";
-import { isDecoderEnabled } from "./decoder-activity.js";
+import {
+  getXngMessageCount,
+  isDecoderEnabled,
+  isFedByXng,
+} from "./decoder-activity.js";
 import type { ConnectionStatus } from "./listener-manager.js";
+import type { MessageType } from "./listener-types.js";
 import { getMessageQueue } from "./message-queue.js";
+
+/**
+ * A type fed only by xng has no listener of its own; once xng has delivered
+ * it, the XNG listener's state stands in for it.
+ */
+function isTypeConnected(
+  connectionStatus: ConnectionStatus,
+  type: MessageType,
+): boolean {
+  return connectionStatus[type] || (isFedByXng(type) && connectionStatus.XNG);
+}
 
 /**
  * Build a SystemStatus-conforming payload (matching the shared @acarshub/types
@@ -55,7 +72,7 @@ export function buildSystemStatus(
   > = {};
 
   if (isDecoderEnabled("ACARS")) {
-    const connected = connectionStatus.ACARS;
+    const connected = isTypeConnected(connectionStatus, "ACARS");
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.ACARS = {
       Status: statusText,
@@ -74,7 +91,7 @@ export function buildSystemStatus(
   }
 
   if (isDecoderEnabled("VDLM2")) {
-    const connected = connectionStatus.VDLM2;
+    const connected = isTypeConnected(connectionStatus, "VDLM2");
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.VDLM2 = {
       Status: statusText,
@@ -93,7 +110,7 @@ export function buildSystemStatus(
   }
 
   if (isDecoderEnabled("HFDL")) {
-    const connected = connectionStatus.HFDL;
+    const connected = isTypeConnected(connectionStatus, "HFDL");
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.HFDL = {
       Status: statusText,
@@ -112,7 +129,7 @@ export function buildSystemStatus(
   }
 
   if (isDecoderEnabled("IMSL")) {
-    const connected = connectionStatus.IMSL;
+    const connected = isTypeConnected(connectionStatus, "IMSL");
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.IMSL = {
       Status: statusText,
@@ -131,7 +148,7 @@ export function buildSystemStatus(
   }
 
   if (isDecoderEnabled("IRDM")) {
-    const connected = connectionStatus.IRDM;
+    const connected = isTypeConnected(connectionStatus, "IRDM");
     const statusText = connected ? "Ok" : "Not Connected";
     decodersStatus.IRDM = {
       Status: statusText,
@@ -146,6 +163,20 @@ export function buildSystemStatus(
       Status: statusText,
       Count: decoderCounts.irdm,
       LastMinute: queueStats.irdm.lastMinute,
+    };
+  }
+
+  if (getConfig().enableXng) {
+    const connected = connectionStatus.XNG;
+    const statusText = connected ? "Ok" : "Not Connected";
+    decodersStatus.XNG = {
+      Status: statusText,
+      Connected: connected,
+      Alive: connected,
+    };
+    globalStatus.XNG = {
+      Status: statusText,
+      Count: getXngMessageCount(),
     };
   }
 
