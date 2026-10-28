@@ -38,11 +38,12 @@ import { act, render } from "@testing-library/react";
 import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ALL_PROVIDERS,
   getProviderConfig,
   getProviderTileUrl,
 } from "../../../config/mapProviders";
 import { useSettingsStore } from "../../../store/useSettingsStore";
-import type { UserSettings } from "../../../types";
+import type { MapProvider, Theme, UserSettings } from "../../../types";
 import { MapComponent } from "../Map";
 
 // ---------------------------------------------------------------------------
@@ -52,6 +53,10 @@ import { MapComponent } from "../Map";
 // react-map-gl/maplibre — capture the mapStyle prop on each render so we can
 // assert reference stability without needing a real WebGL context.
 const capturedMapStyleProps: unknown[] = [];
+// Source/Layer props, keyed by id, so the aviation chart overlay can be
+// inspected (last render wins).
+const capturedSourceProps = new Map<string, Record<string, unknown>>();
+const capturedLayerProps = new Map<string, Record<string, unknown>>();
 
 vi.mock("react-map-gl/maplibre", () => ({
   default: ({
@@ -75,14 +80,19 @@ vi.mock("react-map-gl/maplibre", () => ({
   Source: ({
     id,
     children,
+    ...rest
   }: {
     id: string;
     children?: ReactNode;
     [key: string]: unknown;
-  }) => <div data-testid={`source-${id}`}>{children}</div>,
-  Layer: ({ id }: { id: string; [key: string]: unknown }) => (
-    <div data-testid={`layer-${id}`} />
-  ),
+  }) => {
+    capturedSourceProps.set(id, rest);
+    return <div data-testid={`source-${id}`}>{children}</div>;
+  },
+  Layer: ({ id, ...rest }: { id: string; [key: string]: unknown }) => {
+    capturedLayerProps.set(id, rest);
+    return <div data-testid={`layer-${id}`} />;
+  },
   Popup: ({ children }: { children?: ReactNode; [key: string]: unknown }) => (
     <div data-testid="popup">{children}</div>
   ),
@@ -133,11 +143,15 @@ vi.mock("../MapContextMenu", () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
+// Simulates a stale persisted provider id that no longer exists in the config.
+const UNKNOWN_PROVIDER = "does_not_exist" as MapProvider;
+
 const makeSettings = (
   overrides?: Partial<UserSettings["map"]>,
+  theme: Theme = "mocha",
 ): UserSettings => ({
   appearance: {
-    theme: "mocha",
+    theme,
     showConnectionStatus: true,
     animations: true,
   },
@@ -236,6 +250,8 @@ function MapHarness({ initialZoom: _initialZoom }: { initialZoom: number }) {
 describe("MapComponent — mapStyle stability", () => {
   beforeEach(() => {
     capturedMapStyleProps.length = 0;
+    capturedSourceProps.clear();
+    capturedLayerProps.clear();
     localStorage.clear();
     useSettingsStore.setState({ settings: makeSettings() });
   });
@@ -442,22 +458,238 @@ describe("MapComponent — mapStyle stability", () => {
       }
     });
 
-    it("hybrid style includes both base-tiles and chart-tiles sources", () => {
+    it.each([
+      ["mocha", "https://tiles.openfreemap.org/styles/dark"],
+      ["latte", "https://tiles.openfreemap.org/styles/positron"],
+    ] as const)(
+      "base map is the %s theme default OpenFreeMap style",
+      (theme, expectedUrl) => {
+        useSettingsStore.setState({
+          settings: makeSettings({ provider: "vfr_sectional" }, theme),
+        });
+
+        render(<MapHarness initialZoom={10} />);
+
+        expect(capturedMapStyleProps[0]).toBe(expectedUrl);
+      },
+    );
+
+    it.each<MapProvider>([
+      "vfr_sectional",
+      "vfr_terminal",
+      "ifr_low",
+      "ifr_high",
+    ])("%s renders the chart as a raster Source/Layer overlay", (provider) => {
+      const config = getProviderConfig(provider);
+      useSettingsStore.setState({
+        settings: makeSettings({ provider }),
+      });
+
+      const { getByTestId } = render(<MapHarness initialZoom={10} />);
+
+      expect(getByTestId("source-chart-tiles")).toBeInTheDocument();
+      expect(getByTestId("layer-chart-layer")).toBeInTheDocument();
+      expect(capturedSourceProps.get("chart-tiles")).toEqual({
+        type: "raster",
+        tiles: [config?.url],
+        tileSize: 256,
+        minzoom: config?.minZoom,
+        maxzoom: config?.maxZoom,
+        attribution: config?.attribution,
+      });
+      expect(capturedLayerProps.get("chart-layer")).toEqual({
+        type: "raster",
+        source: "chart-tiles",
+        minzoom: config?.minZoom,
+        maxzoom: config?.maxZoom,
+      });
+    });
+
+    it("renders the chart before every other overlay so they draw above it", () => {
       useSettingsStore.setState({
         settings: makeSettings({ provider: "vfr_sectional" }),
       });
 
-      render(<MapHarness initialZoom={10} />);
+      const { getByTestId } = render(<MapHarness initialZoom={10} />);
 
-      const style = capturedMapStyleProps[0] as {
-        sources: Record<string, unknown>;
-        layers: Array<{ id: string }>;
-      };
+      const map = getByTestId("mock-maplibre-map");
+      const chart = getByTestId("source-chart-tiles");
+      const overlays = [
+        "range-rings",
+        "station-marker",
+        "nexrad-overlay",
+        "rainviewer-overlay",
+        "openaip-overlay",
+        "geojson-overlays",
+        "heywhatsthat-overlay",
+        "aircraft-markers",
+      ];
+      for (const overlay of overlays) {
+        const node = getByTestId(overlay);
+        expect(map.contains(node)).toBe(true);
+        expect(
+          chart.compareDocumentPosition(node) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+      }
+    });
 
-      expect(style).toHaveProperty("sources.base-tiles");
-      expect(style).toHaveProperty("sources.chart-tiles");
-      expect(style.layers.map((l) => l.id)).toContain("base-layer");
-      expect(style.layers.map((l) => l.id)).toContain("chart-layer");
+    it("does not render the chart overlay for non-chart providers", () => {
+      const { queryByTestId } = render(<MapHarness initialZoom={7} />);
+
+      expect(queryByTestId("source-chart-tiles")).toBeNull();
+      expect(capturedSourceProps.has("chart-tiles")).toBe(false);
+    });
+
+    it("remounts the map on theme change so the chart stays below the overlays", () => {
+      useSettingsStore.setState({
+        settings: makeSettings({ provider: "vfr_sectional" }, "mocha"),
+      });
+
+      const { getByTestId } = render(<MapHarness initialZoom={10} />);
+      const mochaMap = getByTestId("mock-maplibre-map");
+
+      act(() => {
+        useSettingsStore.setState({
+          settings: makeSettings({ provider: "vfr_sectional" }, "latte"),
+        });
+      });
+
+      expect(getByTestId("mock-maplibre-map")).not.toBe(mochaMap);
+      expect(capturedMapStyleProps[capturedMapStyleProps.length - 1]).toBe(
+        "https://tiles.openfreemap.org/styles/positron",
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Theme default base map fallback and provider-style isolation
+  // -------------------------------------------------------------------------
+
+  describe("theme default base map fallback", () => {
+    it.each([
+      ["mocha", "https://tiles.openfreemap.org/styles/dark"],
+      ["latte", "https://tiles.openfreemap.org/styles/positron"],
+    ] as const)(
+      "unknown provider falls back to the %s theme default style",
+      (theme, expectedUrl) => {
+        useSettingsStore.setState({
+          settings: makeSettings({ provider: UNKNOWN_PROVIDER }, theme),
+        });
+
+        render(<MapHarness initialZoom={7} />);
+
+        expect(capturedMapStyleProps[0]).toBe(expectedUrl);
+      },
+    );
+
+    it.each([
+      ["mocha", "https://tiles.openfreemap.org/styles/dark"],
+      ["latte", "https://tiles.openfreemap.org/styles/positron"],
+    ] as const)(
+      "custom provider without a URL falls back to the %s theme default style",
+      (theme, expectedUrl) => {
+        useSettingsStore.setState({
+          settings: makeSettings(
+            { provider: "custom", customTileUrl: undefined },
+            theme,
+          ),
+        });
+
+        render(<MapHarness initialZoom={7} />);
+
+        expect(capturedMapStyleProps[0]).toBe(expectedUrl);
+      },
+    );
+
+    it("fallback style follows a theme change", () => {
+      useSettingsStore.setState({
+        settings: makeSettings({ provider: UNKNOWN_PROVIDER }, "mocha"),
+      });
+
+      render(<MapHarness initialZoom={7} />);
+
+      act(() => {
+        useSettingsStore.setState({
+          settings: makeSettings({ provider: UNKNOWN_PROVIDER }, "latte"),
+        });
+      });
+
+      expect(capturedMapStyleProps[capturedMapStyleProps.length - 1]).toBe(
+        "https://tiles.openfreemap.org/styles/positron",
+      );
+    });
+
+    it("raster provider style keeps its identity and the map does not remount across theme changes", () => {
+      useSettingsStore.setState({
+        settings: makeSettings({ provider: "osm" }, "mocha"),
+      });
+
+      const { getByTestId } = render(<MapHarness initialZoom={7} />);
+      const firstStyle = capturedMapStyleProps[0];
+      const firstMap = getByTestId("mock-maplibre-map");
+
+      act(() => {
+        useSettingsStore.setState({
+          settings: makeSettings({ provider: "osm" }, "latte"),
+        });
+      });
+
+      expect(getByTestId("mock-maplibre-map")).toBe(firstMap);
+      for (const style of capturedMapStyleProps) {
+        expect(style).toBe(firstStyle);
+      }
+    });
+
+    it.each(
+      ALL_PROVIDERS.filter((p) => !p.id.startsWith("carto_")).map((p) => p.id),
+    )("style for %s never references cartocdn", (provider) => {
+      for (const theme of ["mocha", "latte"] as const) {
+        capturedMapStyleProps.length = 0;
+        capturedSourceProps.clear();
+        useSettingsStore.setState({
+          settings: makeSettings({ provider }, theme),
+        });
+
+        const { unmount } = render(<MapHarness initialZoom={10} />);
+
+        expect(JSON.stringify(capturedMapStyleProps)).not.toContain("cartocdn");
+        expect(
+          JSON.stringify(Object.fromEntries(capturedSourceProps)),
+        ).not.toContain("cartocdn");
+        unmount();
+      }
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // E2E mode: inline empty style, no external sources
+  // -------------------------------------------------------------------------
+
+  describe("E2E mode", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it.each<MapProvider>([
+      "openfreemap_dark",
+      "osm",
+      "vfr_sectional",
+      UNKNOWN_PROVIDER,
+    ])("%s uses the empty inline style and no chart overlay", (provider) => {
+      vi.stubEnv("VITE_E2E", "true");
+      useSettingsStore.setState({
+        settings: makeSettings({ provider }),
+      });
+
+      const { queryByTestId } = render(<MapHarness initialZoom={10} />);
+
+      expect(capturedMapStyleProps[0]).toEqual({
+        version: 8,
+        sources: {},
+        layers: [],
+      });
+      expect(queryByTestId("source-chart-tiles")).toBeNull();
     });
   });
 });

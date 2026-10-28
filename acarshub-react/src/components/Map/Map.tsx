@@ -39,6 +39,11 @@
 // site had no consumer of its return value, so Vite/rolldown's
 // tree-shaking silently dropped the call as a dead, side-effect-free
 // import — it never actually ran.
+import type {
+  RasterLayerSpecification,
+  RasterSourceSpecification,
+  StyleSpecification,
+} from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -48,8 +53,10 @@ import type {
   ViewStateChangeEvent,
 } from "react-map-gl/maplibre";
 import MapLibreMap, {
+  Layer,
   NavigationControl,
   ScaleControl,
+  Source,
 } from "react-map-gl/maplibre";
 // maplibre-gl's base stylesheet is loaded via a dynamic import alongside
 // the `LiveMapPage` lazy chunk in App.tsx (PERF-BUNDLE Phase B — see
@@ -62,9 +69,11 @@ import MapLibreMap, {
 import {
   getProviderConfig,
   getProviderTileUrl,
+  getThemeDefaultProvider,
 } from "../../config/mapProviders";
 import { useAppStore } from "../../store/useAppStore";
-import { useSettingsStore } from "../../store/useSettingsStore";
+import { useSettingsStore, useTheme } from "../../store/useSettingsStore";
+import type { MapProviderConfig } from "../../types";
 import type { PairedAircraft } from "../../utils/aircraftPairing";
 import { mapLogger } from "../../utils/logger";
 import type { ViewportBounds } from "./AircraftMarkers";
@@ -107,11 +116,32 @@ interface MapComponentProps {
   onViewportBoundsChange?: (bounds: ViewportBounds | null) => void;
 }
 
+/** Aviation chart raster drawn above the theme default base map */
+interface ChartOverlay {
+  source: RasterSourceSpecification;
+  layer: RasterLayerSpecification;
+}
+
+const CHART_SOURCE_ID = "chart-tiles";
+const CHART_LAYER_ID = "chart-layer";
+
+/**
+ * Aviation charts (VFR/IFR) only have tiles within a narrow zoom band, and
+ * MapLibre cannot overzoom raster tiles the way OpenLayers does, so they are
+ * shown as an overlay on a base map rather than as the base map itself.
+ */
+function isZoomConstrainedChart(
+  providerConfig: MapProviderConfig | undefined,
+): boolean {
+  return (providerConfig?.minZoom ?? 0) > 0;
+}
+
 /**
  * Map Component
  *
  * High-performance map using MapLibre GL JS.
- * Supports multiple tile providers: OpenStreetMap, CARTO, OpenFreeMap, ESRI, aviation charts, and custom URLs.
+ * Supports multiple tile providers: raster and vector (OpenFreeMap) base maps,
+ * aviation charts over the theme default base map, and custom URLs.
  */
 export function MapComponent({
   className = "",
@@ -128,6 +158,7 @@ export function MapComponent({
 }: MapComponentProps) {
   const decoders = useAppStore((state) => state.decoders);
   const mapSettings = useSettingsStore((state) => state.settings.map);
+  const theme = useTheme();
 
   // Get initial view state from localStorage or ADSB location
   const getInitialViewState = (): ViewState => {
@@ -203,9 +234,11 @@ export function MapComponent({
     return () => clearTimeout(saveTimeout);
   }, [viewState.longitude, viewState.latitude, viewState.zoom]);
 
-  // Get map style based on provider
-  // biome-ignore lint/suspicious/noExplicitAny: MapLibre StyleSpecification type is complex
-  const mapStyle = useMemo((): string | any => {
+  // Provider-specific style, or null when the base map must be the theme
+  // default (no usable URL, or an aviation chart that needs a base beneath
+  // it). `theme` is deliberately NOT a dependency here so raster style
+  // objects keep their identity across theme changes.
+  const providerStyle = useMemo((): string | StyleSpecification | null => {
     // In E2E mode, return a minimal inline style with no external sources.
     // MapLibre can parse and load this instantly, firing onLoad reliably
     // without depending on external CDN tile providers which are unavailable
@@ -232,31 +265,19 @@ export function MapComponent({
 
     if (!tileUrl) {
       mapLogger.warn(
-        "No tile URL for provider, falling back to CARTO English",
+        "No tile URL for provider, falling back to theme default base map",
         { provider },
       );
-      return {
-        version: 8,
-        sources: {
-          "raster-tiles": {
-            type: "raster",
-            tiles: [
-              "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-            ],
-            tileSize: 256,
-            attribution: providerConfig?.attribution || "",
-          },
-        },
-        layers: [
-          {
-            id: "simple-tiles",
-            type: "raster",
-            source: "raster-tiles",
-            minzoom: 0,
-            maxzoom: 22,
-          },
-        ],
-      };
+      return null;
+    }
+
+    if (isZoomConstrainedChart(providerConfig)) {
+      mapLogger.info("Using theme default base map beneath aviation chart", {
+        provider,
+        chartMinZoom: providerConfig?.minZoom,
+        chartMaxZoom: providerConfig?.maxZoom,
+      });
+      return null;
     }
 
     mapLogger.info("Using raster tile provider", {
@@ -266,58 +287,6 @@ export function MapComponent({
       maxZoom: providerConfig?.maxZoom,
     });
 
-    // Check if this provider has strict zoom constraints (aviation charts)
-    const hasZoomConstraints =
-      providerConfig?.minZoom && providerConfig?.minZoom > 0;
-
-    // For aviation charts: hybrid approach with base map + overlay
-    // MapLibre GL doesn't support raster tile overzooming like OpenLayers does
-    // So we show a base map everywhere and overlay charts only where they exist
-    if (hasZoomConstraints) {
-      mapLogger.info("Using hybrid base + overlay for aviation charts", {
-        provider,
-        chartMinZoom: providerConfig.minZoom,
-        chartMaxZoom: providerConfig.maxZoom,
-      });
-
-      return {
-        version: 8,
-        sources: {
-          "base-tiles": {
-            type: "raster",
-            tiles: [
-              "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-            ],
-            tileSize: 256,
-            attribution: 'Powered by <a href="https://carto.com">CARTO.com</a>',
-          },
-          "chart-tiles": {
-            type: "raster",
-            tiles: [tileUrl],
-            tileSize: 256,
-            attribution: providerConfig?.attribution || "",
-          },
-        },
-        layers: [
-          {
-            id: "base-layer",
-            type: "raster",
-            source: "base-tiles",
-            minzoom: 0,
-            maxzoom: 22,
-          },
-          {
-            id: "chart-layer",
-            type: "raster",
-            source: "chart-tiles",
-            minzoom: providerConfig.minZoom,
-            maxzoom: providerConfig.maxZoom,
-          },
-        ],
-      };
-    }
-
-    // For all other raster providers, use simple single-layer style
     return {
       version: 8,
       sources: {
@@ -339,6 +308,68 @@ export function MapComponent({
       ],
     };
   }, [mapSettings.provider, mapSettings.customTileUrl]);
+
+  const mapStyle = useMemo((): string | StyleSpecification => {
+    if (providerStyle !== null) {
+      return providerStyle;
+    }
+
+    const themeProvider = getThemeDefaultProvider(theme);
+    const themeStyleUrl = getProviderConfig(themeProvider)?.url ?? "";
+    mapLogger.debug("Using theme default base map", {
+      theme,
+      provider: themeProvider,
+      url: themeStyleUrl,
+    });
+    return themeStyleUrl;
+  }, [providerStyle, theme]);
+
+  // Aviation chart raster, rendered as a child <Source>/<Layer> over the
+  // theme default base map. Restricting the layer to the chart's zoom band
+  // leaves the base map visible wherever the chart has no tiles.
+  const chartOverlay = useMemo((): ChartOverlay | null => {
+    if (import.meta.env.VITE_E2E) {
+      return null;
+    }
+
+    const providerConfig = getProviderConfig(mapSettings.provider);
+    if (!providerConfig || !isZoomConstrainedChart(providerConfig)) {
+      return null;
+    }
+
+    const tileUrl = getProviderTileUrl(mapSettings.provider);
+    if (!tileUrl) {
+      return null;
+    }
+
+    return {
+      source: {
+        type: "raster",
+        tiles: [tileUrl],
+        tileSize: 256,
+        minzoom: providerConfig.minZoom,
+        maxzoom: providerConfig.maxZoom,
+        attribution: providerConfig.attribution,
+      },
+      layer: {
+        id: CHART_LAYER_ID,
+        type: "raster",
+        source: CHART_SOURCE_ID,
+        minzoom: providerConfig.minZoom,
+        maxzoom: providerConfig.maxZoom,
+      },
+    };
+  }, [mapSettings.provider]);
+
+  // The map remounts on provider change. A theme-derived base must ALSO
+  // remount on theme change: swapping the style URL in place makes MapLibre
+  // drop every runtime-added layer, and react-map-gl re-adds them from
+  // per-component `styledata` timers in no guaranteed order (none use
+  // `beforeId`), so the chart could end up drawn above the overlays.
+  const mapKey =
+    providerStyle === null
+      ? `${mapSettings.provider}:${theme}`
+      : mapSettings.provider;
 
   // Handle view state changes
   const handleMove = useCallback(
@@ -476,7 +507,7 @@ export function MapComponent({
       onTouchCancel={handleTouchEnd}
     >
       <MapLibreMap
-        key={mapSettings.provider}
+        key={mapKey}
         ref={mapRef}
         {...viewState}
         onMove={handleMove}
@@ -496,6 +527,13 @@ export function MapComponent({
 
         {/* Scale control */}
         <ScaleControl position="bottom-right" unit="nautical" />
+
+        {/* Aviation chart — first overlay so everything below draws above it */}
+        {chartOverlay && (
+          <Source id={CHART_SOURCE_ID} {...chartOverlay.source}>
+            <Layer {...chartOverlay.layer} />
+          </Source>
+        )}
 
         {/* Range rings (reception coverage) */}
         <RangeRings viewState={viewState} />
