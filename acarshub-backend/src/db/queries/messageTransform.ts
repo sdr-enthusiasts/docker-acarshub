@@ -204,8 +204,7 @@ export function createDbSafeParams(
       case "freq":
         // Normalize frequency to 7 characters (pad with zeros)
         if (value !== null && value !== undefined) {
-          const freqStr = String(value);
-          params.freq = freqStr.padEnd(7, "0");
+          params.freq = normalizeFrequency(String(value));
         }
         break;
 
@@ -365,17 +364,25 @@ export function addMessageFromJson(
  * Normalize frequency string to 7 characters
  *
  * Helper function used by createDbSafeParams().
- * Pads frequency with zeros to ensure consistent length.
+ * Pads frequency with zeros to ensure consistent length. Integral-MHz values
+ * (no decimal point, e.g. 136, 10, 1545) get a "." appended first so that
+ * padding extends the fractional part instead of multiplying the value.
  *
  * Examples:
  * - "131.55" → "131.550"
  * - "136.975" → "136.975"
- * - "131" → "1310000"
+ * - "131" → "131.000"
+ * - "10" → "10.0000"
+ * - "1545" → "1545.00"
  *
  * @param freq Frequency string or number
  * @returns Normalized frequency string (7 chars)
  */
 export function normalizeFrequency(freq: string | number): string {
   const freqStr = String(freq);
+  const trimmed = freqStr.trim();
+  if (trimmed !== "" && !trimmed.includes(".")) {
+    return `${trimmed}.`.padEnd(7, "0");
+  }
   return freqStr.padEnd(7, "0");
 }

@@ -132,9 +132,26 @@ describe("Message Transformation", () => {
       expect(normalizeFrequency(131.55)).toBe("131.550");
     });
 
-    it("should handle short frequencies", () => {
-      expect(normalizeFrequency("131")).toBe("1310000");
-      expect(normalizeFrequency(131)).toBe("1310000");
+    it("should leave existing decimal frequencies unchanged", () => {
+      expect(normalizeFrequency("8.936")).toBe("8.93600");
+      expect(normalizeFrequency("1546.020")).toBe("1546.020");
+      expect(normalizeFrequency(8.936)).toBe("8.93600");
+    });
+
+    it("should append a decimal point to integral-MHz frequencies", () => {
+      expect(normalizeFrequency("131")).toBe("131.000");
+      expect(normalizeFrequency(131)).toBe("131.000");
+      expect(normalizeFrequency("136")).toBe("136.000");
+      expect(normalizeFrequency(136)).toBe("136.000");
+      expect(normalizeFrequency("10")).toBe("10.0000");
+      expect(normalizeFrequency(10)).toBe("10.0000");
+      expect(normalizeFrequency("1545")).toBe("1545.00");
+      expect(normalizeFrequency(1545)).toBe("1545.00");
+      expect(normalizeFrequency(" 136 ")).toBe("136.000");
+    });
+
+    it("should keep empty-string handling unchanged", () => {
+      expect(normalizeFrequency("")).toBe("0000000");
     });
   });
 
@@ -185,6 +202,35 @@ describe("Message Transformation", () => {
       const params = createDbSafeParams(raw);
 
       expect(params.freq).toBe("131.550");
+    });
+
+    it.each([
+      [136, "136.000"],
+      [1545, "1545.00"],
+      [10, "10.0000"],
+      ["136", "136.000"],
+      ["1545", "1545.00"],
+      ["10", "10.0000"],
+      ["8.936", "8.93600"],
+      ["1546.020", "1546.020"],
+    ])(
+      "should normalize integral and decimal freq %p to %p",
+      (freq, expected) => {
+        const raw: RawMessage = {
+          timestamp: 1234567890,
+          freq,
+        };
+
+        const params = createDbSafeParams(raw);
+
+        expect(params.freq).toBe(expected);
+      },
+    );
+
+    it("should leave freq unset when missing", () => {
+      const params = createDbSafeParams({ timestamp: 1234567890 });
+
+      expect(params.freq).toBe("");
     });
 
     it("should stringify libacars JSON", () => {
