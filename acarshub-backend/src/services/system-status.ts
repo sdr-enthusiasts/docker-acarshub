@@ -47,18 +47,20 @@ function isTypeConnected(
 }
 
 /**
- * Build a SystemStatus-conforming payload (matching the shared @acarshub/types
- * interface) so the frontend receives a consistent structure whether the status
- * originates from a scheduled broadcast or a request_status event response.
+ * Build the SystemStatus payload for both the scheduled BackgroundServices
+ * broadcast and the on-demand request_status socket response, so the two can
+ * never disagree.
  *
- * Uses the actual TCP/UDP/ZMQ connection state tracked by ListenerManager
- * rather than hardcoded Connected:true/Alive:true values.
+ * Connection state is the real TCP/UDP/ZMQ state tracked by ListenerManager.
+ * global.X.LastMinute is the rolling 60s rate rather than the per-minute
+ * counter, which drops to 0 at every minute boundary.
  */
 export function buildSystemStatus(
   connectionStatus: ConnectionStatus,
 ): SystemStatus {
   const decoderCounts = getPerDecoderMessageCounts();
   const queueStats = getMessageQueue().getStats();
+  const rollingRates = getMessageQueue().getRollingRates();
 
   const decodersStatus: Record<
     string,
@@ -86,7 +88,7 @@ export function buildSystemStatus(
     globalStatus.ACARS = {
       Status: statusText,
       Count: decoderCounts.acars,
-      LastMinute: queueStats.acars.lastMinute,
+      LastMinute: rollingRates.acars,
     };
   }
 
@@ -105,7 +107,7 @@ export function buildSystemStatus(
     globalStatus.VDLM2 = {
       Status: statusText,
       Count: decoderCounts.vdlm2,
-      LastMinute: queueStats.vdlm2.lastMinute,
+      LastMinute: rollingRates.vdlm2,
     };
   }
 
@@ -124,7 +126,7 @@ export function buildSystemStatus(
     globalStatus.HFDL = {
       Status: statusText,
       Count: decoderCounts.hfdl,
-      LastMinute: queueStats.hfdl.lastMinute,
+      LastMinute: rollingRates.hfdl,
     };
   }
 
@@ -143,7 +145,7 @@ export function buildSystemStatus(
     globalStatus.IMSL = {
       Status: statusText,
       Count: decoderCounts.imsl,
-      LastMinute: queueStats.imsl.lastMinute,
+      LastMinute: rollingRates.imsl,
     };
   }
 
@@ -162,7 +164,7 @@ export function buildSystemStatus(
     globalStatus.IRDM = {
       Status: statusText,
       Count: decoderCounts.irdm,
-      LastMinute: queueStats.irdm.lastMinute,
+      LastMinute: rollingRates.irdm,
     };
   }
 

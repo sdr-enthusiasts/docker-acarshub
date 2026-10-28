@@ -24,6 +24,11 @@
 import { EventEmitter } from "node:events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConnectionDescriptor } from "../../config.js";
+import {
+  getConnectionStatus as getPublishedStatus,
+  publishConnectionStatus,
+  resetConnectionStatus,
+} from "../connection-state.js";
 import type {
   DecoderListenerEvents,
   DecoderListenerStats,
@@ -115,6 +120,7 @@ function makeDescriptor(
 describe("ListenerManager", () => {
   beforeEach(() => {
     createdListeners.length = 0;
+    resetConnectionStatus();
   });
 
   afterEach(() => {
@@ -203,6 +209,69 @@ describe("ListenerManager", () => {
     createdListeners[1].simulateDisconnect();
 
     expect(manager.getConnectionStatus().ACARS).toBe(false);
+  });
+
+  describe("published connection state", () => {
+    it("publishes the initial all-disconnected status on construction", async () => {
+      publishConnectionStatus({
+        ACARS: true,
+        VDLM2: true,
+        HFDL: true,
+        IMSL: true,
+        IRDM: true,
+        XNG: true,
+      });
+
+      const { ListenerManager } = await import("../listener-manager.js");
+      new ListenerManager({ onMessage: vi.fn(), onStatusChange: vi.fn() });
+
+      expect(getPublishedStatus()).toEqual({
+        ACARS: false,
+        VDLM2: false,
+        HFDL: false,
+        IMSL: false,
+        IRDM: false,
+        XNG: false,
+      });
+    });
+
+    it("publishes the new status when a listener connects, before onStatusChange fires", async () => {
+      const seenByCallback: boolean[] = [];
+      const { ListenerManager } = await import("../listener-manager.js");
+      const manager = new ListenerManager({
+        onMessage: vi.fn(),
+        onStatusChange: () => {
+          seenByCallback.push(getPublishedStatus().XNG);
+        },
+      });
+
+      manager.setupDecoderConnections("XNG", [makeDescriptor(5559, "tcp")]);
+      createdListeners[0].simulateConnect();
+
+      expect(getPublishedStatus().XNG).toBe(true);
+      expect(seenByCallback).toEqual([true]);
+    });
+
+    it("publishes the new status when the last listener for a type disconnects", async () => {
+      const { ListenerManager } = await import("../listener-manager.js");
+      const manager = new ListenerManager({
+        onMessage: vi.fn(),
+        onStatusChange: vi.fn(),
+      });
+
+      manager.setupDecoderConnections("VDLM2", [
+        makeDescriptor(5555, "udp"),
+        makeDescriptor(15555, "tcp"),
+      ]);
+      createdListeners[0].simulateConnect();
+      createdListeners[1].simulateConnect();
+
+      createdListeners[0].simulateDisconnect();
+      expect(getPublishedStatus().VDLM2).toBe(true);
+
+      createdListeners[1].simulateDisconnect();
+      expect(getPublishedStatus().VDLM2).toBe(false);
+    });
   });
 
   it("routes every listener's message event through onMessage", async () => {

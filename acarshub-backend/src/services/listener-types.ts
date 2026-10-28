@@ -52,6 +52,12 @@ export type MessageType = "ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM";
 export type ListenerType = MessageType | "XNG";
 
 /**
+ * Per-listener-type connection state.  A type is `true` when at least one of
+ * its listeners is connected.
+ */
+export type ConnectionStatus = Record<ListenerType, boolean>;
+
+/**
  * Event signatures emitted by every `IDecoderListener` implementation.
  */
 export interface DecoderListenerEvents {

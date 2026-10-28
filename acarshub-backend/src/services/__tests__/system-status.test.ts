@@ -137,10 +137,7 @@ describe("system-status", () => {
     it("reports Connected:true/Alive:true and Status:'Ok' when a decoder is enabled and connected", async () => {
       mockEnabled.enableAcars = true;
       mockDecoderCounts.acars = 42;
-      mockStats = {
-        ...defaultStats,
-        acars: { lastMinute: 7, total: 42 },
-      };
+      mockRollingRates = { ...mockRollingRates, acars: 7 };
 
       const { buildSystemStatus } = await import("../system-status.js");
       const status = buildSystemStatus({
@@ -162,6 +159,36 @@ describe("system-status", () => {
         Count: 42,
         LastMinute: 7,
       });
+    });
+
+    it("regression: global LastMinute uses the rolling rate, not the per-minute counter", async () => {
+      // WHY: getStats().lastMinute is a coarse counter that resets to 0 at
+      // every minute boundary. getRollingRates() is the smooth 12×5s window
+      // that gives a real msgs/min value at any point in time, so the Status
+      // page shows a live rolling average rather than a sawtooth.
+      mockEnabled.enableAcars = true;
+      mockEnabled.enableVdlm = true;
+      mockEnabled.enableHfdl = true;
+      mockEnabled.enableImsl = true;
+      mockEnabled.enableIrdm = true;
+      mockStats = {
+        acars: { lastMinute: 999, total: 0 },
+        vdlm2: { lastMinute: 888, total: 0 },
+        hfdl: { lastMinute: 777, total: 0 },
+        imsl: { lastMinute: 666, total: 0 },
+        irdm: { lastMinute: 555, total: 0 },
+        error: { lastMinute: 0, total: 0 },
+      };
+      mockRollingRates = { acars: 20, vdlm2: 15, hfdl: 4, imsl: 3, irdm: 2 };
+
+      const { buildSystemStatus } = await import("../system-status.js");
+      const { global } = buildSystemStatus(emptyConnectionStatus).status;
+
+      expect(global.ACARS?.LastMinute).toBe(20);
+      expect(global.VDLM2?.LastMinute).toBe(15);
+      expect(global.HFDL?.LastMinute).toBe(4);
+      expect(global.IMSL?.LastMinute).toBe(3);
+      expect(global.IRDM?.LastMinute).toBe(2);
     });
 
     it("reports Status:'Not Connected' and Connected:false when a decoder is enabled but not connected", async () => {
