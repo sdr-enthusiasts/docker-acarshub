@@ -22,7 +22,7 @@ import type {
   DecoderListenerEvents,
   DecoderListenerStats,
   IDecoderListener,
-  MessageType,
+  ListenerType,
 } from "./listener-types.js";
 
 const logger = createLogger("services:udp-listener");
@@ -48,7 +48,7 @@ export class UdpListener
   extends EventEmitter<DecoderListenerEvents>
   implements IDecoderListener
 {
-  private readonly messageType: MessageType;
+  private readonly messageType: ListenerType;
   private readonly host: string;
   private readonly port: number;
   private readonly reconnectDelay: number;
@@ -59,7 +59,7 @@ export class UdpListener
   private retryTimer: NodeJS.Timeout | null = null;
 
   constructor(
-    type: MessageType,
+    type: ListenerType,
     descriptor: ConnectionDescriptor,
     reconnectDelay = 5000,
   ) {

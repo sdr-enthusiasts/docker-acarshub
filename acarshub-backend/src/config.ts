@@ -53,6 +53,7 @@ const DEFAULT_UDP_PORTS: Record<string, number> = {
   HFDL: 5556,
   IMSL: 5557,
   IRDM: 5558,
+  XNG: 5559,
 };
 
 /**
@@ -187,6 +188,7 @@ const ConfigSchema = z.object({
   enableHfdl: z.boolean(),
   enableImsl: z.boolean(),
   enableIrdm: z.boolean(),
+  enableXng: z.boolean(),
   enableAdsb: z.boolean(),
   adsbUrl: z.string(),
   adsbLat: z.number(),
@@ -297,6 +299,7 @@ export const ENABLE_VDLM = isEnabled(process.env.ENABLE_VDLM, false);
 export const ENABLE_HFDL = isEnabled(process.env.ENABLE_HFDL, false);
 export const ENABLE_IMSL = isEnabled(process.env.ENABLE_IMSL, false);
 export const ENABLE_IRDM = isEnabled(process.env.ENABLE_IRDM, false);
+export const ENABLE_XNG = isEnabled(process.env.ENABLE_XNG, false);
 
 // ============================================================================
 // Decoder Connection Configuration
@@ -334,6 +337,11 @@ export const IMSL_CONNECTIONS: DecoderConnections = parseConnections(
 export const IRDM_CONNECTIONS: DecoderConnections = parseConnections(
   process.env.IRDM_CONNECTIONS ?? "udp",
   DEFAULT_UDP_PORTS.IRDM,
+);
+
+export const XNG_CONNECTIONS: DecoderConnections = parseConnections(
+  process.env.XNG_CONNECTIONS ?? "udp",
+  DEFAULT_UDP_PORTS.XNG,
 );
 
 /**
@@ -695,6 +703,7 @@ export function getConfig(): Config & {
     enableHfdl: ENABLE_HFDL,
     enableImsl: ENABLE_IMSL,
     enableIrdm: ENABLE_IRDM,
+    enableXng: ENABLE_XNG,
     enableAdsb: ENABLE_ADSB,
     adsbUrl: ADSB_URL,
     adsbLat: ADSB_LAT,

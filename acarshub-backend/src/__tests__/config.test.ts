@@ -186,6 +186,29 @@ describe("config module", () => {
       expect(ENABLE_IMSL).toBe(true);
       expect(ENABLE_IRDM).toBe(true);
     });
+
+    it("should default XNG to disabled", async () => {
+      delete process.env.ENABLE_XNG;
+      const { ENABLE_XNG } = await import("../config.js");
+      expect(ENABLE_XNG).toBe(false);
+    });
+
+    it.each(["true", "1", "yes", "enabled"])(
+      "should enable XNG when ENABLE_XNG=%s",
+      async (value) => {
+        process.env.ENABLE_XNG = value;
+        const { ENABLE_XNG, getConfig } = await import("../config.js");
+        expect(ENABLE_XNG).toBe(true);
+        expect(getConfig().enableXng).toBe(true);
+      },
+    );
+
+    it("should keep XNG disabled for ENABLE_XNG=false", async () => {
+      process.env.ENABLE_XNG = "false";
+      const { ENABLE_XNG, getConfig } = await import("../config.js");
+      expect(ENABLE_XNG).toBe(false);
+      expect(getConfig().enableXng).toBe(false);
+    });
   });
 
   describe("parseConnections()", () => {
@@ -338,6 +361,24 @@ describe("config module", () => {
       delete process.env.IRDM_CONNECTIONS;
       const { IRDM_CONNECTIONS } = await import("../config.js");
       expect(IRDM_CONNECTIONS.descriptors[0].port).toBe(5558);
+    });
+
+    it("XNG_CONNECTIONS defaults to bare udp on port 5559", async () => {
+      delete process.env.XNG_CONNECTIONS;
+      const { XNG_CONNECTIONS } = await import("../config.js");
+      expect(XNG_CONNECTIONS.descriptors).toEqual([
+        { listenType: "udp", host: "0.0.0.0", port: 5559 },
+      ]);
+    });
+
+    it("XNG_CONNECTIONS respects XNG_CONNECTIONS env override", async () => {
+      process.env.XNG_CONNECTIONS = "udp, zmq://xng:5560,tcp://xng:5561";
+      const { XNG_CONNECTIONS } = await import("../config.js");
+      expect(XNG_CONNECTIONS.descriptors).toEqual([
+        { listenType: "udp", host: "0.0.0.0", port: 5559 },
+        { listenType: "zmq", host: "xng", port: 5560 },
+        { listenType: "tcp", host: "xng", port: 5561 },
+      ]);
     });
 
     it("ACARS_CONNECTIONS respects ACARS_CONNECTIONS env override", async () => {

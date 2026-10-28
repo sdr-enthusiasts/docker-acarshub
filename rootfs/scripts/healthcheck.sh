@@ -4,7 +4,7 @@
 # ACARS Hub Docker Healthcheck Script
 #
 # What it checks:
-# 1. Decoder connections (ACARS, VDLM2, HFDL, IMSL, IRDM)
+# 1. Decoder connections (ACARS, VDLM2, HFDL, IMSL, IRDM, XNG)
 #    - UDP mode (default): verifies a UDP socket is bound on the expected port
 #    - TCP/ZMQ mode: verifies an ESTABLISHED TCP connection exists to the decoder source
 # 2. Message activity: queries the Node.js backend /data/stats.json API for messages
@@ -71,30 +71,21 @@ stats_count() {
 }
 
 # ============================================================================
-# check_decoder — unified per-decoder health check
+# check_socket — per-listener socket / connection check
 #
 # Arguments:
 #   $1  name          — human-readable name shown in output (e.g. "ACARS")
 #   $2  connections   — value of the *_CONNECTIONS env var
 #   $3  default_port  — fallback UDP port when connections is bare "udp"
-#   $4  stats_field   — field name in /data/stats.json response
 #
-# Performs two checks for each decoder:
-#   Socket check   — advisory: verifies a socket is bound/connected for this type.
-#                    Does NOT set EXITCODE on its own. ss(8) may not expose process
-#                    names in all kernel/privilege configurations, so this check can
-#                    produce false negatives even when the decoder is fully connected.
-#                    It only contributes to EXITCODE when the activity check also fails.
-#   Activity check — authoritative: a non-zero message count proves end-to-end
-#                    connectivity and overrides a failed socket check.
+# Sets SOCKET_OK=1 when a socket is bound/connected for this type, else 0.
+# Does NOT set EXITCODE; callers decide how authoritative the result is.
 # ============================================================================
-check_decoder() {
+SOCKET_OK=0
+check_socket() {
     local name="$1"
     local connections="${2:-udp}"
     local default_port="$3"
-    local stats_field="$4"
-
-    echo "==== Checking ${name} ===="
 
     # ------------------------------------------------------------------
     # Parse the first descriptor from a potentially comma-separated list.
@@ -124,7 +115,7 @@ check_decoder() {
     fi
 
     # ------------------------------------------------------------------
-    # Socket / connection check — ADVISORY ONLY, does not set EXITCODE.
+    # Socket / connection check — does not set EXITCODE.
     #
     # The Node.js worker thread that owns the decoder socket appears in ss(8)
     # output as "node-MainThread", not "node" — e.g.:
@@ -141,20 +132,20 @@ check_decoder() {
     # filter). The decoder ports are container-specific and unlikely to be
     # held by any other process, so the false-positive risk is negligible.
     #
-    # The socket_ok flag is used below: EXITCODE is only set when BOTH
-    # the socket check AND the activity check fail simultaneously.
+    # check_decoder treats SOCKET_OK as advisory: EXITCODE is only set when
+    # BOTH the socket check AND the activity check fail simultaneously.
     #
     # UDP: node binds a datagram socket — check ss -ulnp for the port.
     # TCP/ZMQ: node connects outward — check ss -tnp for an ESTABLISHED
     #          connection whose remote port matches conn_port.
     # ------------------------------------------------------------------
-    local socket_ok=0
+    SOCKET_OK=0
     case "$conn_type" in
     udp)
         # -ulnp: UDP, listening, numeric addresses, show processes
         if ss -ulnp 2>/dev/null | grep -q ":${conn_port}"; then
             echo "${name} UDP socket bound on port ${conn_port}: HEALTHY"
-            socket_ok=1
+            SOCKET_OK=1
         else
             echo "${name} UDP socket not bound on port ${conn_port}: UNHEALTHY"
         fi
@@ -164,12 +155,42 @@ check_decoder() {
         # The remote port (conn_port) appears in the Peer Address:Port column.
         if ss -tnp state established 2>/dev/null | grep -q ":${conn_port}"; then
             echo "${name} TCP connected to ${conn_host}:${conn_port}: HEALTHY"
-            socket_ok=1
+            SOCKET_OK=1
         else
             echo "${name} TCP not connected to ${conn_host}:${conn_port}: UNHEALTHY"
         fi
         ;;
     esac
+}
+
+# ============================================================================
+# check_decoder — unified per-decoder health check
+#
+# Arguments:
+#   $1  name          — human-readable name shown in output (e.g. "ACARS")
+#   $2  connections   — value of the *_CONNECTIONS env var
+#   $3  default_port  — fallback UDP port when connections is bare "udp"
+#   $4  stats_field   — field name in /data/stats.json response
+#
+# Performs two checks for each decoder:
+#   Socket check   — advisory: verifies a socket is bound/connected for this type.
+#                    Does NOT set EXITCODE on its own. ss(8) may not expose process
+#                    names in all kernel/privilege configurations, so this check can
+#                    produce false negatives even when the decoder is fully connected.
+#                    It only contributes to EXITCODE when the activity check also fails.
+#   Activity check — authoritative: a non-zero message count proves end-to-end
+#                    connectivity and overrides a failed socket check.
+# ============================================================================
+check_decoder() {
+    local name="$1"
+    local connections="${2:-udp}"
+    local default_port="$3"
+    local stats_field="$4"
+
+    echo "==== Checking ${name} ===="
+
+    check_socket "$name" "$connections" "$default_port"
+    local socket_ok="$SOCKET_OK"
 
     # ------------------------------------------------------------------
     # Message activity check — AUTHORITATIVE.
@@ -201,6 +222,17 @@ check_decoder() {
 # Per-decoder checks — only runs when the decoder is enabled
 # ============================================================================
 
+# XNG: connection-only. xng envelopes are re-labelled to their carrier type
+# (ACARS, VDLM2, ...) at ingest, so there is no per-XNG stats.json counter for
+# an activity check; the socket check is therefore authoritative here.
+if chk_enabled "${ENABLE_XNG}"; then
+    echo "==== Checking XNG ===="
+    check_socket "XNG" "${XNG_CONNECTIONS:-udp}" "5559"
+    if [[ "$SOCKET_OK" -ne 1 ]]; then
+        EXITCODE=1
+    fi
+fi
+
 if chk_enabled "${ENABLE_IRDM}"; then
     check_decoder "IRDM" "${IRDM_CONNECTIONS:-udp}" "5558" "irdm"
 fi
@@ -228,7 +260,8 @@ if chk_enabled "${ENABLE_ACARS}" ||
     chk_enabled "${ENABLE_VDLM}" ||
     chk_enabled "${ENABLE_HFDL}" ||
     chk_enabled "${ENABLE_IMSL}" ||
-    chk_enabled "${ENABLE_IRDM}"; then
+    chk_enabled "${ENABLE_IRDM}" ||
+    chk_enabled "${ENABLE_XNG}"; then
 
     echo "==== Check webapp ===="
 

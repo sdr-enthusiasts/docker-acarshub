@@ -123,7 +123,7 @@ interface MockSubscriberState {
   closedCalled: boolean;
   closeError: Error | null;
   endpoint: string;
-  frames: ControllableAsyncIterable<[Buffer]>;
+  frames: ControllableAsyncIterable<Buffer[]>;
   events: ControllableAsyncIterable<{ type: string }>;
 }
 
@@ -141,7 +141,7 @@ vi.mock("zeromq", () => {
         closedCalled: false,
         closeError: null,
         endpoint: "",
-        frames: new ControllableAsyncIterable<[Buffer]>(),
+        frames: new ControllableAsyncIterable<Buffer[]>(),
         events: new ControllableAsyncIterable<{ type: string }>(),
       };
       mockSubscriberState = this.state;
@@ -171,7 +171,7 @@ vi.mock("zeromq", () => {
       return this.state.events;
     }
 
-    [Symbol.asyncIterator](): AsyncIterator<[Buffer]> {
+    [Symbol.asyncIterator](): AsyncIterator<Buffer[]> {
       return this.state.frames[Symbol.asyncIterator]();
     }
   }
@@ -410,6 +410,47 @@ describe("ZmqListener", () => {
 
       const [, data] = await messagePromise;
       expect(data).toEqual({ valid: true });
+    });
+
+    it("uses the last frame of a two-frame [topic, json] message (xng)", async () => {
+      listener = new ZmqListener("XNG", makeDescriptor());
+
+      const received: Array<[string, unknown]> = [];
+      listener.on("message", (type, data) => {
+        received.push([type, data]);
+      });
+
+      listener.start();
+      await waitForSubscriberState();
+
+      const payload = { mode: "vdl2", frequency_hz: 136975000 };
+      getState().frames.push([
+        Buffer.from("vdl2"),
+        Buffer.from(JSON.stringify(payload)),
+      ]);
+      await flushMicrotasks();
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(received).toEqual([["XNG", payload]]);
+    });
+
+    it("skips a multipart message with no frames", async () => {
+      listener = new ZmqListener("ACARS", makeDescriptor());
+
+      const received: unknown[] = [];
+      listener.on("message", (_type, data) => {
+        received.push(data);
+      });
+
+      listener.start();
+      await waitForSubscriberState();
+
+      getState().frames.push([]);
+      getState().frames.push([Buffer.from(JSON.stringify({ after: true }))]);
+      await flushMicrotasks();
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(received).toEqual([{ after: true }]);
     });
 
     it("ignores empty frames silently", async () => {
