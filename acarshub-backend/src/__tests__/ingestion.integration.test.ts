@@ -74,6 +74,7 @@ import { getMessageByUid } from "../db/queries/messages/index.js";
 import type { RawMessage } from "../db/queries/messageTransform.js";
 import { enrichMessage } from "../formatters/enrichment.js";
 import { formatAcarsMessage } from "../formatters/index.js";
+import { routeListenerMessage } from "../formatters/xng.js";
 import {
   destroyMessageQueue,
   getMessageQueue,
@@ -508,6 +509,91 @@ describe("ingestion pipeline (integration)", () => {
       // At the moment the emit fired, the message must already be
       // in the ring buffer.
       expect(bufferLengthAtEmitTime).toBe(1);
+    });
+  });
+
+  describe("XNG listener — envelopes re-labelled to their carrier type", () => {
+    function routeXngThroughQueue(
+      envelope: Record<string, unknown>,
+    ): Promise<{ uid: number | string; matched: boolean } | null> {
+      return new Promise((resolve) => {
+        const queue = getMessageQueue(15);
+        queue.on("message", (queued: QueuedMessage) => {
+          resolve(ingestMessage(queued, socket));
+        });
+        routeListenerMessage("XNG", envelope, (type, data) => {
+          queue.push(type, data);
+        });
+      });
+    }
+
+    function xngEnvelope(
+      mode: string,
+      frequencyHz: number,
+      ident: string,
+      body: Record<string, unknown>,
+    ): Record<string, unknown> {
+      return {
+        mode,
+        timestamp: "2026-10-28T14:13:07.123456789Z",
+        frequency_hz: frequencyHz,
+        signal: { rssi_db: -20.0 },
+        decode: { crc_ok: true, errors: 0 },
+        body,
+        source: {
+          station: { id: "0b9c2f4e", ident },
+          app: { name: "xng", version: "0.21.0" },
+        },
+      };
+    }
+
+    it("acars_poa envelope is stored as ACARS with text/label/station_id", async () => {
+      const result = await routeXngThroughQueue(
+        xngEnvelope("acars_poa", 131550000, "XX-TEST-ACARS", {
+          type: "acars",
+          mode: "2",
+          tail: "N471XG",
+          label: "H1",
+          block_id: "4",
+          flight: "XG0042",
+          msg_num: "M01A",
+          text: "XNG ACARS BODY",
+          more_to_come: false,
+        }),
+      );
+
+      expect(result).not.toBeNull();
+      const row = getMessageByUid(String(result?.uid));
+      expect(row?.messageType).toBe("ACARS");
+      expect(row?.text).toBe("XNG ACARS BODY");
+      expect(row?.label).toBe("H1");
+      expect(row?.stationId).toBe("XX-TEST-ACARS");
+
+      const emitted = socket.emit.mock.calls[0]?.[1] as {
+        msghtml: Record<string, unknown>;
+      };
+      expect(emitted.msghtml.message_type).toBe("ACARS");
+    });
+
+    it("vdl2 envelope is stored as VDL-M2 with addresses from the raw frame", async () => {
+      const envelope = xngEnvelope("vdl2", 136975000, "XX-TEST-VDL2", {
+        type: "acars",
+        mode: "2",
+        tail: "HB-IJW",
+        label: "B9",
+        text: "XNG VDL2 BODY",
+        more_to_come: false,
+      });
+      envelope.raw = "1422cc54b20c42b5a1e6f0";
+      const result = await routeXngThroughQueue(envelope);
+
+      expect(result).not.toBeNull();
+      const row = getMessageByUid(String(result?.uid));
+      expect(row?.messageType).toBe("VDL-M2");
+      expect(row?.text).toBe("XNG VDL2 BODY");
+      expect(row?.label).toBe("B9");
+      expect(row?.stationId).toBe("XX-TEST-VDL2");
+      expect(row?.icao).toBe("AC212D");
     });
   });
 
