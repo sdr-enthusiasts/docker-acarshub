@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import { type DecoderKey, decoderKeyFromMessageType } from "@acarshub/types";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "../components/Card";
 import {
@@ -40,6 +41,15 @@ import { formatTimestamp } from "../utils/dateUtils";
  */
 type StatsSection =
   "reception" | "signal" | "alerts" | "frequency" | "messages" | "status";
+
+/** Frequency-chart group key for each decoder. */
+const FREQ_GROUP_BY_DECODER: Readonly<Record<DecoderKey, DecoderType>> = {
+  acars: "acars",
+  vdlm2: "vdlm",
+  hfdl: "hfdl",
+  imsl: "imsl",
+  irdm: "irdm",
+};
 
 /**
  * StatsPage Component
@@ -159,20 +169,11 @@ export const StatsPage = () => {
       irdm: [],
     };
 
-    // Map backend freq_type values to our keys
-    const typeMap: Record<string, string> = {
-      ACARS: "acars",
-      "VDL-M2": "vdlm",
-      HFDL: "hfdl",
-      "IMS-L": "imsl",
-      IRDM: "irdm",
-    };
-
-    // Group frequencies by decoder type
+    // Group frequencies by decoder type (freq_type may use any spelling)
     for (const freq of signalFreqData.freqs) {
-      const mappedType = typeMap[freq.freq_type];
-      if (mappedType && grouped[mappedType]) {
-        grouped[mappedType].push(freq);
+      const key = decoderKeyFromMessageType(freq.freq_type);
+      if (key !== null) {
+        grouped[FREQ_GROUP_BY_DECODER[key]].push(freq);
       }
     }
 

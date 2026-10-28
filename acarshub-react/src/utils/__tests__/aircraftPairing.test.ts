@@ -22,6 +22,7 @@ import {
   formatGroundSpeed,
   formatHeading,
   getDisplayCallsign,
+  normalizeDecoderType,
   type PairedAircraft,
   pairADSBWithACARSMessages,
 } from "../aircraftPairing";
@@ -50,6 +51,38 @@ function makeGroup(
     ...overrides,
   };
 }
+
+// ---------------------------------------------------------------------------
+// normalizeDecoderType
+// ---------------------------------------------------------------------------
+
+describe("normalizeDecoderType", () => {
+  it.each([
+    ["ACARS", "ACARS"],
+    ["VDL-M2", "VDLM2"],
+    ["VDLM2", "VDLM2"],
+    ["VDLM", "VDLM2"],
+    ["HFDL", "HFDL"],
+    // Regression: only "IMSL" was recognised, but the backend emits the
+    // stored spelling "IMS-L" on acars_msg.
+    ["IMS-L", "IMSL"],
+    ["IMSL", "IMSL"],
+    ["IRDM", "IRDM"],
+  ])("normalises %s to %s", (messageType, expected) => {
+    expect(normalizeDecoderType(messageType)).toBe(expected);
+  });
+
+  it("is case-insensitive and trims whitespace", () => {
+    expect(normalizeDecoderType(" ims-l ")).toBe("IMSL");
+    expect(normalizeDecoderType("vdl-m2")).toBe("VDLM2");
+  });
+
+  it("returns undefined for empty, missing, or unknown types", () => {
+    expect(normalizeDecoderType(undefined)).toBeUndefined();
+    expect(normalizeDecoderType("")).toBeUndefined();
+    expect(normalizeDecoderType("BOGUS")).toBeUndefined();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // pairADSBWithACARSMessages
@@ -161,6 +194,23 @@ describe("pairADSBWithACARSMessages", () => {
 
       expect(paired.hasMessages).toBe(true);
       expect(paired.messageCount).toBe(1);
+    });
+
+    it("decoderTypes resolves stored spellings (IMS-L, VDL-M2) newest-first", () => {
+      const aircraft = [makeAircraft({ hex: "A12345" })];
+      const group = makeGroup(["A12345"], {
+        messages: [
+          { uid: "m1", message_type: "IMS-L" },
+          { uid: "m2", message_type: "VDL-M2" },
+          { uid: "m3", message_type: "IMSL" },
+          { uid: "m4", message_type: "VDLM2" },
+        ] as unknown as ReturnType<typeof makeGroup>["messages"],
+      });
+      const groups = new Map([["A12345", group]]);
+
+      const [paired] = pairADSBWithACARSMessages(aircraft, groups);
+
+      expect(paired.decoderTypes).toEqual(["IMSL", "VDLM2"]);
     });
 
     it("hasAlerts is true when matched group has alerts", () => {

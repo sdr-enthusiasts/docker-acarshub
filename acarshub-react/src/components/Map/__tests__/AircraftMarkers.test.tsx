@@ -125,12 +125,17 @@ const { svgShapeToURI } = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock("../../../utils/aircraftIcons", () => ({
-  getBaseMarker: () => ({ name: "jet_swept", scale: 1.0 }),
-  getAircraftColor: () => "#ffffff",
-  svgShapeToURI,
-  shouldRotate: () => true,
-}));
+vi.mock("../../../utils/aircraftIcons", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../utils/aircraftIcons")>();
+  return {
+    getBaseMarker: () => ({ name: "jet_swept", scale: 1.0 }),
+    getAircraftColor: () => "#ffffff",
+    getDecoderSpriteClass: actual.getDecoderSpriteClass,
+    svgShapeToURI,
+    shouldRotate: () => true,
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Mock — spriteLoader (most tests run with useSprites=false, so this is a
@@ -590,6 +595,71 @@ describe("AircraftMarkers", () => {
       expect(capturedAnimatedSpriteProps).toHaveLength(1);
       // base sprite scale 0.6 * "large" multiplier 1.25 = 0.75
       expect(capturedAnimatedSpriteProps[0].scale).toBeCloseTo(0.75, 10);
+    });
+  });
+
+  describe("sprite class by decoder (colorByDecoder)", () => {
+    beforeEach(() => {
+      getSprite.mockReturnValue({
+        spriteName: "boeing-737",
+        matchType: "airframe",
+      });
+      getSpritePosition.mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 43.2,
+        height: 43.2,
+        anchor: { x: 0, y: 0 },
+        scale: 1,
+        shouldRotate: true,
+      });
+      getCSSBackgroundSize.mockReturnValue("345.6px 1468.8px");
+
+      const current = useSettingsStore.getState().settings;
+      useSettingsStore.setState({
+        settings: {
+          ...current,
+          map: { ...current.map, useSprites: true, colorByDecoder: true },
+        },
+      });
+    });
+
+    afterEach(() => {
+      getSprite.mockReset();
+      getSpritePosition.mockReset();
+      getCSSBackgroundSize.mockReset();
+    });
+
+    function renderWithMessageType(messageType: string): HTMLElement | null {
+      const aircraft = makePairedAircraft({
+        hasMessages: true,
+        matchedGroup: {
+          identifiers: ["ABC123"],
+          messages: [{ uid: "m1", timestamp: 1, message_type: messageType }],
+        } as unknown as PairedAircraft["matchedGroup"],
+      });
+      const { container } = renderWithMap(
+        makeFakeMap(WORLD_BOUNDS),
+        <AircraftMarkers aircraft={[aircraft]} />,
+      );
+      flushRAF();
+      return container.querySelector<HTMLElement>(".aircraft-sprite");
+    }
+
+    it.each([
+      ["ACARS", "decoder-acars"],
+      ["VDL-M2", "decoder-vdlm"],
+      ["VDLM2", "decoder-vdlm"],
+      ["HFDL", "decoder-hfdl"],
+      ["IMS-L", "decoder-imsl"],
+      ["IMSL", "decoder-imsl"],
+      ["IRDM", "decoder-irdm"],
+    ])("uses the %s sprite class %s", (messageType, expectedClass) => {
+      expect(renderWithMessageType(messageType)).toHaveClass(expectedClass);
+    });
+
+    it("falls back to the default sprite class for an unknown message type", () => {
+      expect(renderWithMessageType("BOGUS")).toHaveClass("default");
     });
   });
 

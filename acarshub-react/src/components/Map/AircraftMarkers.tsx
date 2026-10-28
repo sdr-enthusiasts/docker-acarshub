@@ -27,6 +27,7 @@ import type { MessageGroup } from "../../types";
 import {
   getAircraftColor,
   getBaseMarker,
+  getDecoderSpriteClass,
   shouldRotate,
   svgShapeToURI,
 } from "../../utils/aircraftIcons";
@@ -532,27 +533,7 @@ export function AircraftMarkers({
               spriteClass = "has-alerts";
             } else if (colorByDecoder && decoderType) {
               // Color by decoder type (based on most recent message)
-              const normalizedType = decoderType.toUpperCase();
-              switch (normalizedType) {
-                case "ACARS":
-                  spriteClass = "decoder-acars";
-                  break;
-                case "VDLM":
-                case "VDL-M2":
-                  spriteClass = "decoder-vdlm";
-                  break;
-                case "HFDL":
-                  spriteClass = "decoder-hfdl";
-                  break;
-                case "IMSL":
-                  spriteClass = "decoder-imsl";
-                  break;
-                case "IRDM":
-                  spriteClass = "decoder-irdm";
-                  break;
-                default:
-                  spriteClass = "default";
-              }
+              spriteClass = getDecoderSpriteClass(decoderType);
             } else if (aircraft.hasMessages) {
               // Legacy behavior: use VDLM (green) sprite for any messages
               spriteClass = "decoder-vdlm";

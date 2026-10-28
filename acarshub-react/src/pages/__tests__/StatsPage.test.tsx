@@ -563,6 +563,39 @@ describe("StatsPage", () => {
       expect(screen.getByTestId("frequency-chart").dataset.count).toBe("1");
     });
 
+    it("accepts every spelling of freq_type (VDL-M2/VDLM2, IMS-L/IMSL) without changing tab labels", () => {
+      useAppStore.setState({
+        decoders: ALL_DECODERS_ENABLED,
+        signalFreqData: {
+          freqs: [
+            { freq: "136.975", freq_type: "VDL-M2", count: 12 },
+            { freq: "136.650", freq_type: "VDLM2", count: 2 },
+            { freq: "1545.0", freq_type: "IMS-L", count: 7 },
+            { freq: "1545.1", freq_type: "IMSL", count: 3 },
+            { freq: "1545.2", freq_type: "imsl", count: 1 },
+          ],
+        } as SignalFreqData,
+      });
+      render(<StatsPage />);
+      clickSection("Frequency Distribution");
+
+      const freqNav = screen.getByRole("tablist", {
+        name: /select decoder for frequency distribution/i,
+      });
+
+      fireEvent.click(within(freqNav).getByRole("tab", { name: "VDLM" }));
+      expect(screen.getByTestId("frequency-chart").dataset.decoder).toBe(
+        "VDLM",
+      );
+      expect(screen.getByTestId("frequency-chart").dataset.count).toBe("2");
+
+      fireEvent.click(within(freqNav).getByRole("tab", { name: "IMSL" }));
+      expect(screen.getByTestId("frequency-chart").dataset.decoder).toBe(
+        "IMSL",
+      );
+      expect(screen.getByTestId("frequency-chart").dataset.count).toBe("3");
+    });
+
     it("resets selectedFreqDecoder when the previously-selected decoder is disabled", () => {
       // Start with VDLM + IRDM enabled, then user selects VDLM.
       useAppStore.setState({

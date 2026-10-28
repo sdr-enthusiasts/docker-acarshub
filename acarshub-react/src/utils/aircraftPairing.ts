@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import { type DecoderKey, decoderKeyFromMessageType } from "@acarshub/types";
 import type {
   ADSBAircraft,
   ADSBSourceType,
@@ -23,9 +24,18 @@ import type {
 
 /**
  * Canonical decoder type names used throughout the UI.
- * Backend may send "VDL-M2" or "VDLM2" – both normalise to "VDLM2".
+ * Any known `message_type` spelling (stored "VDL-M2" / "IMS-L", wire
+ * "VDLM2" / "IMSL", config "VDLM", ...) normalises to one of these.
  */
 export type DecoderType = "ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM";
+
+const DECODER_TYPE_BY_KEY: Readonly<Record<DecoderKey, DecoderType>> = {
+  acars: "ACARS",
+  vdlm2: "VDLM2",
+  hfdl: "HFDL",
+  imsl: "IMSL",
+  irdm: "IRDM",
+};
 
 /**
  * Normalise the raw `message_type` string from an AcarsMsg into one of the
@@ -36,13 +46,8 @@ export function normalizeDecoderType(
   messageType: string | undefined,
 ): DecoderType | undefined {
   if (!messageType) return undefined;
-  const upper = messageType.toUpperCase().trim();
-  if (upper === "ACARS") return "ACARS";
-  if (upper === "VDL-M2" || upper === "VDLM2") return "VDLM2";
-  if (upper === "HFDL") return "HFDL";
-  if (upper === "IMSL") return "IMSL";
-  if (upper === "IRDM") return "IRDM";
-  return undefined;
+  const key = decoderKeyFromMessageType(messageType);
+  return key === null ? undefined : DECODER_TYPE_BY_KEY[key];
 }
 
 /**

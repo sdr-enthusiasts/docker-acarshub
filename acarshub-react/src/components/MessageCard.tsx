@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
+import { type DecoderKey, decoderKeyFromMessageType } from "@acarshub/types";
 import { memo, useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { useSettingsStore } from "../store/useSettingsStore";
@@ -25,6 +26,20 @@ import {
   parseAndFormatLibacars,
 } from "../utils/decoderUtils";
 import { ensureHexFormat } from "../utils/stringUtils";
+
+const MESSAGE_TYPE_CLASS: Readonly<Record<DecoderKey, string>> = {
+  acars: "message-type--acars",
+  vdlm2: "message-type--vdlm",
+  hfdl: "message-type--hfdl",
+  imsl: "message-type--imsl",
+  irdm: "message-type--irdm",
+};
+
+/** Badge colour class for a message type, accepting any known spelling. */
+function getMessageTypeClass(type: string | undefined): string {
+  const key = type ? decoderKeyFromMessageType(type) : null;
+  return key === null ? "message-type--unknown" : MESSAGE_TYPE_CLASS[key];
+}
 
 interface MessageCardProps {
   message: AcarsMsg;
@@ -75,20 +90,6 @@ export const MessageCard = memo(
       settings.regional.dateFormat,
       settings.regional.timezone,
     );
-
-    // Message type badge color mapping
-    const getMessageTypeClass = (type: string | undefined): string => {
-      if (!type) return "message-type--unknown";
-      const typeMap: Record<string, string> = {
-        ACARS: "message-type--acars",
-        VDLM: "message-type--vdlm",
-        "VDL-M2": "message-type--vdlm",
-        HFDL: "message-type--hfdl",
-        IMSL: "message-type--imsl",
-        IRDM: "message-type--irdm",
-      };
-      return typeMap[type.toUpperCase()] || "message-type--unknown";
-    };
 
     return (
       <div

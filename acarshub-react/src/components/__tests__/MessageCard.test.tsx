@@ -327,14 +327,47 @@ describe("MessageCard", () => {
   });
 
   describe("Message Types", () => {
-    it("renders VDLM2 message with correct badge", () => {
+    it("renders VDL-M2 message with correct badge", () => {
       render(<MessageCard message={vdlm2Message} />);
 
-      const badge = screen.getByText("VDLM2");
-      expect(badge).toBeInTheDocument();
-      // The component uses message_type to determine the class
-      // VDLM2 -> message-type--vdlm2 (not --vdlm)
+      const badge = screen.getByText("VDL-M2");
       expect(badge).toHaveClass("message-type");
+      expect(badge).toHaveClass("message-type--vdlm");
+    });
+
+    // Regression: the badge map only knew "IMSL", but the backend emits the
+    // stored spelling "IMS-L", so IMSL messages got the unknown badge.
+    it.each([
+      ["ACARS", "message-type--acars"],
+      ["VDL-M2", "message-type--vdlm"],
+      ["VDLM2", "message-type--vdlm"],
+      ["VDLM", "message-type--vdlm"],
+      ["HFDL", "message-type--hfdl"],
+      ["IMS-L", "message-type--imsl"],
+      ["IMSL", "message-type--imsl"],
+      ["imsl", "message-type--imsl"],
+      ["IRDM", "message-type--irdm"],
+    ])(
+      "gives a %s message the %s badge class",
+      (messageType, expectedClass) => {
+        render(
+          <MessageCard
+            message={{ ...vdlm2Message, message_type: messageType }}
+          />,
+        );
+
+        const badge = screen.getByText(messageType);
+        expect(badge).toHaveClass("message-type", expectedClass);
+        expect(badge).not.toHaveClass("message-type--unknown");
+      },
+    );
+
+    it("gives an unrecognised message type the unknown badge class", () => {
+      render(
+        <MessageCard message={{ ...vdlm2Message, message_type: "BOGUS" }} />,
+      );
+
+      expect(screen.getByText("BOGUS")).toHaveClass("message-type--unknown");
     });
 
     it("renders HFDL message with correct badge", () => {
