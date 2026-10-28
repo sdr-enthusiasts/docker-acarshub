@@ -3,6 +3,7 @@
 // Migration 3: Split freqs table (a589d271a0a4)
 // ----------------------------------------------------------------------------
 
+import { decoderKeyFromMessageType } from "@acarshub/types";
 import type Database from "better-sqlite3";
 import { createLogger } from "../../utils/logger.js";
 
@@ -62,21 +63,9 @@ export function migration03_splitFreqsTable(db: Database.Database): void {
       };
 
       for (const row of oldData) {
-        // Map freq_type to table name (case-insensitive)
-        const freqType = row.freq_type.toUpperCase();
-        let targetTable: keyof typeof stmts | null = null;
-
-        if (freqType === "ACARS") {
-          targetTable = "acars";
-        } else if (freqType === "VDL-M2" || freqType === "VDLM2") {
-          targetTable = "vdlm2";
-        } else if (freqType === "HFDL") {
-          targetTable = "hfdl";
-        } else if (freqType === "IMSL") {
-          targetTable = "imsl";
-        } else if (freqType === "IRDM") {
-          targetTable = "irdm";
-        }
+        // Map freq_type to table name (any spelling, case-insensitive)
+        const targetTable: keyof typeof stmts | null =
+          decoderKeyFromMessageType(row.freq_type);
 
         if (targetTable) {
           stmts[targetTable].run(row.freq, row.count);

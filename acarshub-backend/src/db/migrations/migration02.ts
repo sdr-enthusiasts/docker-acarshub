@@ -8,10 +8,56 @@
 // 3. Rebuilds signal level statistics from the messages table
 // ----------------------------------------------------------------------------
 
+import { type DecoderKey, decoderKeyFromMessageType } from "@acarshub/types";
 import type Database from "better-sqlite3";
 import { createLogger } from "../../utils/logger.js";
 
 const logger = createLogger("db:migrate-02");
+
+/**
+ * Insert per-level message counts for one decoder into `tableName`,
+ * aggregated from the `messages` table.
+ *
+ * `messages.message_type` holds several spellings of the same decoder
+ * (legacy `"IMS-L"` / `"VDL-M2"` alongside `"IMSL"` / `"VDLM2"`), so the
+ * distinct stored values are resolved through
+ * {@link decoderKeyFromMessageType} instead of a hand-written alias list —
+ * the earlier list omitted `"IMS-L"`, so IMSL levels were never counted.
+ *
+ * Levels are CAST to REAL and grouped on the result; NULL and empty levels
+ * are skipped. Rows are appended — callers that need a full rebuild must
+ * clear the table first.
+ */
+export function rebuildLevelTableFromMessages(
+  db: Database.Database,
+  tableName: string,
+  decoderKey: DecoderKey,
+): void {
+  const storedTypes = (
+    db.prepare("SELECT DISTINCT message_type FROM messages").all() as Array<{
+      message_type: string;
+    }>
+  )
+    .map((row) => row.message_type)
+    .filter((type) => decoderKeyFromMessageType(type) === decoderKey);
+
+  if (storedTypes.length === 0) {
+    return;
+  }
+
+  const placeholders = storedTypes.map(() => "?").join(", ");
+  db.prepare(
+    `
+      INSERT INTO ${tableName} (level, count)
+      SELECT CAST(level AS REAL) as level_float, COUNT(*) as msg_count
+      FROM messages
+      WHERE message_type IN (${placeholders})
+        AND level IS NOT NULL
+        AND level != ''
+      GROUP BY level_float
+    `,
+  ).run(...storedTypes);
+}
 
 export function migration02_splitSignalLevelTable(db: Database.Database): void {
   logger.warn("Applying migration 2: split_signal_level_table");
@@ -83,25 +129,16 @@ export function migration02_splitSignalLevelTable(db: Database.Database): void {
     // This matches Alembic behavior - aggregate by message_type and level
     logger.warn("Rebuilding signal level statistics from messages table");
 
-    const decoderMapping = {
-      ACARS: "level_acars",
-      "VDL-M2": "level_vdlm2",
-      VDLM2: "level_vdlm2", // Alternative spelling
-      HFDL: "level_hfdl",
-      IMSL: "level_imsl",
-      IRDM: "level_irdm",
-    };
+    const decoderTables: ReadonlyArray<readonly [DecoderKey, string]> = [
+      ["acars", "level_acars"],
+      ["vdlm2", "level_vdlm2"],
+      ["hfdl", "level_hfdl"],
+      ["imsl", "level_imsl"],
+      ["irdm", "level_irdm"],
+    ];
 
-    for (const [messageType, tableName] of Object.entries(decoderMapping)) {
-      db.exec(`
-        INSERT INTO ${tableName} (level, count)
-        SELECT CAST(level AS REAL) as level_float, COUNT(*) as msg_count
-        FROM messages
-        WHERE message_type = '${messageType}'
-          AND level IS NOT NULL
-          AND level != ''
-        GROUP BY level_float
-      `);
+    for (const [decoderKey, tableName] of decoderTables) {
+      rebuildLevelTableFromMessages(db, tableName, decoderKey);
     }
 
     logger.warn("Signal level data rebuilt from messages");

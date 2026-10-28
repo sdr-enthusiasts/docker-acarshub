@@ -17,6 +17,7 @@
 // 13. 96f36b89016d - drop_unnecessary_indexes
 // 14. 803398f85958 - remove_uuid
 // 15. 8c9d47f5ed13 - drop_unnecessary_indexes2
+// 16. e4ff51950274 - rebuild_level_imsl
 //
 // This barrel assembles the ordered MIGRATIONS array from the individual
 // per-migration modules (one file per revision) and derives LATEST_REVISION
@@ -39,6 +40,7 @@ import { migration12_dropResolutionPromoteTimestampPk } from "./migration12.js";
 import { migration13_dropUnnecessaryIndexes } from "./migration13.js";
 import { migration14_removeUuid } from "./migration14.js";
 import { migration15_dropUnnecessaryIndexes2 } from "./migration15.js";
+import { migration16_rebuildLevelImsl } from "./migration16.js";
 import type { MigrationStep } from "./types.js";
 
 export {
@@ -134,6 +136,11 @@ export const MIGRATIONS: MigrationStep[] = [
     revision: "8c9d47f5ed13",
     name: "drop_unnecessary_indexes2",
     upgrade: migration15_dropUnnecessaryIndexes2,
+  },
+  {
+    revision: "e4ff51950274",
+    name: "rebuild_level_imsl",
+    upgrade: migration16_rebuildLevelImsl,
   },
 ];
 
