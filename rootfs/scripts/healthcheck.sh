@@ -20,7 +20,8 @@
 #
 # Multiple descriptors (comma-separated) are supported; only the first is
 # used for the socket check — if node cannot reach any endpoint, the message
-# activity check will also fail.
+# activity check will also fail. XNG is the exception: it has no activity
+# check, so each of its descriptors is checked and any healthy one suffices.
 #
 # Exit codes:
 # 0 = HEALTHY   - All enabled services are running and processing messages
@@ -225,10 +226,34 @@ check_decoder() {
 # XNG: connection-only. xng envelopes are re-labelled to their carrier type
 # (ACARS, VDLM2, ...) at ingest, so there is no per-XNG stats.json counter for
 # an activity check; the socket check is therefore authoritative here.
+#
+# Every descriptor is checked individually and XNG is healthy when ANY of them
+# is bound/connected, matching ListenerManager's view of a type as connected
+# when any of its listeners is (e.g. a zmq primary/backup pair).
 if chk_enabled "${ENABLE_XNG}"; then
     echo "==== Checking XNG ===="
-    check_socket "XNG" "${XNG_CONNECTIONS:-udp}" "5559"
-    if [[ "$SOCKET_OK" -ne 1 ]]; then
+    XNG_ANY_OK=0
+    XNG_CHECKED=0
+    IFS=',' read -ra XNG_DESCRIPTORS <<<"${XNG_CONNECTIONS:-udp}"
+    for xng_descriptor in "${XNG_DESCRIPTORS[@]}"; do
+        xng_descriptor="${xng_descriptor// /}"
+        if [[ -z "$xng_descriptor" ]]; then
+            continue
+        fi
+        XNG_CHECKED=1
+        check_socket "XNG" "$xng_descriptor" "5559"
+        if [[ "$SOCKET_OK" -eq 1 ]]; then
+            XNG_ANY_OK=1
+        fi
+    done
+    if [[ "$XNG_CHECKED" -eq 0 ]]; then
+        check_socket "XNG" "udp" "5559"
+        XNG_ANY_OK="$SOCKET_OK"
+    fi
+    if [[ "$XNG_ANY_OK" -eq 1 ]]; then
+        echo "XNG: at least one connection healthy"
+    else
+        echo "XNG: no connection healthy: UNHEALTHY"
         EXITCODE=1
     fi
 fi
