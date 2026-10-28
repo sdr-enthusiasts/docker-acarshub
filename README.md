@@ -32,6 +32,7 @@ Builds and runs on `amd64`, and `arm64` architectures.
     - [HFDL](#hfdl)
     - [Inmarsat L-Band](#inmarsat-l-band)
     - [Iridium](#iridium)
+    - [xng](#xng)
   - [Viewing the messages](#viewing-the-messages)
   - [Which frequencies should you monitor](#which-frequencies-should-you-monitor)
   - [A note about data sources used for the web site](#a-note-about-data-sources-used-for-the-web-site)
@@ -70,8 +71,8 @@ ACARS Hub supports three connection modes, configured via the `*_CONNECTIONS` en
 The three connection modes are:
 
 - **UDP** (default): the container binds a UDP port and decoders (or `acars_router`) push data to it. Requires a host port mapping (e.g. `5550:5550/udp`). Use `ACARS_CONNECTIONS=udp` or `ACARS_CONNECTIONS=udp://0.0.0.0:5550`.
-- **TCP**: the container connects outbound to a TCP server. `acars_router` exposes TCP serve ports at `15550`–`15558`. Use `ACARS_CONNECTIONS=tcp://acars_router:15550`.
-- **ZMQ** (recommended): the container subscribes to a ZMQ PUB endpoint. `acars_router` exposes ZMQ serve ports at `45550`–`45558` (one per decoder type). Use `ACARS_CONNECTIONS=zmq://acars_router:45550`. No inbound port mapping is needed on the ACARS Hub side for TCP or ZMQ modes.
+- **TCP**: the container connects outbound to a TCP server. `acars_router` exposes TCP serve ports at `15550`–`15559`. Use `ACARS_CONNECTIONS=tcp://acars_router:15550`.
+- **ZMQ** (recommended): the container subscribes to a ZMQ PUB endpoint. `acars_router` exposes ZMQ serve ports at `45550`–`45559` (one per decoder type). Use `ACARS_CONNECTIONS=zmq://acars_router:45550`. No inbound port mapping is needed on the ACARS Hub side for TCP or ZMQ modes.
 
 Multiple descriptors can be combined with commas for fan-in from several sources, e.g. `ACARS_CONNECTIONS=udp,zmq://acars_router:45550`.
 
@@ -84,6 +85,7 @@ The following decoders are supported:
 - [satdump](https://github.com/SatDump/SatDump). Run the decoder with the Inmarsat.json options for `udp_sinks` set to `"address": "127.0.0.1"` and `"port": "5557"` , ensuring that port `5557` is mapped to the container.
 - [JAERO](https://github.com/jontio/JAERO). Run the decoder with the JSONdump format for UDP output.
 - [gr-iridium](https://github.com/muccc/gr-iridium) and [iridium-toolkit](https://github.com/muccc/iridium-toolkit). Pipe the output of reassembler.py into something like `nc -u acarshub 5558`.
+- xng, a multi-mode SDR decoder. It covers ACARS, VDLM2, HFDL, Inmarsat L-Band and Iridium in one process and publishes its output over ZMQ. ACARS Hub receives it on the separate `XNG` connection type. See [xng](#xng).
 
 For ease of use I have provided docker images set up to work with ACARS Hub. This is the preferred way to get data in to ACARS Hub.
 
@@ -94,7 +96,7 @@ For ease of use I have provided docker images set up to work with ACARS Hub. Thi
 - [docker-satdump](https://github.com/rpatel3001/docker-satdump) for Inmarsat L-Band decoding.
 - [docker-jaero](https://github.com/sdr-enthusiasts/docker-jaero) for Inmarsat L-Band decoding.
 - [docker-gr-iridium-toolkit](https://github.com/rpatel3001/docker-gr-iridium-toolkit) for Iridium decoding.
-- [acars_router](https://github.com/sdr-enthusiasts/acars_router) for receiving, deduplicating, and routing messages from one or more decoders to one or more destinations. This is the **recommended** integration point for ACARS Hub. Decoders send to `acars_router`; ACARS Hub connects to `acars_router`'s ZMQ serve ports (`45550`–`45558`) to receive processed messages.
+- [acars_router](https://github.com/sdr-enthusiasts/acars_router) for receiving, deduplicating, and routing messages from one or more decoders to one or more destinations. This is the **recommended** integration point for ACARS Hub. Decoders send to `acars_router`; ACARS Hub connects to `acars_router`'s ZMQ serve ports (`45550`–`45559`) to receive processed messages.
 
 ## Quick Start
 
@@ -110,6 +112,7 @@ Most configuration options below are not required to get started. See [Setting-U
 | `5556/udp` | Default UDP port for receiving HFDL JSON data (used when `HFDL_CONNECTIONS=udp`)            |
 | `5557/udp` | Default UDP port for receiving Inmarsat L-Band JSON data (used when `IMSL_CONNECTIONS=udp`) |
 | `5558/udp` | Default UDP port for receiving Iridium JSON data (used when `IRDM_CONNECTIONS=udp`)         |
+| `5559/udp` | Default UDP port for receiving xng JSON envelopes (used when `XNG_CONNECTIONS=udp`)         |
 
 > **Note:** The TCP relay ports (`15550`–`15558`) that existed in earlier versions have been removed. The container no longer runs socat relay services. Use the `*_CONNECTIONS` environment variables to configure TCP or ZMQ outbound connections instead — no additional port mappings are required for those modes.
 
@@ -202,6 +205,7 @@ The `*_CONNECTIONS` variables accept a comma-separated list of one or more **con
 | HFDL    | `5556`           |
 | IMSL    | `5557`           |
 | IRDM    | `5558`           |
+| XNG     | `5559`           |
 
 **`acars_router` reference ports** — when using `acars_router` as the intermediary:
 
@@ -212,6 +216,7 @@ The `*_CONNECTIONS` variables accept a comma-separated list of one or more **con
 | HFDL    | `45556`                            | `15556`                            |
 | IMSL    | `45557`                            | `15557`                            |
 | IRDM    | `45558`                            | `15558`                            |
+| XNG     | `45559`                            | `15559`                            |
 
 **Fan-in example** — receive from two sources simultaneously:
 
@@ -255,6 +260,58 @@ Both descriptors feed the same internal pipeline. The built-in deduplication lay
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
 | `ENABLE_IRDM`      | Toggle Iridium decoding on. Set to `true` to enable IRDM processing in the container. **Note:** The legacy value `external` is deprecated but still supported for backward compatibility.                                                                | No       | `false` |
 | `IRDM_CONNECTIONS` | Comma-separated connection descriptor(s) for receiving Iridium data. See [Connection Descriptor Format](#connection-descriptor-format) for syntax. Recommended value when using `acars_router`: `zmq://acars_router:45558`. Default binds UDP port 5558. | No       | `udp`   |
+
+### xng
+
+xng is a multi-mode decoder that emits one JSON envelope per message, whatever the air interface. ACARS Hub receives these envelopes on a dedicated `XNG` connection, then files each one under its native type based on the envelope's `mode`:
+
+| xng `mode`           | Stored as |
+| -------------------- | --------- |
+| `acars_poa`          | ACARS     |
+| `vdl2`               | VDLM2     |
+| `hfdl`               | HFDL      |
+| `aero_l`, `aero_c`   | IMSL      |
+| `iridium`            | IRDM      |
+| anything else        | Dropped   |
+
+Messages from xng are stored, counted, graphed and searched exactly like messages from the native decoders. Envelopes for modes ACARS Hub does not handle (AIS, ADS-B, and so on) are discarded.
+
+| Variable          | Description                                                                                                                                                                                                                                                                               | Required | Default |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------- |
+| `ENABLE_XNG`      | Set to `true` to receive xng envelopes.                                                                                                                                                                                                                                                   | No       | `false` |
+| `XNG_CONNECTIONS` | Comma-separated connection descriptor(s) for receiving xng envelopes. See [Connection Descriptor Format](#connection-descriptor-format) for syntax. Use `udp` when `acars_router` forwards xng traffic, or `zmq://xng:<port>` to subscribe to xng directly. Default binds UDP port 5559. | No       | `udp`   |
+
+You do not need to set `ENABLE_ACARS`, `ENABLE_VDLM`, etc. for the types xng feeds. If a type's `ENABLE_*` flag is off, it switches on the first time an xng message of that type arrives and stays on until the container restarts. These types show the XNG connection state on the Status page. The Status page also has its own XNG row, with the total number of xng messages received since startup.
+
+xng only sends envelopes over ZMQ, so there are two supported setups.
+
+**Via `acars_router` (recommended).** `acars_router` subscribes to xng's ZMQ output and forwards envelopes to ACARS Hub over UDP. `acars_router`'s XNG ports are UDP/TCP listen `5559`, TCP serve `15559`, ZMQ listen `35559` and ZMQ serve `45559`.
+
+```yaml
+acars_router:
+  environment:
+    - AR_RECV_ZMQ_XNG=xng:5555
+    - AR_SEND_UDP_XNG=acarshub:5559
+acarshub:
+  environment:
+    - ENABLE_XNG=true
+    - XNG_CONNECTIONS=udp
+```
+
+**Direct.** ACARS Hub subscribes to xng's ZMQ PUB socket itself:
+
+```yaml
+acarshub:
+  environment:
+    - ENABLE_XNG=true
+    - XNG_CONNECTIONS=zmq://xng:5555
+```
+
+The port must match the endpoint configured with xng's `--zmq` option (`XNG_ZMQ` in the container). xng publishes two-part ZMQ messages (`[topic, json]`). ACARS Hub reads the last part of each message, so it can subscribe to xng directly.
+
+For VDLM2 messages, ACARS Hub reads the aircraft and ground station addresses from the raw frame. xng does not include addresses for ACARS messages carried over HFDL, Inmarsat or Iridium, so those messages have no to/from address. Non-ACARS frames (for example HFDL logon confirms or Iridium ring alerts) are stored with their decoded details in the message's decoded-data field.
+
+The healthcheck only checks that the XNG connection is up. It does not check XNG message activity, because xng messages are counted under the type they are stored as.
 
 ## Viewing the messages
 
@@ -316,6 +373,7 @@ ports:
   - 5556:5556/udp # HFDL  — only needed when HFDL_CONNECTIONS=udp
   - 5557:5557/udp # IMSL  — only needed when IMSL_CONNECTIONS=udp
   - 5558:5558/udp # IRDM  — only needed when IRDM_CONNECTIONS=udp
+  - 5559:5559/udp # XNG   — only needed when XNG_CONNECTIONS=udp
 ```
 
 **TCP or ZMQ mode** (ACARS Hub connects outbound to decoders):
