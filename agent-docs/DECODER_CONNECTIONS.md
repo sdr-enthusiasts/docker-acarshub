@@ -3,7 +3,8 @@
 > **Implementation status: COMPLETE** — All components implemented, all tests passing, `just ci` green.
 
 This document is the authoritative reference for how ACARS Hub receives data from external
-decoder processes (acarsdec, vdlm2dec, dumpvdl2, dumphfdl, acars_router, etc.).
+decoder processes (acarsdec, vdlm2dec, dumpvdl2, dumphfdl, satdump, JAERO, gr-iridium,
+xng, acars_router, etc.).
 
 ## Why This Architecture Exists
 
@@ -50,9 +51,34 @@ One variable per decoder type:
 | HFDL    | `HFDL_CONNECTIONS`  |
 | IMS-L   | `IMSL_CONNECTIONS`  |
 | IRDM    | `IRDM_CONNECTIONS`  |
+| xng     | `XNG_CONNECTIONS`   |
 
-`ENABLE_<TYPE>` continues to gate whether a decoder is active at all. If `ENABLE_ACARS=false`,
-then `ACARS_CONNECTIONS` is ignored.
+`ENABLE_<TYPE>` continues to gate whether a listener is created at all. If
+`ENABLE_ACARS=false`, then `ACARS_CONNECTIONS` is ignored. `ENABLE_XNG` (default `false`)
+gates `XNG_CONNECTIONS` the same way.
+
+`XNG` is an **ingest-only** type. xng emits one JSON envelope per message for every air
+interface it decodes, so the XNG listener carries traffic for several carriers. Before an
+envelope reaches the `MessageQueue` it is re-labelled to its carrier `MessageType` by the
+envelope `mode`:
+
+| xng `mode`         | Re-labelled as     |
+| ------------------ | ------------------ |
+| `acars_poa`        | `ACARS`            |
+| `vdl2`             | `VDLM2`            |
+| `hfdl`             | `HFDL`             |
+| `aero_l`, `aero_c` | `IMSL`             |
+| `iridium`          | `IRDM`             |
+| anything else      | dropped at ingest  |
+
+Downstream of the listeners (queue, stats, DB, search, Socket.IO) `XNG` never appears; an xng
+VDL2 message is a VDLM2 message. Payloads on the XNG listener that are not valid xng envelopes
+are dropped.
+
+The carrier `ENABLE_<TYPE>` flags gate their own listeners only, not xng-fed traffic. When an
+xng envelope arrives for a carrier whose flag is off, that carrier is **auto-enabled** at
+runtime and stays enabled until the process restarts. See the `BackgroundServices` section
+below.
 
 ### Value Format
 
@@ -88,6 +114,7 @@ interfaces. It is equivalent to `udp://0.0.0.0:<default-port>` where default por
 | HFDL    | 5556             |
 | IMSL    | 5557             |
 | IRDM    | 5558             |
+| XNG     | 5559             |
 
 ### Descriptor Semantics
 
@@ -95,7 +122,7 @@ interfaces. It is equivalent to `udp://0.0.0.0:<default-port>` where default por
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `udp` / `udp://<bind>:<port>` | Opens a `dgram` UDP socket bound to the specified address and port. Receives incoming datagrams. "Connected" means the socket is successfully bound.                                               |
 | `tcp://<host>:<port>`         | Opens a `net.Socket` TCP connection to the specified remote host and port. Reconnects automatically on disconnect. "Connected" mirrors socket state.                                               |
-| `zmq://<host>:<port>`         | Opens a ZMQ `SUB` socket and connects to `tcp://<host>:<port>`. Subscribes to all topics (`""`). Reconnection is handled by libzmq internally. "Connected" is tracked by successful frame receipt. |
+| `zmq://<host>:<port>`         | Opens a ZMQ `SUB` socket and connects to `tcp://<host>:<port>`. Subscribes to all topics (`""`). The payload is the **last frame** of each multipart message. Reconnection is handled by libzmq internally. "Connected" is tracked by the ZMQ monitor socket. |
 
 ### Default Values (set in Dockerfile)
 
@@ -104,7 +131,8 @@ ENV ACARS_CONNECTIONS="udp" \
     VDLM_CONNECTIONS="udp"  \
     HFDL_CONNECTIONS="udp"  \
     IMSL_CONNECTIONS="udp"  \
-    IRDM_CONNECTIONS="udp"
+    IRDM_CONNECTIONS="udp"  \
+    XNG_CONNECTIONS="udp"
 ```
 
 ---
@@ -184,6 +212,30 @@ environment:
   - VDLM_CONNECTIONS=zmq://dumpvdl2:45555,udp://0.0.0.0:5555
 ```
 
+### xng via acars_router
+
+```yaml
+environment:
+  - ENABLE_XNG=true
+  - XNG_CONNECTIONS=udp
+```
+
+xng outputs envelopes over ZMQ only. acars_router subscribes with
+`AR_RECV_ZMQ_XNG=xng:5555` and forwards with `AR_SEND_UDP_XNG=acarshub:5559`. The hub binds
+the default XNG UDP port 5559. `ENABLE_ACARS`, `ENABLE_VDLM`, etc. are not required for the
+carriers xng feeds; they auto-enable on first message.
+
+### xng direct (hub subscribes to xng)
+
+```yaml
+environment:
+  - ENABLE_XNG=true
+  - XNG_CONNECTIONS=zmq://xng:5555
+```
+
+The port must match xng's `--zmq` / `XNG_ZMQ` endpoint. xng publishes `[topic, json]`
+multipart messages; `ZmqListener` takes the last frame, so no intermediary is needed.
+
 ---
 
 ## Retired Environment Variables
@@ -236,6 +288,10 @@ export const VDLM_CONNECTIONS: DecoderConnections;
 export const HFDL_CONNECTIONS: DecoderConnections;
 export const IMSL_CONNECTIONS: DecoderConnections;
 export const IRDM_CONNECTIONS: DecoderConnections;
+export const XNG_CONNECTIONS: DecoderConnections; // default port 5559
+
+// Gate for the XNG listener (also exposed as getConfig().enableXng)
+export const ENABLE_XNG: boolean;
 ```
 
 The `parseConnections(raw: string, defaultPort: number): DecoderConnections` function handles
@@ -249,11 +305,18 @@ Validation rules enforced at parse time:
 - Unrecognised descriptor strings produce a `warn` log and are skipped (graceful degradation).
 - An empty `descriptors` array after parsing produces an `error` log at startup.
 
-### Listener Abstraction (`src/services/decoder-listener.ts`) ✅ DONE
+### Listener Abstraction (`src/services/listener-types.ts`) ✅ DONE
 
-A shared interface that all listener implementations satisfy:
+The types live in `listener-types.ts` and are re-exported from `decoder-listener.ts`. A
+shared interface that all listener implementations satisfy:
 
 ```typescript
+/** Carrier types: what is queued, stored, counted and searched. */
+export type MessageType = "ACARS" | "VDLM2" | "HFDL" | "IMSL" | "IRDM";
+
+/** Listener label. XNG is ingest-only and never reaches the queue. */
+export type ListenerType = MessageType | "XNG";
+
 export interface IDecoderListener extends EventEmitter<DecoderListenerEvents> {
   start(): void;
   stop(): void;
@@ -262,19 +325,23 @@ export interface IDecoderListener extends EventEmitter<DecoderListenerEvents> {
 }
 
 export interface DecoderListenerEvents {
-  message: [type: MessageType, data: unknown];
-  connected: [type: MessageType];
-  disconnected: [type: MessageType];
-  error: [type: MessageType, error: Error];
+  message: [type: ListenerType, data: unknown];
+  connected: [type: ListenerType];
+  disconnected: [type: ListenerType];
+  error: [type: ListenerType, error: Error];
 }
 
 export interface DecoderListenerStats {
-  type: MessageType;
+  type: ListenerType;
   listenType: ListenType;
   connectionPoint: string; // human-readable "host:port"
   connected: boolean;
 }
 ```
+
+Listeners, the factory and `ListenerManager` work in `ListenerType`. Everything from the
+`MessageQueue` onward works in `MessageType`. `routeListenerMessage()` is the only place one
+becomes the other, so adding `XNG` did not widen any downstream type.
 
 ### `TcpListener` (`src/services/tcp-listener.ts`) ✅ DONE
 
@@ -306,8 +373,11 @@ Key implementation notes:
 - Connects (does not bind) to `tcp://<host>:<port>`. The remote decoder or router is the PUB
   server; Node.js is the SUB client.
 - Subscribes to all topics: `await socket.subscribe("")`.
-- `receive()` returns a single frame per await; each frame is treated as one potential JSON
-  message (same parse-and-split logic applies defensively).
+- The receive loop yields one **multipart message** per iteration and uses its **last
+  frame** as the payload. Single-frame publishers (acars_router, dumpvdl2) send `[json]`,
+  where last equals first. xng publishes `[topic, json]`, which is why the hub can subscribe to
+  xng directly. A message with no frames is skipped. The payload frame is treated as one
+  potential JSON message (same parse-and-split logic applies defensively).
 - libzmq handles reconnection transparently when the remote PUB server restarts. `connected`
   state is updated on first successful frame receipt and on `ETERM`/close events.
 - ZMQ native add-on compilation requires `libzmq-dev` at build time and `libzmq5` at runtime.
@@ -317,7 +387,7 @@ Key implementation notes:
 
 ```typescript
 export function createDecoderListener(
-  type: MessageType,
+  type: ListenerType,
   descriptor: ConnectionDescriptor,
 ): IDecoderListener {
   switch (descriptor.listenType) {
@@ -331,20 +401,74 @@ export function createDecoderListener(
 }
 ```
 
-### `BackgroundServices` (`src/services/index.ts`) ✅ DONE
+### `BackgroundServices` (`src/services/background-services.ts`) ✅ DONE
 
-`setupListener()` is replaced by `setupDecoderConnections()`. For each enabled decoder type,
-it iterates the `descriptors` array and creates one listener per descriptor via the factory.
-All listeners for a given type share the same `on("message")` handler that pushes into
-`MessageQueue`. Connection status for a decoder type is `true` if **any** of its listeners
-reports connected.
+`src/services/index.ts` is a thin barrel. Listener wiring lives in `ListenerManager`
+(`src/services/listener-manager.ts`), and status payloads are built in
+`src/services/system-status.ts`.
 
-The `tcpListeners: Map<MessageType, TcpListener>` field becomes
-`listeners: Map<string, IDecoderListener>` keyed by `"<TYPE>-<index>"` (e.g. `"ACARS-0"`,
-`"ACARS-1"`) to support multiple listeners per type.
+`ListenerManager.setupDecoderConnections(type, descriptors)` is called once per enabled
+`ListenerType` (the five carriers plus `XNG` when `enableXng` is set). It iterates the
+`descriptors` array and creates one listener per descriptor via the factory. Listeners are
+stored in `decoderListeners: Map<string, IDecoderListener>` keyed by `"<TYPE>-<index>"` (e.g.
+`"ACARS-0"`, `"ACARS-1"`, `"XNG-0"`) to support multiple listeners per type.
+`ConnectionStatus` has one flag per `ListenerType`, including `XNG`. A type's flag is `true`
+if **any** of its listeners reports connected.
 
-`emitSystemStatus()` is updated to derive per-decoder `connected` state by checking whether
-any listener key matching that type is connected.
+All listeners share one `onMessage` hook, set by `BackgroundServices`. The hook calls
+`routeListenerMessage(type, data, push)` (`src/formatters/xng.ts`):
+
+- Non-XNG types are pushed into the `MessageQueue` unchanged.
+- XNG payloads are checked with `isXngEnvelope()`, re-labelled with `xngCarrierType(mode)`,
+  then pushed under the carrier `MessageType`. Invalid envelopes and unhandled modes are
+  dropped.
+
+For each pushed message that came from the XNG listener, the hook also:
+
+1. Calls `recordXngMessage()` to increment the in-memory xng envelope counter shown as the
+   XNG total on the Status page.
+2. Calls `markDecoderActive(carrier)` (`src/services/decoder-activity.ts`). This records the
+   carrier as xng-fed. It returns `true` only the first time a carrier arrives while its
+   `ENABLE_*` flag is off. In that case `onDecoderActivated()` re-emits `system_status` and
+   broadcasts a fresh `features_enabled` payload, so clients show the new type without
+   reconnecting.
+
+`decoder-activity.ts` is the effective-enablement source of truth. `isDecoderEnabled(type)` is
+the config flag OR runtime activation. Activation lasts until process restart. Every runtime
+gate reads `isDecoderEnabled()` instead of `getConfig().enable*`: `buildSystemStatus()`,
+`buildDecoderFeatures()` (the `features_enabled` payload on connect), the signal-stats socket
+handler, and the Prometheus decoder-enabled metrics. Listener creation still reads the
+config flags, so auto-enable never opens a socket.
+
+`buildSystemStatus()` reports an xng-fed carrier as connected if its own listener is
+connected, **or** if `isFedByXng(type)` and the XNG listener is connected. A type fed only by
+xng has no listener of its own. When `enableXng` is set, the status also has an `XNG` decoder
+entry (connection state) and an `XNG` global entry whose `Count` is `getXngMessageCount()`.
+Queue, DB and per-type counts are **not** affected: xng messages are counted under their
+carrier type.
+
+Message formatting is unchanged at the queue boundary. `formatAcarsMessage()` checks
+`isXngEnvelope()` first and delegates to `formatXngMessage()` (`src/formatters/index.ts`),
+which produces the same `FormattedMessage` shape as the carrier's native formatter:
+
+- Envelope fields: `timestamp` (RFC3339 → epoch seconds), `source.station.ident` →
+  `station_id`, `decode.errors` (or `crc_ok` → 0/1) → `error`, `frequency_hz` → `freq` in the
+  carrier's native representation, `signal.rssi_db` → `level`.
+- ACARS bodies: `mode`, `label`, `text`, `tail`, `flight`, `block_id`, `msg_num` → `msgno`,
+  `more_to_come` → `end` (inverted), and `ack` (unset for NAK, matching native formatters).
+  The acars_poa flat app fields (`depa`, `dsta`, `eta`, `gtout`, `gtin`, `wloff`, `wlin`,
+  `position`, `altitude_ft`) map to the matching stored fields. A structured application
+  decode is serialised into `libacars`, and ADS-C basic reports supply `lat`/`lon`/`alt`.
+- VDL2 ACARS frames: `toaddr` / `fromaddr` are decoded from the AVLC header in `raw`
+  (`decodeAvlcAddresses()`). `icao` is set when the source address is an aircraft.
+- Non-ACARS frames (HFDL, Aero, Iridium and VDL2 link-layer bodies): stored with
+  `libacars = JSON.stringify({ [kind]: details })`. `flight`, `lat`/`lon` and `icao` are
+  pulled from `details` where present. VDL2 `toaddr` / `fromaddr` come from `details.dst` /
+  `details.src`.
+- `body.type === "undecoded"` and unhandled modes format to `null` and are not stored.
+
+Known limitation: xng does not include aircraft/ground addresses for ACARS frames carried over
+HFDL, Aero or Iridium, so those messages have no `toaddr` / `fromaddr`.
 
 ---
 
@@ -446,6 +570,7 @@ EXPOSE 5555/udp
 EXPOSE 5556/udp
 EXPOSE 5557/udp
 EXPOSE 5558/udp
+EXPOSE 5559/udp
 ```
 
 Exposing the UDP ports is optional but recommended so that `docker-compose.yaml` examples
@@ -458,7 +583,8 @@ ENV ACARS_CONNECTIONS="udp" \
     VDLM_CONNECTIONS="udp"  \
     HFDL_CONNECTIONS="udp"  \
     IMSL_CONNECTIONS="udp"  \
-    IRDM_CONNECTIONS="udp"
+    IRDM_CONNECTIONS="udp"  \
+    XNG_CONNECTIONS="udp"
 ```
 
 The `FEED_*` variables are removed from the `ENV` block entirely.
@@ -511,6 +637,8 @@ considered complete.
 - Invalid descriptor is skipped with a warn log; remaining descriptors are still parsed.
 - Port out of range (0, 65536) produces a warn log and is skipped.
 - Empty string produces an empty descriptors array and an error log.
+- `ENABLE_XNG` defaults to disabled; `XNG_CONNECTIONS` defaults to bare `udp` on port 5559 and
+  honours an env override.
 
 ### `UdpListener` — `udp-listener.test.ts` ✅ DONE
 
@@ -526,14 +654,49 @@ considered complete.
 - Connects to a test ZMQ PUB socket and receives a message.
 - Parses valid JSON frame and emits `message`.
 - Handles `}{`-concatenated content in a frame.
+- Uses the last frame of a two-frame `[topic, json]` message (xng).
+- Skips a multipart message with no frames.
 - `stop()` closes the socket without throwing.
 
-### `BackgroundServices` — `services/index.test.ts` ✅ DONE — `services-index.test.ts`
+### xng routing and formatting — `formatters/__tests__/xng.test.ts`, `xng-format.test.ts`
+
+- `isXngEnvelope()` accepts captured envelopes and rejects native decoder output and
+  malformed envelopes (missing/mistyped `mode`, `timestamp`, `frequency_hz`, `body`,
+  `source.app`, or `app.name !== "xng"`).
+- `xngCarrierType()` maps every handled mode and returns `null` for others.
+- `routeListenerMessage()` passes non-XNG payloads through unvalidated, re-labels XNG
+  envelopes, and drops invalid XNG payloads.
+- `formatXngMessage()` field mapping per carrier, driven by the captured fixtures in
+  `formatters/__tests__/fixtures/xng-*.jsonl`.
+
+### Decoder activity — `services/__tests__/decoder-activity.test.ts`
+
+- `isDecoderEnabled()` follows the config flag until `markDecoderActive()` activates the type.
+- `markDecoderActive()` returns `true` once for a config-disabled type, `false` thereafter and
+  for config-enabled types.
+- `isFedByXng()`, the xng message counter and `buildDecoderFeatures()` reflect activation;
+  `resetDecoderActivity()` clears all state.
+
+### `BackgroundServices` — `services/__tests__/background-services.test.ts`, `listener-manager.test.ts` ✅ DONE
 
 - With `ACARS_CONNECTIONS=udp,tcp://host:1234`, two listeners are created for `ACARS`.
 - Decoder `connected` status is `true` if any listener for that type is connected.
 - Decoder `connected` status is `false` only when all listeners for that type are disconnected.
 - Messages from both listeners for the same type arrive in the message queue.
+- An xng envelope for a config-disabled carrier activates it exactly once and refreshes
+  clients once (`system_status` + `features_enabled`).
+- Every routed xng envelope is counted; messages from non-XNG listeners are not.
+
+### System status — `services/__tests__/system-status.test.ts`
+
+- An xng-fed type with no listener of its own reports connected iff XNG is connected.
+- XNG does not stand in for a type xng has not fed.
+- The `XNG` entry is omitted when `ENABLE_XNG` is off, and reports connection state and the
+  routed envelope count when on.
+
+### Ingestion integration — `__tests__/ingestion.integration.test.ts`
+
+- Envelopes on the XNG listener are re-labelled to their carrier type end to end.
 
 ### `GET /data/stats.json` — `server.test.ts` or `stats.test.ts` ✅ DONE — `stats.test.ts`
 
@@ -563,7 +726,13 @@ The following questions were raised during planning and are now resolved.
 `ENABLE_ACARS`, `ENABLE_VDLM`, etc. are kept exactly as they are. They are already present in
 every user's compose file and changing them would be a breaking change with no benefit.
 `<TYPE>_CONNECTIONS` is only consulted when the corresponding `ENABLE_<TYPE>` flag is true.
-No implicit enable logic is introduced.
+
+The one implicit enable is xng auto-enable. A carrier type whose flag is off becomes enabled
+for display, stats and status when its first xng envelope arrives. It stays enabled until
+restart and never gains a listener of its own. This exists because xng is one process feeding
+several carriers. Requiring users to set five `ENABLE_*` flags (which would also open five
+unused UDP sockets) to see xng traffic would be a trap. The effect is runtime-only and
+reversible by restart, so `ENABLE_<TYPE>` remains the gate for listeners.
 
 ### UDP `connected` state: bound = connected
 

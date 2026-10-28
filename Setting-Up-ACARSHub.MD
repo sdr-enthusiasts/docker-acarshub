@@ -33,7 +33,8 @@ dumphfdl  ──UDP──► ┘       │
 ## Connection Modes
 
 ACARS Hub receives decoder data via the `ACARS_CONNECTIONS`, `VDLM_CONNECTIONS`,
-`HFDL_CONNECTIONS`, `IMSL_CONNECTIONS`, and `IRDM_CONNECTIONS` environment variables. See the
+`HFDL_CONNECTIONS`, `IMSL_CONNECTIONS`, `IRDM_CONNECTIONS`, and `XNG_CONNECTIONS` environment
+variables. See the
 [README](README.md#connection-descriptor-format) for the full URI syntax reference.
 
 | Mode              | Example value              | When to use                                                                          |
@@ -51,6 +52,7 @@ ACARS Hub receives decoder data via the `ACARS_CONNECTIONS`, `VDLM_CONNECTIONS`,
 | HFDL          | `45556`        | `15556`        |
 | Inmarsat IMSL | `45557`        | `15557`        |
 | Iridium IRDM  | `45558`        | `15558`        |
+| xng           | `45559`        | `15559`        |
 
 ## How to do the setup
 
@@ -260,6 +262,7 @@ By default `acars_router` publishes processed messages on these ports:
 | HFDL          | `45556`        | `15556`        | ACARS Hub sets `HFDL_CONNECTIONS=zmq://acars_router:45556`  |
 | Inmarsat IMSL | `45557`        | `15557`        | ACARS Hub sets `IMSL_CONNECTIONS=zmq://acars_router:45557`  |
 | Iridium IRDM  | `45558`        | `15558`        | ACARS Hub sets `IRDM_CONNECTIONS=zmq://acars_router:45558`  |
+| xng           | `45559`        | `15559`        | See [Setting Up xng](#setting-up-xng)                       |
 
 > **Note:** The ZMQ serve ports (45xxx) are different from the ZMQ ingest/listen ports
 > (35xxx). The 35xxx ports are where external ZMQ clients can push messages **into**
@@ -301,9 +304,74 @@ Multiple destinations for the same type are separated with a semicolon:
 | `AR_SEND_TCP_HFDL`         | unset   | `host:port` to send HFDL messages to via TCP. Separate multiple with `;`.                              |
 | `AR_SERVE_ZMQ_ACARS`       | `45550` | ZMQ port on which `acars_router` publishes ACARS messages. Must match `ACARS_CONNECTIONS` in acarshub. |
 | `AR_SERVE_ZMQ_VDLM2`       | `45555` | ZMQ port on which `acars_router` publishes VDLM2 messages. Must match `VDLM_CONNECTIONS` in acarshub.  |
+| `AR_RECV_ZMQ_XNG`          | unset   | `host:port` of xng's ZMQ PUB socket to subscribe to for xng envelopes (e.g. `xng:5555`).               |
+| `AR_SEND_UDP_XNG`          | unset   | `host:port` to send xng envelopes to via UDP (e.g. `acarshub:5559`). Separate multiple with `;`.       |
 
 For the full list of variables see the
 [acars_router README](https://github.com/sdr-enthusiasts/acars_router).
+
+## Setting Up xng
+
+xng is a multi-mode decoder. It sends one JSON envelope per message, whatever the air
+interface. ACARS Hub receives these envelopes on the `XNG` connection type and stores each
+one under its native type, based on the envelope's `mode`:
+
+- `acars_poa` → ACARS
+- `vdl2` → VDLM2
+- `hfdl` → HFDL
+- `aero_l`, `aero_c` → IMSL
+- `iridium` → IRDM
+
+Envelopes with any other mode (AIS, ADS-B, and so on) are dropped. You do not need to set
+`ENABLE_ACARS`, `ENABLE_VDLM`, etc. for the types xng feeds. A type whose flag is off is
+switched on when its first xng message arrives, and stays on until the container restarts.
+
+xng only sends envelopes over ZMQ. The xng hostname and port in the snippets below must
+match the endpoint set with xng's `--zmq` option (`XNG_ZMQ`, e.g. `tcp://0.0.0.0:5555`, in
+the container).
+
+### xng through acars_router (recommended)
+
+`acars_router` subscribes to xng and forwards envelopes to ACARS Hub over UDP. Add these
+lines to the compose file above:
+
+```yaml
+services:
+  acarshub:
+    ports:
+      - 8080:80
+      # Needed only if xng traffic reaches ACARS Hub from outside the docker network.
+      # - 5559:5559/udp
+    environment:
+      - ENABLE_XNG=true
+      - XNG_CONNECTIONS=udp
+
+  acars_router:
+    environment:
+      # Subscribe to xng's ZMQ PUB endpoint (must match xng's --zmq / XNG_ZMQ).
+      - AR_RECV_ZMQ_XNG=xng:5555
+      # Forward xng envelopes to ACARS Hub's default XNG UDP port.
+      - AR_SEND_UDP_XNG=acarshub:5559
+```
+
+### xng direct to ACARS Hub
+
+ACARS Hub subscribes to xng's ZMQ PUB endpoint itself. You do not need to map any port:
+
+```yaml
+services:
+  acarshub:
+    environment:
+      - ENABLE_XNG=true
+      # Must match xng's --zmq / XNG_ZMQ endpoint.
+      - XNG_CONNECTIONS=zmq://xng:5555
+```
+
+xng sends two-part ZMQ messages (`[topic, json]`). ACARS Hub reads the last part of each
+message, so this works without an intermediary.
+
+In both setups the Status page has an XNG row, showing the connection state and the total
+number of xng messages received. Each type fed by xng shows the XNG connection state.
 
 ## Further configuration
 

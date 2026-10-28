@@ -44,13 +44,14 @@ This document describes the technical architecture of ACARS Hub.
 │  • acarsdec (ACARS, links libacars)                          │
 │  • vdlm2dec / dumpvdl2 (VDL Mode 2, links libacars)          │
 │  • dumphfdl (HFDL, links libacars)                           │
+│  • xng (multi-mode envelopes, re-labelled by mode)           │
 │  • acars_router (aggregator / fan-out)                       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 See `agent-docs/DECODER_CONNECTIONS.md` for the authoritative reference
 on decoder ingress (TCP / UDP / ZMQ wiring, fan-in, `ENABLE_<TYPE>`
-gating, listener abstraction).
+gating, listener abstraction, xng envelope re-labelling and auto-enable).
 
 ## Frontend Architecture
 
@@ -193,6 +194,7 @@ acarshub-backend/
 │   │   ├── tcp-listener.ts      # TCP ingress
 │   │   ├── udp-listener.ts      # UDP ingress
 │   │   ├── zmq-listener.ts      # ZeroMQ ingress
+│   │   ├── decoder-activity.ts  # Effective decoder enablement (config OR xng auto-enable)
 │   │   ├── adsb-poller.ts       # aircraft.json poller
 │   │   ├── message-queue.ts     # In-process queue (decoder → formatter)
 │   │   ├── message-ring-buffer.ts  # On-connect warm-state ring buffer
@@ -205,7 +207,8 @@ acarshub-backend/
 │   │   ├── station-ids.ts
 │   │   └── heywhatsthat.ts
 │   ├── formatters/
-│   │   ├── index.ts             # Per-decoder formatters (ACARS, VDLM2, HFDL, IMSL, IRDM)
+│   │   ├── index.ts             # Per-decoder formatters (ACARS, VDLM2, HFDL, IMSL, IRDM, xng)
+│   │   ├── xng.ts               # xng envelope guard + mode → MessageType routing
 │   │   └── enrichment.ts        # Label decoding, alert matching, dedup
 │   ├── utils/                   # Logger (Pino), shared helpers
 │   └── __tests__/
@@ -299,7 +302,7 @@ Radio Decoder → TCP/UDP/ZMQ → Node.js Backend → SQLite → Socket.IO → R
 
 **Step by step**:
 
-1. **Radio decoder** (acarsdec, vdlm2dec, dumphfdl, etc.) receives the
+1. **Radio decoder** (acarsdec, vdlm2dec, dumphfdl, xng, etc.) receives the
    radio signal and emits JSON. Upstream decoder daemons that link
    libacars decode CPDLC / ARINC622 / SPDU / frequency substructures
    and include them in the JSON.
@@ -309,11 +312,19 @@ Radio Decoder → TCP/UDP/ZMQ → Node.js Backend → SQLite → Socket.IO → R
    or ZMQ subscriber). See `agent-docs/DECODER_CONNECTIONS.md` for the
    configuration language.
 3. **Listener** (`services/{tcp,udp,zmq}-listener.ts`) parses the JSON
-   and pushes it onto the in-process `MessageQueue`
-   (`services/message-queue.ts`).
+   and hands it to `routeListenerMessage()` (`formatters/xng.ts`), which
+   pushes it onto the in-process `MessageQueue`
+   (`services/message-queue.ts`). Native decoder types pass through
+   unchanged. Envelopes on the ingest-only `XNG` listener are re-labelled
+   by envelope `mode` to their carrier type (`acars_poa` → ACARS, `vdl2`
+   → VDLM2, `hfdl` → HFDL, `aero_l`/`aero_c` → IMSL, `iridium` → IRDM;
+   other modes are dropped). A carrier with its `ENABLE_*` flag off is
+   auto-enabled on its first xng message (`services/decoder-activity.ts`).
+   Nothing downstream of this step sees `XNG`.
 4. **Formatter** (`formatters/index.ts` + `formatters/enrichment.ts`)
    consumes the queue:
-   - Maps decoder-specific JSON to the canonical `AcarsMsg` shape
+   - Maps decoder-specific JSON to the canonical `AcarsMsg` shape (xng
+     envelopes via `formatXngMessage()`)
    - Re-serialises libacars substructures into the `libacars` field
    - Decodes label metadata (where applicable)
    - Runs alert matching against configured terms
@@ -450,7 +461,7 @@ add-ons load at runtime.
 
 - `80/tcp` — HTTP (nginx)
 - `8888/tcp` — Backend (internal only; nginx-proxied)
-- `5550-5558/udp` — Default decoder UDP bind ports when
+- `5550-5559/udp` — Default decoder UDP bind ports (5559 is XNG) when
   `<TYPE>_CONNECTIONS` selects UDP ingress (see
   `agent-docs/DECODER_CONNECTIONS.md`)
 
