@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
-    "@biomejs/biome": "2.5.13",
+    "@biomejs/biome": "2.6.3",
     "@lhci/cli": "0.15.1",
     "@playwright/test": "1.64.1",
     "@testing-library/jest-dom": "7.0.1",

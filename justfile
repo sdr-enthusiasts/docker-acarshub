@@ -124,7 +124,11 @@ ci:
     @echo "Running backend build..."
     cd acarshub-backend && npm run build
     @echo "Running Biome checks..."
-    biome check --error-on-warnings acarshub-react/ acarshub-backend/
+    # Uses the npm-pinned Biome (workspace package.json files), not the
+    # flake's `biome` on PATH: nixpkgs still ships 2.5.x, and only 2.6+ lints
+    # SCSS. Switch back to plain `biome` once nixpkgs catches up so CI and the
+    # pre-commit hook run the same version again.
+    ./node_modules/.bin/biome check --error-on-warnings acarshub-react/ acarshub-backend/
     @echo "Checking for circular import dependencies..."
     just madge
     @echo "Running frontend tests with coverage..."
