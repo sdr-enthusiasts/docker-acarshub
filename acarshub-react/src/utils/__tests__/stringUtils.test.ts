@@ -335,33 +335,6 @@ describe("stringUtils", () => {
     });
   });
 
-  describe("formatBytes", () => {
-    it("should format zero bytes", () => {
-      expect(formatBytes(0)).toBe("0 Bytes");
-    });
-
-    it("should format bytes", () => {
-      expect(formatBytes(500)).toBe("500 Bytes");
-    });
-
-    it("should format kilobytes", () => {
-      expect(formatBytes(1024)).toBe("1 KB");
-    });
-
-    it("should format megabytes", () => {
-      expect(formatBytes(1048576)).toBe("1 MB");
-    });
-
-    it("should format gigabytes", () => {
-      expect(formatBytes(1073741824)).toBe("1 GB");
-    });
-
-    it("should respect decimal places", () => {
-      expect(formatBytes(1536, 1)).toBe("1.5 KB");
-      expect(formatBytes(1536, 0)).toBe("2 KB");
-    });
-  });
-
   describe("randomString", () => {
     it("should generate string of specified length", () => {
       expect(randomString(10)).toHaveLength(10);
@@ -462,6 +435,7 @@ describe("stringUtils", () => {
   describe("formatBytes", () => {
     it("should format bytes", () => {
       expect(formatBytes(0)).toBe("0 Bytes");
+      expect(formatBytes(500)).toBe("500 Bytes");
       expect(formatBytes(1024)).toBe("1 KB");
       expect(formatBytes(1536)).toBe("1.5 KB");
     });
