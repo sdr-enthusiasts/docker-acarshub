@@ -706,7 +706,11 @@ export function AircraftList({
             type="button"
             className={`aircraft-list__filter-button ${filterDropdownOpen ? "aircraft-list__filter-button--open" : ""}`}
             onClick={() => setFilterDropdownOpen(!filterDropdownOpen)}
-            aria-label="Filter aircraft"
+            aria-label={
+              activeFilterCount > 0
+                ? `Filters, ${activeFilterCount} active`
+                : "Filters"
+            }
             aria-expanded={filterDropdownOpen}
           >
             <IconFilter />
