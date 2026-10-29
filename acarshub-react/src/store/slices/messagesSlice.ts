@@ -44,6 +44,7 @@ import {
 import type { AcarsMsg, ADSBData, Decoders, MessageGroup } from "../../types";
 import { storeLogger } from "../../utils/logger";
 import { cullMessageGroups } from "../../utils/messageCulling";
+import { stripHtml } from "../../utils/stringUtils";
 import { useSettingsStore } from "../useSettingsStore";
 import { saveReadMessageUids } from "./readStateSlice";
 
@@ -165,12 +166,6 @@ export const createMessagesSlice: StateCreator<
           });
 
           // Strip HTML tags from matched terms (notifications don't support HTML)
-          const stripHtml = (text: string): string => {
-            const tmp = document.createElement("div");
-            tmp.innerHTML = text;
-            return tmp.textContent || tmp.innerText || "";
-          };
-
           const cleanedTerms = decodedMessage.matched_text?.length
             ? decodedMessage.matched_text.map(stripHtml).join(", ")
             : "Unknown";
