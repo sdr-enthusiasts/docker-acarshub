@@ -15,7 +15,7 @@
 // along with acarshub.  If not, see <http://www.gnu.org/licenses/>.
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PairedAircraft } from "../../../utils/aircraftPairing";
 import { AircraftList } from "../AircraftList";
 
@@ -202,5 +202,35 @@ describe("AircraftList – interaction callbacks", () => {
     (row as HTMLElement).click();
 
     expect(onClick).toHaveBeenCalledWith(aircraft);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Filter button accessible name (WCAG 2.5.3 Label in Name)
+// ---------------------------------------------------------------------------
+
+describe("AircraftList – filter button accessible name", () => {
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("includes the visible 'Filters' text in the accessible name", () => {
+    render(
+      <AircraftList aircraft={[]} hoveredAircraft={null} sidebarWidth={400} />,
+    );
+
+    const button = screen.getByRole("button", { name: "Filters" });
+    expect(button).toHaveTextContent("Filters");
+  });
+
+  it("announces the active filter count alongside the visible text", () => {
+    localStorage.setItem("aircraftList.showAcarsOnly", "true");
+
+    render(
+      <AircraftList aircraft={[]} hoveredAircraft={null} sidebarWidth={400} />,
+    );
+
+    const button = screen.getByRole("button", { name: "Filters, 1 active" });
+    expect(button).toHaveTextContent("Filters1");
   });
 });
