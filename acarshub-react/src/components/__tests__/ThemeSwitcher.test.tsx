@@ -139,11 +139,11 @@ describe("ThemeSwitcher", () => {
 
   describe("icon selection (target-theme semantics)", () => {
     it("renders the lightbulb icon while currently dark (action: go light)", () => {
-      // Icons are anonymous SVGs from createIcon(); they're
+      // Icons are anonymous SVGs rendered by the shared SvgIcon; they're
       // distinguished by viewBox. IconLightbulb uses "0 0 384 512";
       // IconMoon uses "0 0 512 512". Pinning the viewBox is the most
       // refactor-resistant assertion available without bolting a
-      // data-testid onto the icon factory.
+      // data-testid onto the icon component.
       const { container } = render(<ThemeSwitcher />);
       const svg = container.querySelector("svg");
       expect(svg).not.toBeNull();
