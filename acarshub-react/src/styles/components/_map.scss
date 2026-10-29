@@ -58,6 +58,18 @@
     border: 2px solid var(--color-overlay0);
     border-radius: var(--border-radius-sm);
 
+    // Theme-aware zoom icon colours, consumed by the zoom button rule below.
+    // Switched here rather than by a [data-theme] selector on the icon, which
+    // would outrank the :hover and :disabled icon rules.
+    --map-zoom-icon-filter: brightness(0) invert(1); // Mocha: white icons
+    --map-zoom-icon-opacity: 0.7;
+
+    [data-theme="light"] & {
+      // Latte: dark icons to match the custom map buttons
+      --map-zoom-icon-filter: brightness(0) invert(0.3);
+      --map-zoom-icon-opacity: 0.8;
+    }
+
     button {
       background-color: var(--color-surface0);
       color: var(--color-text);
@@ -90,18 +102,22 @@
       // Theme-aware zoom button icons
       &.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon,
       &.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
-        // Dark theme (Mocha): white icons
-        filter: brightness(0) invert(1);
-        opacity: 0.7;
+        filter: var(--map-zoom-icon-filter);
+        opacity: var(--map-zoom-icon-opacity);
+      }
 
-        // Light theme (Latte): dark icons to match custom buttons
-        [data-theme="light"] & {
-          filter: brightness(0) invert(0.3);
-          opacity: 0.8;
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+
+        .maplibregl-ctrl-icon {
+          opacity: 0.3;
         }
       }
 
-      &:hover {
+      // Hover feedback only for enabled buttons (MapLibre disables zoom
+      // in/out at the zoom limits).
+      &:hover:not(:disabled) {
         background-color: var(--color-surface1);
         border-color: var(--color-overlay1);
 
@@ -119,15 +135,6 @@
 
       &:active {
         background-color: var(--color-surface2);
-      }
-
-      &:disabled {
-        cursor: not-allowed;
-        opacity: 0.4;
-
-        .maplibregl-ctrl-icon {
-          opacity: 0.3;
-        }
       }
 
       & + button {

@@ -219,10 +219,3 @@
     font-weight: 600;
   }
 }
-
-// Tall screens: hide the flyout, show individual overlay buttons
-@media (min-height: 791px) {
-  .map-overlays-menu {
-    display: none !important;
-  }
-}

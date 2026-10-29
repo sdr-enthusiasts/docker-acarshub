@@ -238,7 +238,9 @@
     @include media-xl {
       @content;
     }
-  } @else if $size == 2xl {
+  } @else if $size == "2xl" {
+    // Quoted: unquoted `2xl` is a Sass number (2 with unit "xl"), so
+    // callers must pass breakpoint("2xl").
     @include media-2xl {
       @content;
     }
@@ -272,7 +274,7 @@
     @media (max-width: #{$breakpoint-xl - 1px}) {
       @content;
     }
-  } @else if $size == 2xl {
+  } @else if $size == "2xl" {
     @media (max-width: #{$breakpoint-2xl - 1px}) {
       @content;
     }
@@ -493,6 +495,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     transition: none;
+    // biome-ignore lint/complexity/noImportantStyles: reduced-motion must beat the more specific :hover/:active transforms.
     transform: none !important;
   }
 }

@@ -85,12 +85,10 @@
   // Mobile-first: extra bottom padding for the always-visible scrollbar.
   padding: 0 0.75rem 0.5rem;
   background-color: var(--color-surface0);
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 10;
   overflow-x: auto;
   overflow-y: hidden;
-  position: relative;
 
   // Mobile-first: visible scrollbar always (no hover state on touch devices
   // to reveal it on demand).

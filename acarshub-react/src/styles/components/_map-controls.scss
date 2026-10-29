@@ -70,17 +70,25 @@
     // Remove border radius from middle buttons
     button {
       border-radius: 0;
-      // Keep the 2px border from MapControlButton but remove sides/top/bottom between buttons
-      border-left: 0 !important;
-      border-right: 0 !important;
-      border-top: 0 !important;
-      border-bottom: 1px solid var(--color-overlay0) !important;
       cursor: pointer;
       touch-action: manipulation; // Prevent double-tap zoom on mobile Safari
       -webkit-tap-highlight-color: transparent; // Remove tap highlight on iOS
       user-select: none; // Prevent text selection on mobile Safari
       -webkit-user-select: none; // Prevent text selection on mobile Safari
       -webkit-touch-callout: none; // Prevent callout menu on iOS
+
+      // Replace MapControlButton's 2px border with a 1px divider between
+      // buttons. The :hover/:active selectors are listed so this outranks
+      // .map-control-button:hover and .map-control-button--active:hover,
+      // which would otherwise recolour the divider.
+      &,
+      &:hover,
+      &:active {
+        border-left: 0;
+        border-right: 0;
+        border-top: 0;
+        border-bottom: 1px solid var(--color-overlay0);
+      }
 
       &:first-child {
         border-top-left-radius: var(--border-radius-sm);
@@ -90,7 +98,7 @@
       &:last-child {
         border-bottom-left-radius: var(--border-radius-sm);
         border-bottom-right-radius: var(--border-radius-sm);
-        border-bottom: 0 !important;
+        border-bottom: 0;
       }
 
       &:only-child {

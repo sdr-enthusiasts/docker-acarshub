@@ -22,21 +22,16 @@
  * Custom-styled toggle switch with Catppuccin theming
  */
 
+// Rule order in this file matters: states are expressed with the
+// `.toggle-input:disabled` / `:not(:disabled)` pseudo-classes so that a
+// disabled toggle looks disabled whether it is on or off, and every selector
+// sits below the lower-specificity rules it overrides.
+
 .toggle-wrapper {
   display: flex;
   gap: 0.75rem;
   align-items: center;
   align-self: center;
-
-  &--disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-
-    .toggle-slider,
-    .toggle-label {
-      cursor: not-allowed;
-    }
-  }
 }
 
 .toggle-control {
@@ -49,12 +44,6 @@
   width: 0;
   height: 0;
   pointer-events: none;
-
-  // Focus state - show outline on slider
-  &:focus-visible + .toggle-slider {
-    outline: 2px solid var(--color-blue);
-    outline-offset: 2px;
-  }
 }
 
 .toggle-slider {
@@ -74,50 +63,54 @@
     min-height: unset;
   }
 
+  // Track and thumb dimensions come from custom properties so the size
+  // variants (bottom of file) only set variables instead of competing with
+  // the state selectors below.
   &__track {
     position: relative;
     display: flex;
     align-items: center;
     // Mobile-first base: larger tap target track sizing.
-    width: 3.5rem;
-    height: 1.75rem;
+    width: var(--toggle-track-width, 3.5rem);
+    height: var(--toggle-track-height, 1.75rem);
     background-color: var(--color-surface1);
     border-radius: 1.5rem;
     transition: background-color 0.2s ease;
     border: 2px solid var(--color-surface2);
 
     @include breakpoint(md) {
-      width: 2.75rem;
-      height: 1.375rem;
+      width: var(--toggle-track-width, 2.75rem);
+      height: var(--toggle-track-height, 1.375rem);
+    }
+
+    // Disabled state: greyed out, on or off, with no hover feedback (the
+    // hover/checked rules below exclude disabled inputs).
+    .toggle-input:disabled ~ .toggle-slider & {
+      background-color: var(--color-surface0);
+    }
+
+    // Hover state
+    .toggle-input:not(:disabled) ~ .toggle-slider:hover & {
+      background-color: var(--color-surface2);
+      border-color: var(--color-overlay0);
     }
 
     // Checked state
-    .toggle-input:checked ~ .toggle-slider & {
+    .toggle-input:checked:not(:disabled) ~ .toggle-slider & {
       background-color: var(--color-blue);
       border-color: var(--color-blue);
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
-    // Hover state
-    .toggle-slider:hover & {
-      background-color: var(--color-surface2);
-      border-color: var(--color-overlay0);
-    }
-
-    .toggle-input:checked ~ .toggle-slider:hover & {
+    .toggle-input:checked:not(:disabled) ~ .toggle-slider:hover & {
       background-color: var(--color-sapphire);
       border-color: var(--color-sapphire);
-    }
-
-    // Disabled state
-    .toggle-wrapper--disabled & {
-      background-color: var(--color-surface0);
     }
   }
 
   &__thumb {
-    width: 1.125rem;
-    height: 1.125rem;
+    width: var(--toggle-thumb-size, 1.125rem);
+    height: var(--toggle-thumb-size, 1.125rem);
     margin-left: 0.125rem;
     background-color: var(--color-toggle-thumb);
     border-radius: 50%;
@@ -128,13 +121,15 @@
 
     // Checked state - move thumb to right
     .toggle-input:checked ~ .toggle-slider & {
-      transform: translateX(1.25rem);
+      transform: translateX(var(--toggle-thumb-travel, 1.25rem));
       background-color: var(--color-toggle-thumb);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     }
 
-    // Disabled state
-    .toggle-wrapper--disabled & {
+    // Disabled state: greyed thumb, on or off. Same specificity as the
+    // checked rule and later, so it wins the background but keeps the
+    // checked position.
+    .toggle-input:disabled ~ .toggle-slider & {
       background-color: var(--color-overlay0);
     }
   }
@@ -163,23 +158,30 @@
   line-height: 1.5;
 }
 
+.toggle-wrapper--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+
+  .toggle-slider,
+  .toggle-label {
+    cursor: not-allowed;
+  }
+}
+
+// Focus state - show outline on slider
+.toggle-input:focus-visible + .toggle-slider {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
 // Size variants
 .toggle-wrapper--small {
+  --toggle-track-width: 2.5rem;
+  --toggle-track-height: 1.25rem;
+  --toggle-thumb-size: 1rem;
+  --toggle-thumb-travel: 1rem;
+
   gap: 0.75rem;
-
-  .toggle-slider__track {
-    width: 2.5rem;
-    height: 1.25rem;
-  }
-
-  .toggle-slider__thumb {
-    width: 1rem;
-    height: 1rem;
-
-    .toggle-input:checked ~ .toggle-slider & {
-      transform: translateX(1rem);
-    }
-  }
 
   .toggle-label {
     font-size: 0.875rem;
@@ -191,21 +193,12 @@
 }
 
 .toggle-wrapper--large {
+  --toggle-track-width: 3.5rem;
+  --toggle-track-height: 1.75rem;
+  --toggle-thumb-size: 1.5rem;
+  --toggle-thumb-travel: 1.625rem;
+
   gap: 1.25rem;
-
-  .toggle-slider__track {
-    width: 3.5rem;
-    height: 1.75rem;
-  }
-
-  .toggle-slider__thumb {
-    width: 1.5rem;
-    height: 1.5rem;
-
-    .toggle-input:checked ~ .toggle-slider & {
-      transform: translateX(1.625rem);
-    }
-  }
 
   .toggle-label {
     font-size: 1rem;

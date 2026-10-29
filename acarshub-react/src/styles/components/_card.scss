@@ -109,11 +109,6 @@
       font-family: var(--font-mono);
     }
 
-    [data-theme="light"] & code {
-      background-color: transparent;
-      border: 1px solid var(--color-surface0);
-    }
-
     pre {
       background-color: var(--color-surface0);
       padding: 1rem;
@@ -125,6 +120,14 @@
         background-color: transparent;
         padding: 0;
       }
+    }
+
+    // Latte override for inline code (see the contrast note above). Kept
+    // after the pre rule and limited to inline code so code blocks inside
+    // <pre> don't pick up the pill border.
+    [data-theme="light"] & code:not(pre > code) {
+      background-color: transparent;
+      border: 1px solid var(--color-surface0);
     }
 
     img {

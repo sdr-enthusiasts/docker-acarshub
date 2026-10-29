@@ -162,10 +162,3 @@
     font-weight: 600;
   }
 }
-
-// Desktop: hide the flyout menu, show individual buttons
-@include breakpoint(md) {
-  .map-filters-menu {
-    display: none !important;
-  }
-}
