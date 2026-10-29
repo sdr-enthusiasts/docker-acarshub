@@ -65,6 +65,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    // biome-ignore lint/complexity/noImportantStyles: reduced-motion must beat the more specific :hover/:active transforms.
     transform: none !important;
   }
 }

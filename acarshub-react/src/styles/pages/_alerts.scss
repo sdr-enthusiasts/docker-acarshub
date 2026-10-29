@@ -30,7 +30,7 @@
   // (Top margin needs no override — `.page` is flush by default.)
   margin-bottom: 0;
   border-radius: 0;
-  overflow: visible !important;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   min-height: 200px;
@@ -555,7 +555,7 @@
 
     &__virtual-list {
       overflow: visible;
-      height: auto !important;
+      height: auto;
     }
 
     &__empty-state {

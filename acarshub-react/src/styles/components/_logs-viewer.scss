@@ -89,9 +89,7 @@
 }
 
 .logs-viewer-checkbox {
-  flex-direction: row !important;
   align-items: center;
-  gap: var(--spacing-xs) !important;
   cursor: pointer;
   user-select: none;
 
@@ -106,6 +104,12 @@
     font-size: 0.875rem;
     color: var(--color-text);
   }
+}
+
+// Scoped under .logs-viewer-filters to outrank the column layout that
+// `.logs-viewer-filters label` gives every other filter control.
+.logs-viewer-filters .logs-viewer-checkbox {
+  flex-direction: row;
 }
 
 .logs-viewer-actions {
@@ -125,27 +129,13 @@
 
   span {
     color: var(--color-subtext0);
-
-    strong {
-      color: var(--color-text);
-      font-weight: 600;
-    }
   }
 
-  &--error strong {
-    color: var(--color-red);
-  }
-
-  &--warn strong {
-    color: var(--color-yellow);
-  }
-
-  &--info strong {
-    color: var(--color-blue);
-  }
-
-  &--debug strong {
-    color: var(--color-green);
+  // Same specificity as the .logs-viewer-stat--* level colours below, so
+  // those (later in the file) win for their own counts.
+  strong {
+    color: var(--color-text);
+    font-weight: 600;
   }
 }
 

@@ -104,6 +104,42 @@
     text-align: center;
   }
 
+  // Unordered list styling - improved visual hierarchy
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+
+    > li {
+      position: relative;
+      padding-left: 1.75rem;
+      margin-bottom: 0.875rem;
+      line-height: 1.7;
+
+      &::before {
+        content: "▸";
+        position: absolute;
+        left: 0;
+        top: 0.125rem;
+        color: var(--color-blue);
+        font-weight: 600;
+        font-size: 0.875rem;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    @include media-sm {
+      > li {
+        padding-left: 2rem;
+        margin-bottom: 1rem;
+      }
+    }
+  }
+
   // Ordered list styling - better spacing and readability
   ol {
     counter-reset: list-counter;
@@ -152,42 +188,6 @@
           width: 2.5rem;
           font-size: 1.125rem;
         }
-      }
-    }
-  }
-
-  // Unordered list styling - improved visual hierarchy
-  ul {
-    list-style: none;
-    padding-left: 0;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-
-    > li {
-      position: relative;
-      padding-left: 1.75rem;
-      margin-bottom: 0.875rem;
-      line-height: 1.7;
-
-      &::before {
-        content: "▸";
-        position: absolute;
-        left: 0;
-        top: 0.125rem;
-        color: var(--color-blue);
-        font-weight: 600;
-        font-size: 0.875rem;
-      }
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-
-    @include media-sm {
-      > li {
-        padding-left: 2rem;
-        margin-bottom: 1rem;
       }
     }
   }
@@ -294,50 +294,6 @@
 
     @include media-sm {
       padding: 1rem;
-    }
-  }
-
-  // Responsive table of contents (if added later)
-  .toc {
-    background-color: var(--color-surface0);
-    border: 1px solid var(--color-surface1);
-    border-radius: $radius-lg;
-    padding: 1rem;
-
-    @include media-sm {
-      padding: 1.5rem;
-    }
-
-    h3 {
-      margin: 0 0 1rem;
-      font-size: 1.125rem;
-      color: var(--color-text);
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-
-      li {
-        padding-left: 0;
-        margin-bottom: 0.5rem;
-
-        &::before {
-          content: none;
-        }
-
-        a {
-          display: block;
-          padding: 0.5rem;
-          border-radius: $radius-sm;
-          transition: background-color 0.2s ease-in-out;
-
-          &:hover {
-            background-color: var(--color-surface1);
-            text-decoration: none;
-          }
-        }
-      }
     }
   }
 

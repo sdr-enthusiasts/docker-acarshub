@@ -24,7 +24,6 @@
   left: var(--ctx-menu-x);
   top: var(--ctx-menu-y);
   z-index: 10000;
-  min-width: 180px;
   background-color: var(--color-surface0);
   border: 1px solid var(--color-surface2);
   border-radius: $radius-md;
@@ -33,11 +32,7 @@
   opacity: 0;
   transform: scale(0.95);
   animation: context-menu-fade-in 0.15s ease-out forwards;
-  // Mobile-first base: ensure the menu is fully visible on very narrow
-  // phones (this is a further constraint on top of the already-mobile
-  // default below, not the desktop-first anti-pattern -- 375px doesn't
-  // correspond to one of the standard sm/md/lg tiers, so a bespoke
-  // min-width query is used here instead of the breakpoint() mixin).
+  // Sized so the menu stays fully visible on very narrow phones.
   min-width: 160px;
   max-width: calc(100vw - 16px);
 

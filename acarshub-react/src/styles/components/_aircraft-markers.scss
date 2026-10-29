@@ -104,29 +104,10 @@
     border-radius: 4px;
   }
 
-  // Hover effect - slight scale up (but no pulsing glow). Keyed off the
-  // wrapper (not the inner visual span) since the wrapper is what actually
-  // receives pointer events; this also means the glow shows across the
-  // full 44px hit area, not just the (possibly smaller) visual icon.
+  // Raise the hovered marker above its neighbours. The hover/press glow on
+  // the icon itself is defined after the marker state rules below.
   &:hover {
     z-index: 100;
-
-    .aircraft-marker:not(.aircraft-marker--hovered) img {
-      filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .aircraft-marker img {
-        filter: none;
-      }
-    }
-  }
-
-  // Active/clicked state
-  &:active {
-    .aircraft-marker img {
-      filter: brightness(1.2) drop-shadow(0 0 6px rgba(0, 0, 0, 1));
-    }
   }
 }
 
@@ -159,8 +140,8 @@
     -webkit-user-drag: none;
   }
 
-  // Hovered from list - pulsing glow effect. Unlike the plain :hover state
-  // above (mouse-driven, keyed off .aircraft-marker-hit), this is a state
+  // Hovered from list - pulsing glow effect. Unlike the pointer :hover rules
+  // below (mouse-driven, keyed off .aircraft-marker-hit), this is a state
   // modifier class applied directly by React (list-hover, not pointer
   // position), so it stays on this element.
   &--hovered {
@@ -180,64 +161,39 @@
   }
 }
 
-// Aircraft marker variants based on state
-.aircraft-marker--alert {
-  // Red glow for aircraft with alerts
-  img {
-    filter: drop-shadow(0 0 6px rgba(255, 0, 0, 0.8));
-  }
-
-  &:hover img {
-    filter: drop-shadow(0 0 8px rgba(255, 0, 0, 1));
-  }
-}
-
-.aircraft-marker--message {
-  // Green glow for aircraft with ACARS messages
-  img {
-    filter: drop-shadow(0 0 4px rgba(0, 255, 0, 0.6));
-  }
-
-  &:hover img {
-    filter: drop-shadow(0 0 6px rgba(0, 255, 0, 0.8));
-  }
-}
-
+// Aircraft with unread messages
 .aircraft-marker--unread {
-  // Yellow/peach glow for aircraft with unread messages
   img {
     filter: drop-shadow(0 0 5px rgba(250, 179, 135, 0.8));
   }
-
-  &:hover img {
-    filter: drop-shadow(0 0 7px rgba(250, 179, 135, 1));
-  }
 }
 
-.aircraft-marker--selected {
-  // Highlight selected aircraft
-  z-index: 200;
+// Pointer hover / press (SVG rendering path; the sprite path has its own
+// rules in AircraftSprite.scss). Keyed off the wrapper, which is what
+// receives pointer events, so the effect covers the full 44px hit area.
+//
+// These must stay AFTER the state rules above and share one specificity:
+// the plain shadow applies to every marker, then later rules let stateful
+// markers keep (and intensify) their own glow instead of losing it to the
+// generic shadow.
+.aircraft-marker-hit:hover .aircraft-marker img {
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
+}
 
-  img {
-    filter: drop-shadow(0 0 8px rgba(255, 255, 0, 1));
-  }
+.aircraft-marker-hit:active .aircraft-marker img {
+  filter: brightness(1.2) drop-shadow(0 0 6px rgba(0, 0, 0, 1));
+}
 
-  // Pulsing animation for selected aircraft
-  @keyframes pulse {
-    0%,
-    100% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.1);
-    }
-  }
+.aircraft-marker-hit:hover .aircraft-marker--unread img {
+  filter: drop-shadow(0 0 7px rgba(250, 179, 135, 1));
+}
 
-  animation: pulse 2s ease-in-out infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
+// The list-hover highlight outranks the pointer shadow. Normally the
+// marker-pulse animation already drives `filter`, but with reduced motion the
+// animation is off and this static declaration has to win on its own.
+.aircraft-marker-hit:hover .aircraft-marker--hovered img {
+  filter: drop-shadow(0 0 12px var(--color-blue))
+    drop-shadow(0 0 6px var(--color-blue));
 }
 
 // Pulsing animation for hovered aircraft (from list)
@@ -306,37 +262,37 @@
 
   // Align left when near left edge of viewport
   &--align-left {
-    left: 0 !important;
-    right: auto !important;
+    left: 0;
+    right: auto;
 
     &.aircraft-tooltip--above {
       bottom: 100%;
       margin-bottom: 10px;
-      transform: translateX(0) rotate(0deg) !important;
+      transform: translateX(0) rotate(0deg);
     }
 
     &.aircraft-tooltip--below {
       top: 100%;
       margin-top: 10px;
-      transform: translateX(0) rotate(0deg) !important;
+      transform: translateX(0) rotate(0deg);
     }
   }
 
   // Align right when near right edge of viewport
   &--align-right {
-    left: auto !important;
-    right: 0 !important;
+    left: auto;
+    right: 0;
 
     &.aircraft-tooltip--above {
       bottom: 100%;
       margin-bottom: 10px;
-      transform: translateX(0) rotate(0deg) !important;
+      transform: translateX(0) rotate(0deg);
     }
 
     &.aircraft-tooltip--below {
       top: 100%;
       margin-top: 10px;
-      transform: translateX(0) rotate(0deg) !important;
+      transform: translateX(0) rotate(0deg);
     }
   }
 

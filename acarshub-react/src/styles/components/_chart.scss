@@ -65,10 +65,13 @@
     position: relative;
     width: 100%;
 
-    // Ensure canvas is responsive
+    // Ensure canvas is responsive. Chart.js writes width/height as inline
+    // styles on the <canvas>; only !important can override inline styles.
     canvas {
+      // biome-ignore-start lint/complexity/noImportantStyles: overriding Chart.js inline canvas sizing.
       width: 100% !important;
       height: auto !important;
+      // biome-ignore-end lint/complexity/noImportantStyles: end of Chart.js overrides.
       display: block;
     }
   }

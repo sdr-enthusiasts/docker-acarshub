@@ -31,16 +31,6 @@
   &--full-width {
     width: 100%;
   }
-
-  &--disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-
-    .select,
-    .select-label {
-      cursor: not-allowed;
-    }
-  }
 }
 
 .select-label {
@@ -121,6 +111,18 @@
     &:disabled {
       color: var(--color-subtext0);
     }
+  }
+}
+
+// Disabled wrapper. Kept below the .select / .select-label base rules it
+// overrides.
+.select-wrapper--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+
+  .select,
+  .select-label {
+    cursor: not-allowed;
   }
 }
 

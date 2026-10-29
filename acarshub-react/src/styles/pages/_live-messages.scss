@@ -35,7 +35,7 @@
 
 .live-messages-page {
   // Override parent .page overflow to allow sticky positioning and virtual list
-  overflow: visible !important;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   // Remove the .page bottom margin and border-radius so the page occupies the

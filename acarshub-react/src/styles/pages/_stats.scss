@@ -40,9 +40,7 @@
   &__section-nav {
     background-color: var(--color-surface0);
     border-radius: $radius-lg;
-    padding: $spacing-sm;
     border: 1px solid var(--color-surface2);
-
     padding: $spacing-xs;
     margin-top: $spacing-sm;
     margin-bottom: $spacing-sm;
@@ -106,7 +104,6 @@
     border: 1px solid var(--color-surface2);
     border-radius: $radius-lg;
     padding: $spacing-sm;
-    margin-top: $spacing-sm;
     min-height: 200px; // Prevent layout shifts that cause scroll jumps
     max-height: 600px; // Chart looks weird when it is too tall relative to the 1400 px max width
     // contain: layout is intentionally omitted — it freezes the element's
@@ -116,7 +113,7 @@
     contain: style;
     overflow: hidden; // clip any chart content that escapes its container
     overflow-anchor: none; // Disable browser scroll anchoring
-    margin-top: 0; // Add top margin for spacing from card header
+    margin-top: 0;
     // content-visibility: auto is intentionally omitted — it can use a stale
     // intrinsic size when the element was off-screen during initial layout,
     // causing the chart to render at the wrong width.
@@ -127,11 +124,6 @@
     > div {
       overflow-anchor: none;
       position: relative; // Create positioning context
-    }
-
-    // First chart wrapper in a card should have top margin
-    .chart-section__header + & {
-      margin-top: $spacing-sm;
     }
   }
 
@@ -350,8 +342,10 @@
       // Specificity here (0,4,1) beats the original (0,1,1) even with
       // !important — both have !important so the higher specificity wins.
       canvas {
+        // biome-ignore-start lint/complexity/noImportantStyles: overriding Chart.js inline canvas sizing (see _chart.scss).
         width: 100% !important;
         height: 100% !important;
+        // biome-ignore-end lint/complexity/noImportantStyles: end of Chart.js overrides.
         display: block;
         max-width: 100%;
       }

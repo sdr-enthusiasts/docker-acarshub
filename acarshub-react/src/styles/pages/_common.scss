@@ -29,7 +29,7 @@
   // WHY the default is 0: this used to be $spacing-sm / $spacing-lg, and every
   // app-like page then had to override it back to 0 — Live Messages and Alerts
   // with an explicit `margin-top: 0`, Stats via `margin: 0 auto auto auto`,
-  // Live Map via `margin: 0 !important`. Search was the one page that never
+  // Live Map via `margin: 0`. Search was the one page that never
   // got the override, so it alone rendered a 24px gap above its header, making
   // its header area look ~45% taller than every other page's. That is a
   // default which the majority of consumers actively fight; the default was

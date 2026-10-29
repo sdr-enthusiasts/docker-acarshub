@@ -236,6 +236,7 @@
 
 // Animation disable
 [data-animations="false"] {
+  // biome-ignore lint/style/noDescendingSpecificity: only overrides `transition`, which no higher-specificity radio selector sets; the flagged focus selector sets `outline`.
   .radio-option__indicator,
   .radio-option__dot,
   .radio-option__label {
