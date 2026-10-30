@@ -60,7 +60,9 @@ interface ZmqModuleLike {
  * - libzmq handles reconnection transparently when the remote PUB restarts.
  * - Connection state is tracked via the socket.events monitor loop (Option C
  *   from the architecture doc) which surfaces real TCP-layer connect/disconnect
- *   events independent of message rate.
+ *   events independent of message rate. The monitor is attached before
+ *   connect() so the initial connect event cannot be missed, and any received
+ *   frame also marks the listener connected as a fallback.
  * - Each received frame is treated as one potential JSON message. The same
  *   }{→}\n{ split logic used by TcpListener / UdpListener is applied
  *   defensively.
@@ -180,10 +182,7 @@ export class ZmqListener
       this.socket = null;
     }
 
-    if (this.isConnected) {
-      this.isConnected = false;
-      this.emit("disconnected", this.messageType);
-    }
+    this.markDisconnected();
   }
 
   /**
@@ -217,6 +216,14 @@ export class ZmqListener
 
     const endpoint = `tcp://${this.host}:${this.port}`;
 
+    // zeromq.js attaches the libzmq socket monitor lazily, on first access to
+    // `sock.events`. libzmq connects on its own I/O thread, so if connect()
+    // runs first the initial "connect" event can fire before the monitor
+    // exists and is lost for good -- leaving the listener reported as
+    // disconnected until the next reconnect (#1910). Start the monitor loop,
+    // which touches `sock.events` synchronously, before connecting.
+    const monitorLoop = this.runMonitorLoop(sock);
+
     try {
       sock.connect(endpoint);
       await Promise.resolve(sock.subscribe(""));
@@ -231,8 +238,9 @@ export class ZmqListener
         this.messageType,
         error instanceof Error ? error : new Error(String(error)),
       );
-      this.closeSocket();
       this.isRunning = false;
+      this.closeSocket();
+      await monitorLoop;
       return;
     }
 
@@ -242,7 +250,21 @@ export class ZmqListener
     });
 
     // Run both loops concurrently. They both terminate when the socket closes.
-    await Promise.all([this.runReceiveLoop(sock), this.runMonitorLoop(sock)]);
+    await Promise.all([this.runReceiveLoop(sock), monitorLoop]);
+  }
+
+  private markConnected(): void {
+    if (!this.isConnected) {
+      this.isConnected = true;
+      this.emit("connected", this.messageType);
+    }
+  }
+
+  private markDisconnected(): void {
+    if (this.isConnected) {
+      this.isConnected = false;
+      this.emit("disconnected", this.messageType);
+    }
   }
 
   /**
@@ -261,6 +283,10 @@ export class ZmqListener
         if (!this.isRunning) {
           break;
         }
+        // A SUB socket can only receive over an established connection, so
+        // any frame proves we are connected. This self-heals the flag if a
+        // monitor event is ever missed.
+        this.markConnected();
         const payload = frames.at(-1);
         if (payload === undefined) {
           continue;
@@ -307,11 +333,9 @@ export class ZmqListener
         });
 
         if (event.type === "connect") {
-          this.isConnected = true;
-          this.emit("connected", this.messageType);
+          this.markConnected();
         } else if (event.type === "disconnect") {
-          this.isConnected = false;
-          this.emit("disconnected", this.messageType);
+          this.markDisconnected();
         }
       }
     } catch (error) {

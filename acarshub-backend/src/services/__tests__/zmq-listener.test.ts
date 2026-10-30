@@ -125,9 +125,22 @@ interface MockSubscriberState {
   endpoint: string;
   frames: ControllableAsyncIterable<Buffer[]>;
   events: ControllableAsyncIterable<{ type: string }>;
+  /** True once the `events` getter has been read (monitor attached). */
+  monitorAttached: boolean;
 }
 
 let mockSubscriberState: MockSubscriberState | null = null;
+
+/**
+ * When true, connect() emits a monitor "connect" event the way the real
+ * zeromq add-on does: only if the monitor was already attached via the
+ * lazy `events` getter. Otherwise the event is dropped, mirroring libzmq
+ * firing the event before zmq_socket_monitor() was called (#1910).
+ */
+let mockSimulateNativeConnect = false;
+
+/** When non-null, connect() throws this error. */
+let mockConnectError: Error | null = null;
 
 // Mock the zeromq module before any imports resolve it.
 vi.mock("zeromq", () => {
@@ -143,13 +156,20 @@ vi.mock("zeromq", () => {
         endpoint: "",
         frames: new ControllableAsyncIterable<Buffer[]>(),
         events: new ControllableAsyncIterable<{ type: string }>(),
+        monitorAttached: false,
       };
       mockSubscriberState = this.state;
     }
 
     connect(endpoint: string): void {
+      if (mockConnectError !== null) {
+        throw mockConnectError;
+      }
       this.state.endpoint = endpoint;
       this.state.connected = true;
+      if (mockSimulateNativeConnect && this.state.monitorAttached) {
+        this.state.events.push({ type: "connect" });
+      }
     }
 
     async subscribe(_topic: string): Promise<void> {
@@ -168,6 +188,7 @@ vi.mock("zeromq", () => {
     }
 
     get events(): AsyncIterable<{ type: string }> {
+      this.state.monitorAttached = true;
       return this.state.events;
     }
 
@@ -235,6 +256,8 @@ describe("ZmqListener", () => {
 
   beforeEach(() => {
     mockSubscriberState = null;
+    mockSimulateNativeConnect = false;
+    mockConnectError = null;
   });
 
   afterEach(() => {
@@ -618,6 +641,100 @@ describe("ZmqListener", () => {
 
       expect(() => listener.stop()).not.toThrow();
       expect(() => listener.stop()).not.toThrow();
+    });
+
+    it("regression: initial connect event is not lost to lazy monitor attach (#1910)", async () => {
+      // Bug: connect() ran before the first `sock.events` access. zeromq.js
+      // attaches the libzmq monitor lazily on that access, so a fast TCP
+      // connect fired its event into the void and the listener stayed
+      // `connected: false` while actually receiving.
+      mockSimulateNativeConnect = true;
+      listener = new ZmqListener("ACARS", makeDescriptor());
+
+      const connectedPromise = waitForEvent<[string]>(listener, "connected");
+      listener.start();
+      await waitForSubscriberState();
+
+      const [type] = await connectedPromise;
+      expect(type).toBe("ACARS");
+      expect(listener.connected).toBe(true);
+    });
+
+    it("regression: a received frame marks the listener connected without a monitor event (#1910)", async () => {
+      listener = new ZmqListener("ACARS", makeDescriptor());
+
+      const connected: string[] = [];
+      listener.on("connected", (type) => {
+        connected.push(type);
+      });
+
+      const messagePromise = waitForEvent<[string, unknown]>(
+        listener,
+        "message",
+      );
+      listener.start();
+      await waitForSubscriberState();
+      expect(listener.connected).toBe(false);
+
+      getState().frames.push([Buffer.from(JSON.stringify({ id: 1 }))]);
+      await messagePromise;
+
+      expect(listener.connected).toBe(true);
+      expect(connected).toEqual(["ACARS"]);
+    });
+
+    it("emits 'connected' once when both a frame and a monitor event report a connection", async () => {
+      listener = new ZmqListener("ACARS", makeDescriptor());
+
+      let connectedCount = 0;
+      listener.on("connected", () => {
+        connectedCount++;
+      });
+
+      listener.start();
+      await waitForSubscriberState();
+
+      getState().frames.push([Buffer.from(JSON.stringify({ id: 1 }))]);
+      getState().frames.push([Buffer.from(JSON.stringify({ id: 2 }))]);
+      getState().events.push({ type: "connect" });
+      await flushMicrotasks();
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(connectedCount).toBe(1);
+      expect(listener.connected).toBe(true);
+    });
+
+    it("does not emit 'disconnected' for a disconnect event while already disconnected", async () => {
+      listener = new ZmqListener("ACARS", makeDescriptor());
+
+      let disconnectedCount = 0;
+      listener.on("disconnected", () => {
+        disconnectedCount++;
+      });
+
+      listener.start();
+      await waitForSubscriberState();
+
+      getState().events.push({ type: "disconnect" });
+      await flushMicrotasks();
+
+      expect(disconnectedCount).toBe(0);
+      expect(listener.connected).toBe(false);
+    });
+
+    it("closes the socket and ends the monitor loop when connect() throws", async () => {
+      mockConnectError = new Error("simulated connect failure");
+      listener = new ZmqListener("ACARS", makeDescriptor());
+
+      const errorPromise = waitForEvent<[string, Error]>(listener, "error");
+      listener.start();
+
+      const [type, err] = await errorPromise;
+      expect(type).toBe("ACARS");
+      expect(err.message).toBe("simulated connect failure");
+      expect(getState().monitorAttached).toBe(true);
+      expect(getState().closedCalled).toBe(true);
+      expect(listener.connected).toBe(false);
     });
   });
 });
