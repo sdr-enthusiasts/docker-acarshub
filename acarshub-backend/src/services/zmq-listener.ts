@@ -61,8 +61,9 @@ interface ZmqModuleLike {
  * - Connection state is tracked via the socket.events monitor loop (Option C
  *   from the architecture doc) which surfaces real TCP-layer connect/disconnect
  *   events independent of message rate. The monitor is attached before
- *   connect() so the initial connect event cannot be missed, and any received
- *   frame also marks the listener connected as a fallback.
+ *   connect() so the initial connect event cannot be missed. Until the monitor
+ *   reports its first event, a received frame also marks the listener
+ *   connected as a fallback.
  * - Each received frame is treated as one potential JSON message. The same
  *   }{→}\n{ split logic used by TcpListener / UdpListener is applied
  *   defensively.
@@ -81,6 +82,12 @@ export class ZmqListener
 
   private isRunning = false;
   private isConnected = false;
+
+  // Set once the monitor reports a connect/disconnect for the current
+  // socket. From then on the monitor is authoritative and received frames
+  // no longer mark the listener connected: libzmq can still hand out frames
+  // queued before a disconnect, which must not flip the state back.
+  private monitorHasReported = false;
 
   // The socket is created on start() and set to null on stop().
   // Typed as ZmqSubscriberLike (a hand-rolled structural interface, not the
@@ -213,6 +220,7 @@ export class ZmqListener
 
     const sock: ZmqSubscriberLike = new zmq.Subscriber();
     this.socket = sock;
+    this.monitorHasReported = false;
 
     const endpoint = `tcp://${this.host}:${this.port}`;
 
@@ -283,10 +291,12 @@ export class ZmqListener
         if (!this.isRunning) {
           break;
         }
-        // A SUB socket can only receive over an established connection, so
-        // any frame proves we are connected. This self-heals the flag if a
-        // monitor event is ever missed.
-        this.markConnected();
+        // Fallback for a missed initial connect event: a SUB socket only
+        // receives over an established connection. Once the monitor has
+        // reported anything it owns the state (see monitorHasReported).
+        if (!this.monitorHasReported) {
+          this.markConnected();
+        }
         const payload = frames.at(-1);
         if (payload === undefined) {
           continue;
@@ -333,8 +343,10 @@ export class ZmqListener
         });
 
         if (event.type === "connect") {
+          this.monitorHasReported = true;
           this.markConnected();
         } else if (event.type === "disconnect") {
+          this.monitorHasReported = true;
           this.markDisconnected();
         }
       }
