@@ -704,6 +704,68 @@ describe("ZmqListener", () => {
       expect(listener.connected).toBe(true);
     });
 
+    it("regression: a frame queued before a disconnect does not mark the listener connected again", async () => {
+      // libzmq can still deliver frames that were queued before the TCP
+      // connection dropped. Once the monitor has reported a disconnect, those
+      // frames must not flip the state back to connected.
+      listener = new ZmqListener("ACARS", makeDescriptor());
+
+      let connectedCount = 0;
+      listener.on("connected", () => {
+        connectedCount++;
+      });
+
+      listener.start();
+      await waitForSubscriberState();
+
+      getState().events.push({ type: "connect" });
+      getState().events.push({ type: "disconnect" });
+      await flushMicrotasks();
+      expect(listener.connected).toBe(false);
+
+      const messagePromise = waitForEvent<[string, unknown]>(
+        listener,
+        "message",
+      );
+      getState().frames.push([Buffer.from(JSON.stringify({ queued: true }))]);
+      const [, data] = await messagePromise;
+
+      expect(data).toEqual({ queued: true });
+      expect(listener.connected).toBe(false);
+      expect(connectedCount).toBe(1);
+    });
+
+    it("regression: frame fallback stops once the monitor reports a disconnect", async () => {
+      // Connected via the frame fallback (initial monitor event missed),
+      // then the monitor reports a disconnect: later queued frames must not
+      // re-mark the listener connected.
+      listener = new ZmqListener("ACARS", makeDescriptor());
+      listener.start();
+      await waitForSubscriberState();
+
+      const firstMessage = waitForEvent<[string, unknown]>(listener, "message");
+      getState().frames.push([Buffer.from(JSON.stringify({ id: 1 }))]);
+      await firstMessage;
+      expect(listener.connected).toBe(true);
+
+      getState().events.push({ type: "disconnect" });
+      await flushMicrotasks();
+      expect(listener.connected).toBe(false);
+
+      const secondMessage = waitForEvent<[string, unknown]>(
+        listener,
+        "message",
+      );
+      getState().frames.push([Buffer.from(JSON.stringify({ id: 2 }))]);
+      await secondMessage;
+      expect(listener.connected).toBe(false);
+
+      // A real reconnect is still picked up via the monitor.
+      getState().events.push({ type: "connect" });
+      await flushMicrotasks();
+      expect(listener.connected).toBe(true);
+    });
+
     it("does not emit 'disconnected' for a disconnect event while already disconnected", async () => {
       listener = new ZmqListener("ACARS", makeDescriptor());
 
