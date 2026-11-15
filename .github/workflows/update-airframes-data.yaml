@@ -121,9 +121,11 @@ jobs:
           fi
 
           if [ "$gs_changed" = true ] || [ "$meta_changed" = true ]; then
-            echo "needs_update=true" >> "$GITHUB_OUTPUT"
-            echo "ground_stations_changed=${gs_changed}" >> "$GITHUB_OUTPUT"
-            echo "metadata_changed=${meta_changed}" >> "$GITHUB_OUTPUT"
+            {
+              echo "needs_update=true"
+              echo "ground_stations_changed=${gs_changed}"
+              echo "metadata_changed=${meta_changed}"
+            } >> "$GITHUB_OUTPUT"
             echo "📦 Update needed"
           else
             echo "needs_update=false" >> "$GITHUB_OUTPUT"
@@ -157,10 +159,12 @@ jobs:
           gs_stations=$(jq '.ground_stations | length' rootfs/webapp/data/ground-stations.json)
           meta_labels=$(jq '.labels | length' rootfs/webapp/data/metadata.json)
 
-          echo "ground_stations_size=${gs_size}" >> "$GITHUB_OUTPUT"
-          echo "metadata_size=${meta_size}" >> "$GITHUB_OUTPUT"
-          echo "ground_stations_count=${gs_stations}" >> "$GITHUB_OUTPUT"
-          echo "metadata_labels_count=${meta_labels}" >> "$GITHUB_OUTPUT"
+          {
+            echo "ground_stations_size=${gs_size}"
+            echo "metadata_size=${meta_size}"
+            echo "ground_stations_count=${gs_stations}"
+            echo "metadata_labels_count=${meta_labels}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Configure Git identity
         if: steps.compare.outputs.needs_update == 'true'
