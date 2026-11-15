@@ -14,7 +14,6 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    if: ${{ needs.skip-if-clean.outputs.skip != 'true' }} # <-- now valid in PRs
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -23,6 +22,10 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Run flake pre-commit hooks
+        env:
+          # Lets the lychee link check use the GitHub API for github.com links
+          # instead of being rate limited.
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           nix develop -c bash -c '
             npm i
