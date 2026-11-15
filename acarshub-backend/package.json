@@ -28,7 +28,7 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "@acarshub/types": "*",
-    "@airframes/acars-decoder": "1.9.4",
+    "@airframes/acars-decoder": "^1.9.0",
     "@fastify/cors": "11.3.1",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.4",
