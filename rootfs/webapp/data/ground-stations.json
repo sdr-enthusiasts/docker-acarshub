@@ -3,7 +3,7 @@
     "name": "acars-vdl2 group",
     "url": "https://acars-vdl2.groups.io/g/main/table?id=12248"
   },
-  "count": 2298,
+  "count": 2303,
   "ground_stations": [
     {
       "id": "225677",
@@ -19062,18 +19062,6 @@
       }
     },
     {
-      "id": "10418A",
-      "airport": {
-        "icao": "KSPS",
-        "iata": "SPS",
-        "name": "Sheppard Air Force Base / Wichita Falls Air Trml",
-        "city": "Wichita Falls (TX)",
-        "country_code": "US",
-        "latitude": "33.988N",
-        "longitude": "98.492W"
-      }
-    },
-    {
       "id": "104A8A",
       "airport": {
         "icao": "KDTA",
@@ -27579,6 +27567,78 @@
         "country_code": "RU",
         "latitude": "56.017N",
         "longitude": "92.833E"
+      }
+    },
+    {
+      "id": "10A4CA",
+      "airport": {
+        "icao": "VTBS",
+        "iata": "BKK",
+        "name": "Suvarnabhumi Airport",
+        "city": "Bangkok",
+        "country_code": "TH",
+        "latitude": "13.69N",
+        "longitude": "100.742E"
+      }
+    },
+    {
+      "id": "221AE1",
+      "airport": {
+        "icao": "KDFW",
+        "iata": "DFW",
+        "name": "Dallas/Ft Worth International Airport",
+        "city": "Dallas/Ft Worth (TX)",
+        "country_code": "US",
+        "latitude": "32.896N",
+        "longitude": "97.041W"
+      }
+    },
+    {
+      "id": "221AE2",
+      "airport": {
+        "icao": "KDFW",
+        "iata": "DFW",
+        "name": "Dallas/Ft Worth International Airport",
+        "city": "Dallas/Ft Worth (TX)",
+        "country_code": "US",
+        "latitude": "32.896N",
+        "longitude": "97.041W"
+      }
+    },
+    {
+      "id": "221AE3",
+      "airport": {
+        "icao": "KDFW",
+        "iata": "DFW",
+        "name": "Dallas/Ft Worth International Airport",
+        "city": "Dallas/Ft Worth (TX)",
+        "country_code": "US",
+        "latitude": "32.896N",
+        "longitude": "97.041W"
+      }
+    },
+    {
+      "id": "11993A",
+      "airport": {
+        "icao": "EGPU",
+        "iata": "TRE",
+        "name": "Tiree Airport",
+        "city": "Tiree Inner Hebrides",
+        "country_code": "GB",
+        "latitude": "56.501N",
+        "longitude": "6.871W"
+      }
+    },
+    {
+      "id": "10418A",
+      "airport": {
+        "icao": "KLAW",
+        "iata": "LAW",
+        "name": "Lawton Municipal Airport",
+        "city": "Lawton/Fort Sill (OK)",
+        "country_code": "US",
+        "latitude": "34.5610N",
+        "longitude": "98.416W"
       }
     }
   ]
