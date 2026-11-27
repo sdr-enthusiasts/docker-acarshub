@@ -32,7 +32,7 @@
     "@fastify/cors": "11.3.1",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.4",
-    "fastify": "5.12.7",
+    "fastify": "5.12.8",
     "pino": "10.4.0",
     "pino-pretty": "13.2.0",
     "prom-client": "15.1.3",
