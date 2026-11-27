@@ -43,7 +43,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.6.9",
     "@types/better-sqlite3": "9.6.0",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.11",
     "@vitest/coverage-v8": "5.0.5",
     "drizzle-kit": "0.31.11",
     "socket.io-client": "4.8.4",
