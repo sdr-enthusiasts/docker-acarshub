@@ -152,6 +152,12 @@ table {
   width: 100%;
 }
 
+/* Textarea specific */
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
 /* Form input defaults */
 input,
 textarea,
@@ -177,12 +183,6 @@ select {
     opacity: 0.6;
     background-color: var(--color-surface1);
   }
-}
-
-/* Textarea specific */
-textarea {
-  resize: vertical;
-  min-height: 100px;
 }
 
 /* Code and pre defaults */

@@ -89,12 +89,6 @@
     width: 0;
     height: 0;
     pointer-events: none;
-
-    // Focus state
-    &:focus-visible ~ .radio-option__label .radio-option__indicator {
-      outline: 2px solid var(--color-blue);
-      outline-offset: 2px;
-    }
   }
 
   &__label {
@@ -116,6 +110,10 @@
       padding: 0.375rem;
       margin: -0.375rem;
       min-height: unset;
+    }
+
+    [data-animations="false"] & {
+      transition: none;
     }
 
     &:hover {
@@ -155,6 +153,10 @@
       margin-top: 0;
     }
 
+    [data-animations="false"] & {
+      transition: none;
+    }
+
     // Hover state
     .radio-option__label:hover & {
       border-color: var(--color-overlay0);
@@ -173,6 +175,12 @@
       border-color: var(--color-surface1);
       background-color: var(--color-surface0);
     }
+
+    // Focus state
+    .radio-option__input:focus-visible ~ .radio-option__label & {
+      outline: 2px solid var(--color-blue);
+      outline-offset: 2px;
+    }
   }
 
   &__dot {
@@ -190,6 +198,10 @@
     @include breakpoint(md) {
       width: 0.4375rem;
       height: 0.4375rem;
+    }
+
+    [data-animations="false"] & {
+      transition: none;
     }
 
     // Checked state - show theme-aware dot
@@ -231,15 +243,5 @@
     .radio-option__input:disabled ~ .radio-option__label & {
       color: var(--color-subtext1);
     }
-  }
-}
-
-// Animation disable
-[data-animations="false"] {
-  // biome-ignore lint/style/noDescendingSpecificity: only overrides `transition`, which no higher-specificity radio selector sets; the flagged focus selector sets `outline`.
-  .radio-option__indicator,
-  .radio-option__dot,
-  .radio-option__label {
-    transition: none;
   }
 }

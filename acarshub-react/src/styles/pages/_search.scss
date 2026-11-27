@@ -209,6 +209,16 @@
       letter-spacing: 0.05em;
     }
 
+    select {
+      appearance: auto;
+      cursor: pointer;
+
+      option {
+        background: var(--color-base);
+        color: var(--color-text);
+      }
+    }
+
     input,
     select {
       // SCSS-TOUCH mobile-first: 10 search-form fields. Mobile gets a 44px
@@ -240,16 +250,6 @@
 
       &:hover:not(:focus) {
         border-color: var(--color-overlay0);
-      }
-    }
-
-    select {
-      appearance: auto;
-      cursor: pointer;
-
-      option {
-        background: var(--color-base);
-        color: var(--color-text);
       }
     }
 
@@ -368,16 +368,6 @@
     cursor: pointer;
     transition: all var(--transition-normal);
 
-    &:hover:not(:disabled) {
-      background: var(--color-surface1);
-      border-color: var(--color-blue);
-      color: var(--color-blue);
-    }
-
-    &:active:not(:disabled) {
-      transform: scale(0.95);
-    }
-
     &:focus-visible {
       outline: 2px solid var(--color-blue);
       outline-offset: 2px;
@@ -386,6 +376,16 @@
     &:disabled {
       opacity: 0.4;
       cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background: var(--color-surface1);
+      border-color: var(--color-blue);
+      color: var(--color-blue);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.95);
     }
 
     &--active {

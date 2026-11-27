@@ -89,13 +89,6 @@
       0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  // Hover state
-  &:hover:not(:disabled) {
-    border-color: var(--color-overlay0);
-    background-color: var(--color-surface1);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-  }
-
   // Disabled state
   &:disabled {
     cursor: not-allowed;
@@ -124,6 +117,14 @@
   .select-label {
     cursor: not-allowed;
   }
+}
+
+// Hover state. Declared after the disabled wrapper so .select selectors stay
+// in ascending specificity order.
+.select:hover:not(:disabled) {
+  border-color: var(--color-overlay0);
+  background-color: var(--color-surface1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .select-icon {

@@ -314,13 +314,6 @@
     grid-template-columns: minmax(180px, auto) 1fr;
   }
 
-  &--error {
-    .message-field__value {
-      color: var(--color-red);
-      font-weight: 700;
-    }
-  }
-
   &__label {
     color: var(--color-subtext1);
     font-size: var(--font-size-sm);
@@ -334,6 +327,13 @@
     font-family: var(--font-mono);
     word-break: break-word;
     margin: 0;
+  }
+
+  &--error {
+    .message-field__value {
+      color: var(--color-red);
+      font-weight: 700;
+    }
   }
 }
 

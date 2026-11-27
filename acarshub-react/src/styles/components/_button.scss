@@ -54,17 +54,49 @@
     opacity: 0.5;
     pointer-events: none;
   }
+}
 
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: $shadow-md;
+/**
+ * Button Groups
+ *
+ * Sits between the base .btn rules and the .btn hover/active states so the
+ * .btn selectors stay in ascending specificity order.
+ */
+
+.btn-group {
+  display: inline-flex;
+  gap: 0;
+
+  .btn {
+    border-radius: 0;
+
+    &:first-child {
+      border-top-left-radius: $radius-md;
+      border-bottom-left-radius: $radius-md;
+    }
+
+    &:last-child {
+      border-top-right-radius: $radius-md;
+      border-bottom-right-radius: $radius-md;
+    }
+
+    &:not(:last-child) {
+      border-right: none;
+    }
   }
+}
 
-  &:active:not(:disabled) {
-    transform: translateY(0);
-  }
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: $shadow-md;
+}
 
-  @media (prefers-reduced-motion: reduce) {
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
     // biome-ignore lint/complexity/noImportantStyles: reduced-motion must beat the more specific :hover/:active transforms.
     transform: none !important;
   }
@@ -249,33 +281,6 @@
   padding: $spacing-md $spacing-xl;
   font-size: $font-size-lg;
   gap: $spacing-md;
-}
-
-/**
- * Button Groups
- */
-
-.btn-group {
-  display: inline-flex;
-  gap: 0;
-
-  .btn {
-    border-radius: 0;
-
-    &:first-child {
-      border-top-left-radius: $radius-md;
-      border-bottom-left-radius: $radius-md;
-    }
-
-    &:last-child {
-      border-top-right-radius: $radius-md;
-      border-bottom-right-radius: $radius-md;
-    }
-
-    &:not(:last-child) {
-      border-right: none;
-    }
-  }
 }
 
 /**

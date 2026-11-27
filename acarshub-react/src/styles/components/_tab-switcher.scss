@@ -105,12 +105,6 @@
       min-height: auto;
     }
 
-    // Hover state
-    &:hover:not(&--disabled):not(&--active) {
-      background-color: var(--color-surface0);
-      color: var(--color-text);
-    }
-
     // Focus state
     &:focus-visible {
       outline: 2px solid var(--color-primary);
@@ -145,11 +139,6 @@
       &:hover {
         background-color: transparent;
       }
-    }
-
-    // Active press state
-    &:active:not(&--disabled) {
-      transform: translateY(1px);
     }
   }
 
@@ -186,10 +175,6 @@
       border-radius: $radius-lg;
       background-color: var(--color-surface0);
 
-      &:hover:not(&--disabled):not(&--active) {
-        background-color: var(--color-surface1);
-      }
-
       &--active {
         background-color: var(--color-primary);
         color: var(--color-base);
@@ -197,10 +182,6 @@
         &::after {
           display: none;
         }
-      }
-
-      &:active:not(&--disabled) {
-        transform: scale(0.98);
       }
     }
   }
@@ -236,11 +217,6 @@
         font-size: $font-size-base;
       }
 
-      &:hover:not(&--disabled):not(&--active) {
-        background-color: var(--color-surface2);
-        border-color: var(--color-overlay0);
-      }
-
       &--active {
         background-color: var(--color-primary);
         color: var(--color-base);
@@ -250,10 +226,6 @@
         &::after {
           display: none;
         }
-      }
-
-      &:active:not(&--disabled) {
-        transform: scale(0.98);
       }
     }
   }
@@ -308,4 +280,52 @@
   .tab-switcher__container {
     scroll-behavior: auto;
   }
+}
+
+// The interaction states below are kept out of the blocks above and ordered
+// by ascending specificity, so no .tab-switcher__tab rule follows a more
+// specific one.
+
+// Active press state
+.tab-switcher__tab:active:not(.tab-switcher__tab--disabled) {
+  transform: translateY(1px);
+}
+
+// Hover state
+.tab-switcher__tab:hover:not(.tab-switcher__tab--disabled):not(
+    .tab-switcher__tab--active
+  ) {
+  background-color: var(--color-surface0);
+  color: var(--color-text);
+}
+
+// Variant press states
+.tab-switcher--pills
+  .tab-switcher__tab:active:not(
+    .tab-switcher--pills .tab-switcher__tab--disabled
+  ) {
+  transform: scale(0.98);
+}
+
+.tab-switcher--primary
+  .tab-switcher__tab:active:not(
+    .tab-switcher--primary .tab-switcher__tab--disabled
+  ) {
+  transform: scale(0.98);
+}
+
+// Variant hover states
+.tab-switcher--pills
+  .tab-switcher__tab:hover:not(
+    .tab-switcher--pills .tab-switcher__tab--disabled
+  ):not(.tab-switcher--pills .tab-switcher__tab--active) {
+  background-color: var(--color-surface1);
+}
+
+.tab-switcher--primary
+  .tab-switcher__tab:hover:not(
+    .tab-switcher--primary .tab-switcher__tab--disabled
+  ):not(.tab-switcher--primary .tab-switcher__tab--active) {
+  background-color: var(--color-surface2);
+  border-color: var(--color-overlay0);
 }

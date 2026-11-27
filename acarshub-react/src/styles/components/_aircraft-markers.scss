@@ -343,6 +343,20 @@
     letter-spacing: 0.5px;
   }
 
+  &__label {
+    color: var(--color-subtext1);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  &__value {
+    color: var(--color-text);
+    font-weight: 500;
+    text-align: right;
+  }
+
   &__row {
     display: flex;
     justify-content: space-between;
@@ -376,20 +390,6 @@
         font-weight: 600;
       }
     }
-  }
-
-  &__label {
-    color: var(--color-subtext1);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-  }
-
-  &__value {
-    color: var(--color-text);
-    font-weight: 500;
-    text-align: right;
   }
 }
 

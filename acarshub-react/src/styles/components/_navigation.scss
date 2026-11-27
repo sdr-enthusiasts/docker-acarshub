@@ -64,24 +64,6 @@
     font-size: $font-size-base;
     font-weight: $font-weight-medium;
     border-radius: $radius-md;
-
-    &:hover {
-      background-color: var(--color-surface0);
-      color: var(--color-text);
-    }
-
-    @include focus-visible;
-  }
-
-  nav a.active {
-    background-color: var(--color-surface0);
-    color: var(--color-primary);
-    font-weight: $font-weight-semibold;
-
-    &:hover {
-      background-color: var(--color-surface0);
-      opacity: 0.9;
-    }
   }
 
   .logo-link {
@@ -532,34 +514,62 @@
 
     // SCSS-TOUCH: flyout menu items — 44px hit target on mobile.
     min-height: 44px;
-
-    &:hover {
-      color: var(--color-primary);
-      background-color: var(--color-surface0);
-    }
-
-    @include focus-visible;
   }
+}
 
-  // Active highlight pill.  All padding/sizing properties match the base
-  // link rule above so the pill is exactly the same box as a non-active
-  // link, just with a visible background.  The cascading desktop rule
-  // (`.navigation nav a.active`) is overridden by this rule because we're
-  // now scoped under `.navigation` too (same specificity, but later in
-  // source order).
-  a.active {
-    color: var(--color-primary);
-    font-weight: $font-weight-semibold;
-    background-color: var(--color-surface0);
-    border-radius: $radius-sm;
-    padding: 0 $spacing-sm;
-    min-height: 44px;
+// Link interaction/active states for both the desktop bar and the mobile
+// flyout, ordered by ascending specificity. The desktop and flyout rules
+// match the same <a> elements and are resolved by specificity, so keeping
+// them in ascending order means a later rule never silently loses to an
+// earlier one.
 
-    &:hover {
-      background-color: var(--color-surface0);
-      opacity: 0.9;
-    }
-  }
+// (0,2,2) desktop hover/focus/active
+.navigation nav a:hover,
+.navigation nav .link-button:hover {
+  background-color: var(--color-surface0);
+  color: var(--color-text);
+}
+
+.navigation nav a:focus-visible,
+.navigation nav .link-button:focus-visible {
+  @include focus-ring;
+}
+
+.navigation nav a.active {
+  background-color: var(--color-surface0);
+  color: var(--color-primary);
+  font-weight: $font-weight-semibold;
+}
+
+// (0,3,1) flyout hover/focus/active
+.navigation .small_nav a:hover,
+.navigation .small_nav .link-button:hover {
+  color: var(--color-primary);
+  background-color: var(--color-surface0);
+}
+
+.navigation .small_nav a:focus-visible,
+.navigation .small_nav .link-button:focus-visible {
+  @include focus-ring;
+}
+
+// Active highlight pill.  All padding/sizing properties match the base
+// link rule above so the pill is exactly the same box as a non-active
+// link, just with a visible background.  Outranks the desktop
+// `.navigation nav a.active` rule on specificity.
+.navigation .small_nav a.active {
+  color: var(--color-primary);
+  font-weight: $font-weight-semibold;
+  background-color: var(--color-surface0);
+  border-radius: $radius-sm;
+  padding: 0 $spacing-sm;
+  min-height: 44px;
+}
+
+// (0,3,2)
+.navigation nav a.active:hover {
+  background-color: var(--color-surface0);
+  opacity: 0.9;
 }
 
 // Latte (light theme) contrast fixes:
@@ -569,8 +579,15 @@
 // Active state is communicated by font-weight + underline border (decorative, no contrast req).
 //
 // Applies to both the desktop links and the mobile flyout pill
-// (`.navigation .small_nav a.active`), so it must stay below both rules.
+// (`.navigation .small_nav a.active`); it outranks the flyout pill on
+// specificity and must stay below the desktop `a.active` rule.
 [data-theme="light"] .navigation nav a.active {
   color: var(--color-text);
   border-bottom: 2px solid var(--color-mauve);
+}
+
+// (0,4,1)
+.navigation .small_nav a.active:hover {
+  background-color: var(--color-surface0);
+  opacity: 0.9;
 }

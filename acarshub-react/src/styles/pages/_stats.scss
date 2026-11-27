@@ -21,6 +21,11 @@
 // Stats Page
 // =============================================================================
 
+// Fade in when loaded (keyframes in "Animation States" below)
+[data-animations="true"] .stats-image {
+  animation: fadeIn 0.3s ease;
+}
+
 .stats-page {
   // Prevent scroll anchoring on the entire page
   overflow-anchor: none;
@@ -131,12 +136,6 @@
   .card:has(.stats-image) {
     padding: 0;
     overflow: hidden;
-
-    // Hover effect
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
 
     // Smooth transitions
     transition:
@@ -387,6 +386,13 @@
       grid-auto-rows: 1fr;
     }
   }
+
+  // Image card hover effect. Kept after the section-content card rules so the
+  // .card selectors stay in ascending specificity order.
+  .card:has(.stats-image):hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
 }
 
 // =============================================================================
@@ -397,12 +403,9 @@
 // Animation States
 // =============================================================================
 
+// The matching `[data-animations="true"] .stats-image` rule lives at the top
+// of this file, ahead of the more specific .stats-image state selectors.
 [data-animations="true"] {
-  .stats-image {
-    // Fade in when loaded
-    animation: fadeIn 0.3s ease;
-  }
-
   @keyframes fadeIn {
     from {
       opacity: 0;
