@@ -66,6 +66,12 @@
       "automerge": true
     },
     {
+      "matchPackageNames": ["@airframes/acars-decoder"],
+      "schedule": ["at any time"],
+      "minimumReleaseAge": "0 days",
+      "prPriority": 10
+    },
+    {
       "matchDatasources": ["docker"],
       "matchPackageNames": ["/^ghcr\\.io/sdr-enthusiasts/.*$/"],
       "enabled": false
