@@ -52,6 +52,7 @@
     },
     {
       "matchManagers": ["npm"],
+      "rangeStrategy": "bump",
       "automerge": false
     },
     {
