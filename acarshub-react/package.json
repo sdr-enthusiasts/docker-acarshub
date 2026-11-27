@@ -22,7 +22,7 @@
   "dependencies": {
     "@acarshub/types": "*",
     "@tanstack/react-virtual": "3.14.28",
-    "chart.js": "4.6.1",
+    "chart.js": "4.6.2",
     "chartjs-adapter-date-fns": "3.0.0",
     "chartjs-plugin-datalabels": "2.2.0",
     "date-fns": "4.4.0",
