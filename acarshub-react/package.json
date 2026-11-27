@@ -50,7 +50,7 @@
     "@vitejs/plugin-react": "6.1.2",
     "@vitest/coverage-v8": "5.0.5",
     "@vitest/ui": "5.0.5",
-    "axe-core": "4.14.0",
+    "axe-core": "4.14.1",
     "canvas": "3.2.3",
     "happy-dom": "21.0.4",
     "jsdom": "30.1.3",
