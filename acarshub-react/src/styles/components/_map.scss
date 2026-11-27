@@ -106,6 +106,14 @@
         opacity: var(--map-zoom-icon-opacity);
       }
 
+      & + button {
+        border-top: 1px solid var(--color-overlay0);
+      }
+
+      &:active {
+        background-color: var(--color-surface2);
+      }
+
       &:disabled {
         cursor: not-allowed;
         opacity: 0.4;
@@ -131,14 +139,6 @@
             hue-rotate(175deg);
           opacity: 1;
         }
-      }
-
-      &:active {
-        background-color: var(--color-surface2);
-      }
-
-      & + button {
-        border-top: 1px solid var(--color-overlay0);
       }
     }
   }

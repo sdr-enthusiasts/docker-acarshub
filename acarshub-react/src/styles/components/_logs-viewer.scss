@@ -48,6 +48,18 @@
   color: var(--color-subtext0);
 }
 
+.logs-viewer-select {
+  min-width: 150px;
+}
+
+.logs-viewer-input {
+  min-width: 200px;
+
+  &::placeholder {
+    color: var(--color-subtext1);
+  }
+}
+
 .logs-viewer-select,
 .logs-viewer-input {
   // SCSS-TOUCH mobile-first: form controls inside the Settings → Advanced
@@ -62,7 +74,6 @@
   font-family: inherit;
   font-size: 1rem;
   min-height: 44px;
-  min-width: 150px;
 
   @include breakpoint(md) {
     min-height: unset;
@@ -77,14 +88,6 @@
 
   &:hover {
     border-color: var(--color-overlay1);
-  }
-}
-
-.logs-viewer-input {
-  min-width: 200px;
-
-  &::placeholder {
-    color: var(--color-subtext1);
   }
 }
 

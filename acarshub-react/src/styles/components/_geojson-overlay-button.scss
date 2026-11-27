@@ -101,6 +101,13 @@
     background-color: var(--color-mantle);
   }
 
+  &__name {
+    font-size: 13px;
+    font-weight: 600;
+    transition: color 0.15s ease;
+    color: var(--color-text);
+  }
+
   &__label {
     display: flex;
     align-items: center;
@@ -120,13 +127,6 @@
         color: var(--color-blue);
       }
     }
-  }
-
-  &__name {
-    font-size: 13px;
-    font-weight: 600;
-    transition: color 0.15s ease;
-    color: var(--color-text);
   }
 
   &__overlays {

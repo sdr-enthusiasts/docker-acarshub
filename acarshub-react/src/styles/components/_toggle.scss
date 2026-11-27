@@ -83,6 +83,10 @@
       height: var(--toggle-track-height, 1.375rem);
     }
 
+    [data-animations="false"] & {
+      transition: none;
+    }
+
     // Disabled state: greyed out, on or off, with no hover feedback (the
     // hover/checked rules below exclude disabled inputs).
     .toggle-input:disabled ~ .toggle-slider & {
@@ -118,6 +122,10 @@
       transform 0.2s ease,
       background-color 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+    [data-animations="false"] & {
+      transition: none;
+    }
 
     // Checked state - move thumb to right
     .toggle-input:checked ~ .toggle-slider & {
@@ -206,13 +214,5 @@
 
   .toggle-help-text {
     font-size: 0.875rem;
-  }
-}
-
-// Animation disable
-[data-animations="false"] {
-  .toggle-slider__track,
-  .toggle-slider__thumb {
-    transition: none;
   }
 }
